@@ -4,11 +4,12 @@ import { open } from 'node:fs/promises'
 import { parseTimestamp } from './metadataParser'
 
 /** Bump when the summary shape or extraction rules change (invalidates cache). */
-export const PARSER_VERSION = 4
+export const PARSER_VERSION = 5
 
 const MAX_TEXT = 2000
 const MAX_LINE_BYTES = 128 * 1024 * 1024
 const HEAD_BYTES = 4096
+const RECENT_ID_WINDOW = 16
 
 /**
  * Everything the app needs from a transcript, small enough to cache.
@@ -30,7 +31,9 @@ export interface TranscriptSummary {
   models: string[]
   userMessageCount: number
   assistantMessageCount: number
-  lastAssistantMessageId?: string
+  /** Distinct assistant API message ids (see applyRecord). */
+  recentAssistantIds: string[]
+  toolUseCount: number
   lineCount: number
   invalidLineCount: number
   cwd?: string
@@ -40,7 +43,16 @@ export interface TranscriptSummary {
 }
 
 export function emptySummary(): TranscriptSummary {
-  return { sessionIds: [], models: [], userMessageCount: 0, assistantMessageCount: 0, lineCount: 0, invalidLineCount: 0 }
+  return {
+    sessionIds: [],
+    models: [],
+    userMessageCount: 0,
+    assistantMessageCount: 0,
+    recentAssistantIds: [],
+    toolUseCount: 0,
+    lineCount: 0,
+    invalidLineCount: 0
+  }
 }
 
 type Rec = Record<string, unknown>
@@ -156,10 +168,20 @@ export function applyRecord(s: TranscriptSummary, rec: unknown): void {
       if (r.isSidechain === true) break
       const message = (r.message ?? {}) as Rec
       const id = str(message.id)
-      // Streaming writes one record per content block with the same message id.
-      if (!id || id !== s.lastAssistantMessageId) {
+      // Claude Code writes one record per content block, all sharing the API
+      // message id, sometimes interleaved with tool results. Count each id once
+      // (a small window of recent ids is enough; blocks of one message are close).
+      if (!id || !s.recentAssistantIds.includes(id)) {
         s.assistantMessageCount++
-        s.lastAssistantMessageId = id
+        if (id) {
+          s.recentAssistantIds.push(id)
+          if (s.recentAssistantIds.length > RECENT_ID_WINDOW) s.recentAssistantIds.shift()
+        }
+      }
+      if (Array.isArray(message.content)) {
+        for (const block of message.content) {
+          if (block && typeof block === 'object' && (block as Rec).type === 'tool_use') s.toolUseCount++
+        }
       }
       const model = str(message.model)
       if (model && model !== '<synthetic>') {
@@ -313,13 +335,18 @@ export async function readHeadHash(filePath: string, parsedBytes: number): Promi
  * (used to attribute legacy project-level agent-*.jsonl logs).
  */
 export async function readDeclaredSessionId(filePath: string, maxLines = 5): Promise<string | undefined> {
+  return readDeclaredField(filePath, 'sessionId', maxLines)
+}
+
+/** First non-empty string value of `field` in the first few records of a JSONL file. */
+export async function readDeclaredField(filePath: string, field: string, maxLines = 5): Promise<string | undefined> {
   let n = 0
   for await (const line of readJsonlLines(filePath, { chunkSize: 64 * 1024 })) {
     if (++n > maxLines) break
     try {
       const rec = JSON.parse(line.text) as Rec
-      const sid = str(rec?.sessionId)
-      if (sid) return sid
+      const value = str(rec?.[field])
+      if (value) return value
     } catch {
       /* ignore */
     }

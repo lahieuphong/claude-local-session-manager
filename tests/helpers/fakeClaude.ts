@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { DiscoveryEnv } from '../../src/main/services/claudeDiscovery'
 import { isInsideOrEqual } from '../../src/main/security/pathValidator'
 import { ScanCache } from '../../src/main/services/cacheService'
-import { LocalArchiveStore } from '../../src/main/services/localArchiveStore'
+import { ManagerHiddenStore } from '../../src/main/services/managerHiddenStore'
 import { ProcessService, type RawProcess } from '../../src/main/services/processService'
 import { SessionRepository } from '../../src/main/services/sessionRepository'
 import { ArchiveService } from '../../src/main/services/archiveService'
@@ -41,7 +41,7 @@ export interface FakeClaude {
   writeSessionData(projectDirName: string, uuid: string, files?: Record<string, string>): Promise<string>
   writeMetadata(localId: string, obj: Record<string, unknown> | string, dir?: string): Promise<string>
   writeUuidDir(kind: 'file-history' | 'session-env', uuid: string): Promise<string>
-  writeLive(pid: number, sessionId: string): Promise<string>
+  writeLive(pid: number, sessionId: string, extra?: Record<string, unknown>): Promise<string>
   cleanup(): Promise<void>
 }
 
@@ -126,9 +126,9 @@ export async function createFakeClaude(): Promise<FakeClaude> {
       await writeFile(path.join(dir, 'backup@v1'), 'backup content', 'utf8')
       return dir
     },
-    async writeLive(pid, sessionId) {
+    async writeLive(pid, sessionId, extra = {}) {
       const file = path.join(liveDir, `${pid}.json`)
-      await writeFile(file, JSON.stringify({ pid, sessionId, cwd: 'C:\\Work\\demo', status: 'idle', name: 'demo-1' }), 'utf8')
+      await writeFile(file, JSON.stringify({ pid, sessionId, cwd: 'C:\\Work\\demo', status: 'idle', name: 'demo-1', ...extra }), 'utf8')
       return file
     },
     async cleanup() {
@@ -145,25 +145,45 @@ export async function copyFixture(rel: string, dest: string): Promise<void> {
 export interface Harness {
   repo: SessionRepository
   processService: ProcessService
-  localArchive: LocalArchiveStore
+  hidden: ManagerHiddenStore
+  cache: ScanCache
   archive: ArchiveService
   deleter: DeleteService
   /** Processes the stubbed process query returns (mutable). */
   processes: RawProcess[]
 }
 
-/** Wire the real services against a fake Claude tree with a stubbed process list. */
-export function createHarness(fake: FakeClaude, opts: { dryRun?: boolean } = {}): Harness {
+/**
+ * Wire the real services against a fake Claude tree with a stubbed process
+ * list. Filesystem decoding of folder names is off unless requested, so tests
+ * never list directories outside their temp tree.
+ */
+export function createHarness(
+  fake: FakeClaude,
+  opts: { dryRun?: boolean; recentWriteMs?: number; decodeFolderNames?: boolean; planTtlMs?: number } = {}
+): Harness {
   const processes: RawProcess[] = []
   const processService = new ProcessService(null, async () => processes, 0)
-  const localArchive = new LocalArchiveStore(null)
-  const repo = new SessionRepository({ env: fake.env, cache: new ScanCache(null), localArchive, processService })
+  const hidden = new ManagerHiddenStore(path.join(fake.root, 'manager-data', 'manager-hidden.json'))
+  const cache = new ScanCache(path.join(fake.root, 'manager-data', 'scan-cache.json'))
+  const repo = new SessionRepository({
+    env: fake.env,
+    cache,
+    hidden,
+    processService,
+    decodeFolderNames: opts.decodeFolderNames ?? false
+  })
   return {
     repo,
     processService,
-    localArchive,
+    hidden,
+    cache,
     processes,
-    archive: new ArchiveService(repo, processService, localArchive, opts.dryRun ?? false),
-    deleter: new DeleteService(repo, processService, opts.dryRun ?? false)
+    archive: new ArchiveService(repo, processService, hidden, opts.dryRun ?? false),
+    deleter: new DeleteService(repo, processService, {
+      dryRun: opts.dryRun ?? false,
+      recentWriteMs: opts.recentWriteMs ?? 0,
+      planTtlMs: opts.planTtlMs
+    })
   }
 }

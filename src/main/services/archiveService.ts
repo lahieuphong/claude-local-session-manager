@@ -4,7 +4,7 @@ import type { ActionResult, BulkActionResult } from '../../shared/types'
 import { validateTarget, PathRejectedError, type AllowedRoots } from '../security/pathValidator'
 import { writeFileAtomic } from '../util/atomicWrite'
 import { errorMessage, logger } from '../util/logger'
-import type { LocalArchiveStore } from './localArchiveStore'
+import type { ManagerHiddenStore } from './managerHiddenStore'
 import {
   ARCHIVE_INDEX_FILE,
   parseArchiveIndex,
@@ -101,11 +101,22 @@ export async function setDesktopArchived(
   return { ok: true, message: warnings.length ? `${message} ${warnings.join(' ')}` : message, warnings }
 }
 
+export const NOT_ARCHIVABLE_MESSAGE =
+  'This Claude Code session has no Claude Desktop metadata, so Claude has no archive flag for it. ' +
+  'Use "Hide in manager" instead (it only changes this app’s list).'
+
+/**
+ * Two deliberately separate operations:
+ *  - Archive / Restore: Claude Desktop's own `isArchived` flag. Only for
+ *    sessions with real `local_*.json` metadata. Blocked while Claude runs.
+ *  - Hide / Show in manager: this app's own list. Never touches Claude files,
+ *    never creates Claude metadata, and is not Claude's archive.
+ */
 export class ArchiveService {
   constructor(
     private repo: SessionRepository,
     private processes: ProcessService,
-    private localArchive: LocalArchiveStore,
+    private hidden: ManagerHiddenStore,
     private dryRun: boolean
   ) {}
 
@@ -113,49 +124,67 @@ export class ArchiveService {
     const record = this.repo.getRecord(id)
     const roots = this.repo.getAllowedRoots()
     if (!record || !roots) return { ok: false, code: 'NOT_FOUND', message: 'Session not found. Refresh and try again.' }
+    if (!record.metadata) return { ok: false, code: 'NOT_SUPPORTED', message: NOT_ARCHIVABLE_MESSAGE }
 
-    let result: ActionResult
-    if (record.metadata) {
-      const status = await this.processes.getStatus(true)
-      const guard = globalGuard(status) ?? sessionGuard(status, record.guardUuids)
-      if (guard) return { ok: false, ...guard }
-      result = await setDesktopArchived(record.metadata, archived, roots, this.dryRun)
-    } else if (record.appArchiveKey) {
-      // Claude Code CLI has no archive flag: keep it in this app only.
-      if (this.dryRun) {
-        result = { ok: true, dryRun: true, message: `DRY RUN: would mark as ${archived ? 'archived' : 'active'} in this app.` }
-      } else {
-        try {
-          await this.localArchive.set(record.appArchiveKey, archived)
-          result = {
-            ok: true,
-            message: archived
-              ? 'Archived in this app only (Claude Code CLI sessions have no archive flag; Claude files were not modified).'
-              : 'Restored in this app.'
-          }
-        } catch (err) {
-          result = { ok: false, code: 'IO_ERROR', message: `Could not save app archive state: ${errorMessage(err)}` }
-        }
-      }
-    } else {
-      return { ok: false, code: 'NOT_SUPPORTED', message: 'Orphan session folders cannot be archived. Delete them or leave them.' }
-    }
+    const status = await this.processes.getStatus(true)
+    const guard = globalGuard(status) ?? sessionGuard(status, record.guardUuids)
+    if (guard) return { ok: false, ...guard }
+    const result = await setDesktopArchived(record.metadata, archived, roots, this.dryRun)
     if (result.ok && !result.dryRun && opts.rescan !== false) await this.repo.scan(archived ? 'archive' : 'restore')
     return result
   }
 
+  async setHidden(id: string, hidden: boolean, opts: { rescan?: boolean } = {}): Promise<ActionResult> {
+    const record = this.repo.getRecord(id)
+    if (!record) return { ok: false, code: 'NOT_FOUND', message: 'Session not found. Refresh and try again.' }
+    if (!record.managerKey) {
+      return {
+        ok: false,
+        code: 'NOT_SUPPORTED',
+        message: "This is a Claude Desktop session: use Archive / Restore, which changes Claude's own archive state."
+      }
+    }
+    try {
+      await this.hidden.set(record.managerKey, hidden)
+    } catch (err) {
+      return { ok: false, code: 'IO_ERROR', message: `Could not save the manager's hidden list: ${errorMessage(err)}` }
+    }
+    if (opts.rescan !== false) await this.repo.scan(hidden ? 'hide' : 'unhide')
+    return {
+      ok: true,
+      message: hidden
+        ? "Hidden in manager. Only this app's list changed; Claude's files and archive state are untouched."
+        : 'Shown in manager again.'
+    }
+  }
+
   async bulk(ids: string[], archived: boolean): Promise<BulkActionResult> {
+    return this.runBulk(ids, (id) => this.setArchived(id, archived, { rescan: false }), archived ? 'Archived' : 'Restored', (r) => r.ok && !r.dryRun)
+  }
+
+  async bulkHidden(ids: string[], hidden: boolean): Promise<BulkActionResult> {
+    return this.runBulk(ids, (id) => this.setHidden(id, hidden, { rescan: false }), hidden ? 'Hidden' : 'Shown', (r) => r.ok)
+  }
+
+  private async runBulk(
+    ids: string[],
+    op: (id: string) => Promise<ActionResult>,
+    verb: string,
+    changed: (r: ActionResult) => boolean
+  ): Promise<BulkActionResult> {
     const results: BulkActionResult['results'] = []
     for (const id of ids) {
       const title = this.repo.getRecord(id)?.session.displayTitle ?? id
-      results.push({ id, title, ...(await this.setArchived(id, archived, { rescan: false })) })
+      results.push({ id, title, ...(await op(id)) })
     }
-    if (results.some((r) => r.ok && !r.dryRun)) await this.repo.scan(archived ? 'bulk-archive' : 'bulk-restore')
+    if (results.some(changed)) await this.repo.scan(`bulk-${verb.toLowerCase()}`)
     const failed = results.filter((r) => !r.ok)
-    const verb = archived ? 'Archived' : 'Restored'
     return {
       ok: failed.length === 0,
-      message: failed.length === 0 ? `${verb} ${results.length} session(s).` : `${verb} ${results.length - failed.length} of ${results.length}; ${failed.length} failed.`,
+      message:
+        failed.length === 0
+          ? `${verb} ${results.length} session(s).`
+          : `${verb} ${results.length - failed.length} of ${results.length}; ${failed.length} skipped or failed.`,
       results
     }
   }

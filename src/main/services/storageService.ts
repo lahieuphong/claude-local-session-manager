@@ -17,8 +17,9 @@ export function computeStorageInfo(snapshot: ScanSnapshot, cachePath: string): S
   }
   return {
     totalSessions: s.length,
-    active: s.filter((x) => !x.archived && x.status !== 'orphan' && x.status !== 'metadata-only').length,
+    active: s.filter((x) => !x.archived && !x.hiddenInManager && (x.status === 'active' || x.status === 'transcript-only')).length,
     archived: s.filter((x) => x.archived).length,
+    hiddenInManager: s.filter((x) => x.hiddenInManager).length,
     transcriptOnly: s.filter((x) => x.status === 'transcript-only').length,
     metadataOnly: s.filter((x) => x.status === 'metadata-only').length,
     orphan: s.filter((x) => x.status === 'orphan').length,

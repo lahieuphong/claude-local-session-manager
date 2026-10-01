@@ -37,18 +37,30 @@ export type TitleSource =
   | 'untitled'
 
 /** How a session is archived, if at all. */
-export type ArchiveSource =
-  /** `isArchived: true` in the Claude Desktop metadata file. */
-  | 'desktop-metadata'
-  /** Archived only inside this app (Claude Code CLI has no archive flag). */
-  | 'app-local'
+/**
+ * How a running Claude Code process holds a session (from the `status` in
+ * ~/.claude/sessions/<pid>.json): `running` = busy generating, `idle` =
+ * attached but idle, `in-use` = attached in any other state (waiting for
+ * input/permission, unknown). Every state blocks deletion.
+ */
+export type LiveState = 'running' | 'idle' | 'in-use'
 
 export interface LiveSessionRef {
   pid: number
+  state: LiveState
   status?: string
   name?: string
   entrypoint?: string
 }
+
+/** Where the canonical project path of a session came from. */
+export type ProjectSource =
+  | 'metadata-cwd'
+  | 'transcript-cwd'
+  | 'owner-session'
+  | 'folder-records'
+  | 'decoded-folder-name'
+  | 'unresolved'
 
 export interface ClaudeSession {
   /** Internal stable ID assigned by the scanner. The only ID the renderer may send back. */
@@ -74,23 +86,31 @@ export interface ClaudeSession {
   /** Older transcripts of the same Desktop session (`priorCliSessionIds`). */
   priorCliSessionIds: string[]
 
+  /** Canonical workspace path (real cwd). Never part of any delete plan. */
   projectPath?: string
   projectName: string
-  /** Key used for grouping/filtering by project. */
+  /** Key used for grouping/filtering by project (derived from the canonical path). */
   projectKey: string
-  /** Name of the folder under ~/.claude/projects. */
+  projectSource: ProjectSource
+  /** Encoded folder name under ~/.claude/projects (storage locator only). */
   projectDirName?: string
+  /** Full path of that Claude storage folder (never deleted as a whole). */
+  projectStorageDir?: string
 
   metadataFile?: string
   transcriptFile?: string
   extraTranscriptFiles: string[]
   sessionDataDirectory?: string
+  /** Same-UUID session folders written while the session's cwd was elsewhere. */
+  extraSessionDataDirectories: string[]
   fileHistoryDirectory?: string
   sessionEnvDirectory?: string
   legacySubagentLogs: string[]
 
+  /** Claude Desktop's own archive flag (`isArchived` in metadata). */
   archived: boolean
-  archiveSource?: ArchiveSource
+  /** Hidden only inside this manager; Claude's files and archive state are untouched. */
+  hiddenInManager: boolean
 
   createdAt?: number
   updatedAt?: number
@@ -107,8 +127,14 @@ export interface ClaudeSession {
   firstUserMessage?: string
   lastUserMessage?: string
   lastPrompt?: string
+  /** Meaningful user prompts (excludes tool results, meta and command output). */
   userMessageCount?: number
+  /** Distinct assistant API messages (message IDs); one per model step, incl. tool-use steps. */
   assistantMessageCount?: number
+  /** tool_use blocks issued by the assistant. */
+  toolUseCount?: number
+  /** Non-empty JSONL records in the transcript. */
+  transcriptRecordCount?: number
 
   gitBranch?: string
   claudeVersion?: string
@@ -206,7 +232,9 @@ export interface ProjectUsage {
 export interface StorageInfo {
   totalSessions: number
   active: number
+  /** Claude Desktop archived (isArchived). */
   archived: number
+  hiddenInManager: number
   transcriptOnly: number
   metadataOnly: number
   orphan: number
@@ -242,6 +270,8 @@ export interface LiveCliSession {
   status?: string
   name?: string
   entrypoint?: string
+  /** Process start time recorded by Claude Code (Windows FILETIME), used to detect PID reuse. */
+  procStart?: string
   alive: boolean
 }
 
@@ -269,6 +299,9 @@ export type ActionErrorCode =
   | 'INVALID_INPUT'
   | 'PATH_REJECTED'
   | 'CHANGED_ON_DISK'
+  | 'STALE_PLAN'
+  | 'PROTECTED_PATH'
+  | 'RECENTLY_WRITTEN'
   | 'IO_ERROR'
   | 'CANCELLED'
 
@@ -294,15 +327,22 @@ export type PlanItemKind =
   | 'session-env'
   | 'tombstone'
   | 'archive-index'
+  /** A record in this manager's own data (hidden list, scan cache). Not a Claude file. */
+  | 'manager-record'
 
-export type PlanAction = 'delete-file' | 'delete-directory' | 'create-file' | 'update-file'
+export type PlanAction = 'delete-file' | 'delete-directory' | 'create-file' | 'update-file' | 'remove-record'
 
 export interface DeletePlanItem {
   kind: PlanItemKind
   action: PlanAction
   path: string
   sizeBytes?: number
+  /** Files that will be removed (1 for a file target). */
   fileCount?: number
+  /** Directories that will be removed, including the target folder itself. */
+  dirCount?: number
+  /** For `manager-record` items: which manager store the record lives in. */
+  recordType?: 'hidden-list' | 'scan-cache'
   note?: string
 }
 
@@ -310,8 +350,17 @@ export interface SessionDeletePlan {
   sessionId: string
   displayTitle: string
   status: SessionStatus
+  cliSessionId?: string
+  desktopSessionId?: string
+  projectName: string
+  /** Workspace path; listed under "will not delete". */
+  projectPath?: string
   items: DeletePlanItem[]
   totalBytes: number
+  totalFiles: number
+  totalDirs: number
+  /** Paths explicitly kept (workspace, Claude project folder, project memory). */
+  willNotDelete: Array<{ path: string; reason: string }>
   /** When set, this session cannot be deleted right now. */
   blockedReason?: string
   blockedCode?: ActionErrorCode
@@ -319,21 +368,29 @@ export interface SessionDeletePlan {
 }
 
 export interface DeletePlan {
-  token: string
+  /** Unique ID of this plan; the only plan reference the renderer sends back. */
+  planId: string
+  /** Deterministic SHA-256 of the plan content (targets, sizes, identities). */
+  contentHash: string
   createdAt: number
+  expiresAt: number
   dryRun: boolean
   bulk: boolean
   /** Sessions that will be deleted. */
   sessions: SessionDeletePlan[]
   /** Sessions that were requested but are blocked and will be skipped. */
   blocked: SessionDeletePlan[]
-  /** Global reason that blocks everything (e.g. Claude Desktop running). */
+  /** Global reason that blocks real deletion (e.g. Claude Desktop running). */
   globalBlockedReason?: string
   globalBlockedCode?: ActionErrorCode
   totalBytes: number
   totalItems: number
+  totalFiles: number
+  totalDirs: number
   /** Phrases accepted in the confirmation box. */
   confirmationPhrases: string[]
+  /** Human-readable plan for review/copying (generated by the main process). */
+  reportText: string
 }
 
 export type DeleteItemOutcome = 'deleted' | 'created' | 'updated' | 'missing' | 'failed' | 'skipped' | 'dry-run'
@@ -357,7 +414,12 @@ export interface DeleteResult {
   dryRun: boolean
   code?: ActionErrorCode
   message: string
+  planId?: string
+  /** Dry run only: the reason a real delete would be refused right now. */
+  wouldBeBlocked?: string
   sessions: SessionDeleteResult[]
+  /** Human-readable report of what was (or would be) done. */
+  reportText?: string
 }
 
 export type ExportFormat = 'jsonl' | 'info' | 'markdown'

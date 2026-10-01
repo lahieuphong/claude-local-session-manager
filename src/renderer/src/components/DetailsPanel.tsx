@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
-import type { ClaudeSession, ExportFormat, SessionDetails } from '../../../shared/types'
+import type { ClaudeSession, ExportFormat, LiveState, ProjectSource, SessionDetails } from '../../../shared/types'
 import { formatBytes, formatCount, formatDateTime } from '../../../shared/format'
 import { TITLE_SOURCE_LABEL, describeRawTitle } from '../../../shared/titles'
-import { archive, errText, exportOne, openDelete, runAction, toast, useAppState } from '../stores/appStore'
+import { archive, errText, exportOne, hideInManager, openDelete, runAction, toast, useAppState } from '../stores/appStore'
 import { displayPath } from '../utils/paths'
 import { SessionBadges } from './Badges'
 import {
   IconArchive,
+  IconEye,
+  IconEyeOff,
   IconCopy,
   IconDownload,
   IconExternal,
@@ -17,6 +19,26 @@ import {
 } from './Icons'
 
 const api = (): Window['sessionManager'] => window.sessionManager
+
+const LIVE_TEXT: Record<LiveState, string> = { running: 'Running', idle: 'Open (idle)', 'in-use': 'In use' }
+
+const PROJECT_SOURCE_LABEL: Record<ProjectSource, string> = {
+  'metadata-cwd': 'Claude Desktop metadata cwd',
+  'transcript-cwd': 'Transcript cwd',
+  'owner-session': 'Owning session',
+  'folder-records': 'Records inside the session folder',
+  'decoded-folder-name': 'Claude storage folder name, matched to a real folder',
+  unresolved: 'Unresolved'
+}
+
+const MESSAGES_HINT =
+  'Prompts = meaningful user prompts. Assistant messages = distinct model API responses (one per step; a single prompt ' +
+  'usually produces many because every tool-use step is a separate response). Tool calls = tool_use blocks.'
+
+function plural(n: number | undefined, word: string): string {
+  if (n === undefined) return `— ${word}s`
+  return `${formatCount(n)} ${word}${n === 1 ? '' : 's'}`
+}
 
 export function DetailsPanel(): ReactElement {
   const selectedId = useAppState((s) => s.selectedId)
@@ -64,11 +86,11 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
 
   const desktopBlocked = !!process && (process.desktopRunning || !!process.error)
   const liveBlocked = !!s.live
-  const archiveTouchesClaude = s.hasMetadata
-  const archiveBlock = archiveTouchesClaude && (desktopBlocked || liveBlocked)
+  // Claude archive changes Claude Desktop metadata, so it is guarded like delete.
+  const archiveBlock = s.hasMetadata && (desktopBlocked || liveBlocked)
   const deleteBlock = desktopBlocked || liveBlocked
   const blockReason = liveBlocked
-    ? `Open in a running Claude Code process (PID ${s.live!.pid}${s.live!.name ? `, ${s.live!.name}` : ''}). Close it before ${s.hasMetadata ? 'archiving or deleting' : 'deleting'}.`
+    ? `Attached to a live Claude Code process (state: ${LIVE_TEXT[s.live!.state]}, PID ${s.live!.pid}${s.live!.name ? `, ${s.live!.name}` : ''}). Close that session before ${s.hasMetadata ? 'archiving or deleting' : 'deleting'}.`
     : desktopBlocked
       ? process?.error
         ? 'Claude process status is unknown. Refresh the process status first.'
@@ -84,18 +106,28 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
         </header>
 
         <div className="actions">
-          {s.archived ? (
-            <button className="btn" disabled={busy || archiveBlock || s.kind === 'orphan'} onClick={() => void archive(s.id, false)}>
-              <IconRestore size={14} /> Restore
+          {s.hasMetadata ? (
+            s.archived ? (
+              <button className="btn" disabled={busy || archiveBlock} onClick={() => void archive(s.id, false)} title="Clear Claude Desktop's isArchived flag">
+                <IconRestore size={14} /> Restore
+              </button>
+            ) : (
+              <button className="btn" disabled={busy || archiveBlock} onClick={() => void archive(s.id, true)} title="Set Claude Desktop's isArchived flag">
+                <IconArchive size={14} /> Archive
+              </button>
+            )
+          ) : s.hiddenInManager ? (
+            <button className="btn" disabled={busy} onClick={() => void hideInManager(s.id, false)}>
+              <IconEye size={14} /> Show in manager
             </button>
           ) : (
             <button
               className="btn"
-              disabled={busy || archiveBlock || s.kind === 'orphan'}
-              onClick={() => void archive(s.id, true)}
-              title={s.hasMetadata ? 'Set isArchived=true in the Claude Desktop metadata' : 'CLI sessions have no archive flag: archived in this app only'}
+              disabled={busy}
+              onClick={() => void hideInManager(s.id, true)}
+              title="Hide in this manager only. Claude's files and archive state are not modified."
             >
-              <IconArchive size={14} /> Archive
+              <IconEyeOff size={14} /> Hide in manager
             </button>
           )}
           <ExportMenu session={s} disabled={busy} />
@@ -108,12 +140,16 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
           </button>
         </div>
         {blockReason && <div className="notice warn small">{blockReason}</div>}
-        {!s.hasMetadata && s.kind === 'cli' && (
+        {!s.hasMetadata && (
           <div className="notice subtle small">
-            Claude Code CLI session — there is no Claude Desktop metadata file, so Archive only hides it inside this app.
+            {s.kind === 'cli' ? 'Claude Code transcript-only session' : 'Orphan session folder'}: there is no Claude Desktop metadata, so Claude
+            has no archive state for it. <strong>Hide in manager</strong> only changes this app&apos;s own list. It does not modify
+            Claude&apos;s files or archive state, and the session still appears in Claude.
           </div>
         )}
-        {appInfo?.dryRun && <div className="notice info small">DRY RUN mode: archive, restore and delete only log what they would do.</div>}
+        {appInfo?.dryRun && (
+          <div className="notice info small">DRY RUN mode: archive, restore and delete only validate and log; no Claude file is modified.</div>
+        )}
 
         {s.problems.length > 0 && (
           <Section title="Problems">
@@ -133,7 +169,19 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
             {s.customTitle && <KV k="Custom title" v={s.customTitle} />}
             {s.aiTitle && <KV k="AI title" v={s.aiTitle} />}
             <KV k="Project" v={s.projectName} />
-            <KV k="Project path" v={s.projectPath ? <code>{s.projectPath}</code> : <span className="muted">unknown</span>} />
+            <KV
+              k="Project path"
+              v={s.projectPath ? <code>{s.projectPath}</code> : <span className="muted">unknown</span>}
+              hint="Canonical workspace (real cwd). Never part of a delete plan."
+            />
+            <KV k="Project source" v={PROJECT_SOURCE_LABEL[s.projectSource]} />
+            {s.projectStorageDir && (
+              <KV
+                k="Claude storage folder"
+                v={<code>{displayPath(s.projectStorageDir, raw)}</code>}
+                hint="Encoded folder under ~/.claude/projects (storage locator only)"
+              />
+            )}
             <KV k="Session ID" v={<CopyCode value={s.id} />} hint="Internal ID assigned by this app" />
             <KV k="CLI session ID" v={s.cliSessionId ? <CopyCode value={s.cliSessionId} /> : '—'} />
             {s.desktopSessionId && <KV k="Desktop session ID" v={<CopyCode value={s.desktopSessionId} />} />}
@@ -143,12 +191,21 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
             <KV k="Model" v={s.models.length > 1 ? s.models.join(', ') : s.model ?? '—'} />
             <KV
               k="Messages"
+              hint={MESSAGES_HINT}
               v={
-                s.userMessageCount !== undefined
-                  ? `${formatCount(s.userMessageCount)} prompt${s.userMessageCount === 1 ? '' : 's'} · ${formatCount(s.assistantMessageCount)} response${s.assistantMessageCount === 1 ? '' : 's'}`
-                  : '—'
+                s.userMessageCount !== undefined ? (
+                  <span title={MESSAGES_HINT}>
+                    {plural(s.userMessageCount, 'prompt')} · {plural(s.assistantMessageCount, 'assistant message')} ·{' '}
+                    {plural(s.toolUseCount, 'tool call')}
+                  </span>
+                ) : (
+                  '—'
+                )
               }
             />
+            {s.transcriptRecordCount !== undefined && (
+              <KV k="Transcript records" v={formatCount(s.transcriptRecordCount)} hint="Non-empty JSONL lines" />
+            )}
             <KV
               k="Size"
               v={
@@ -171,7 +228,12 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
             />
             {s.gitBranch && <KV k="Git branch" v={s.gitBranch} />}
             {s.claudeVersion && <KV k="Claude Code" v={`${s.claudeVersion}${s.entrypoint ? ` · ${s.entrypoint}` : ''}`} />}
-            {s.live && <KV k="In use by" v={`PID ${s.live.pid}${s.live.status ? ` (${s.live.status})` : ''}`} />}
+            {s.live && (
+              <KV
+                k="Claude Code process"
+                v={`${LIVE_TEXT[s.live.state]} · PID ${s.live.pid}${s.live.status ? ` (status: ${s.live.status})` : ''}`}
+              />
+            )}
           </dl>
         </Section>
 
@@ -179,6 +241,9 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
           <PathRow label="Metadata" path={s.metadataFile} raw={raw} size={s.metadataSize} onReveal={() => runAction(() => api().revealMetadata(s.id))} />
           <PathRow label="Transcript" path={s.transcriptFile} raw={raw} size={s.transcriptSize} onReveal={() => runAction(() => api().revealTranscript(s.id))} />
           <PathRow label="Session data" path={s.sessionDataDirectory} raw={raw} size={s.sessionDataSize} onReveal={() => runAction(() => api().revealSessionData(s.id))} />
+          {s.extraSessionDataDirectories.map((p) => (
+            <PathRow key={p} label="Session data (other folder, same UUID)" path={p} raw={raw} />
+          ))}
           {s.extraTranscriptFiles.map((p) => (
             <PathRow key={p} label="Prior transcript" path={p} raw={raw} />
           ))}

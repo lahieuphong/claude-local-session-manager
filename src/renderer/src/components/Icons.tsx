@@ -139,6 +139,20 @@ export const IconInfo = (p: IconProps): ReactElement => (
     <path d="M12 11v6M12 7.5h.01" />
   </Icon>
 )
+export const IconEyeOff = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <path d="M3 3l18 18" />
+    <path d="M10.6 5.1A10.5 10.5 0 0 1 12 5c6 0 9.5 7 9.5 7a17 17 0 0 1-3 3.8" />
+    <path d="M6.6 6.6C4 8.3 2.5 12 2.5 12S6 19 12 19a9.6 9.6 0 0 0 5.4-1.6" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  </Icon>
+)
+export const IconEye = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+)
 export const IconMinus = (p: IconProps): ReactElement => (
   <Icon {...p}>
     <path d="M6 12h12" />

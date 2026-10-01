@@ -39,7 +39,7 @@ describe('partial delete failure', () => {
     const h = createHarness(fake)
     const [s] = (await h.repo.scan()).sessions
     const plan = await h.deleter.createPlan([s.id], false)
-    const r = await h.deleter.execute([s.id], 'DELETE', plan.token, false)
+    const r = await h.deleter.execute([s.id], 'DELETE', plan.planId, false)
 
     expect(r.ok).toBe(false)
     expect(r.partial).toBe(true)

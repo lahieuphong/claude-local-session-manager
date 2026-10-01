@@ -5,18 +5,22 @@ import { errorMessage, logger } from '../util/logger'
 import type { AllowedRoots } from '../security/pathValidator'
 import type { ScanCache } from './cacheService'
 import { discoverRoots, toAllowedRoots, toStorageRoots, type DiscoveredRoots, type DiscoveryEnv } from './claudeDiscovery'
-import type { LocalArchiveStore } from './localArchiveStore'
+import type { ManagerHiddenStore } from './managerHiddenStore'
 import { TOMBSTONE_PREFIX, scanDesktopRoot, stripBom, transcriptIdsOf, type DesktopRootScan } from './metadataParser'
 import type { ProcessService } from './processService'
-import { buildSessions, type SessionRecord } from './sessionBuilder'
-import { scanProjects, scanUuidDirs, type ScanOptions } from './sessionScanner'
+import { canonicalizeProjects, decodeProjectDirName, sanitizeProjectPath } from './projectResolver'
+import { buildSessions, knownWorkspacePaths, type SessionRecord } from './sessionBuilder'
+import { scanProjects, scanUuidDirs, type ProjectsScan, type ScanOptions } from './sessionScanner'
+import { pathKey } from '../util/fsx'
 
 export interface RepositoryDeps {
   env: DiscoveryEnv
   cache: ScanCache
-  localArchive: LocalArchiveStore
+  hidden: ManagerHiddenStore
   processService: ProcessService
   scanOptions?: ScanOptions
+  /** Disable filesystem decoding of encoded project folder names (tests). */
+  decodeFolderNames?: boolean
 }
 
 /**
@@ -48,6 +52,19 @@ export class SessionRepository extends EventEmitter {
 
   getAllowedRoots(): AllowedRoots | null {
     return this.roots ? toAllowedRoots(this.roots) : null
+  }
+
+  /** Every known project workspace path (never a delete target, never inside a delete target). */
+  getWorkspacePaths(): string[] {
+    return knownWorkspacePaths(this.records.values())
+  }
+
+  getCache(): ScanCache {
+    return this.deps.cache
+  }
+
+  getHiddenStore(): ManagerHiddenStore {
+    return this.deps.hidden
   }
 
   isScanning(): boolean {
@@ -104,14 +121,22 @@ export class SessionRepository extends EventEmitter {
     if (projects) issues.push(...projects.issues)
     if (!roots.projectsRoot) issues.push({ message: 'Claude Code projects folder (~/.claude/projects) was not found.' })
 
+    const decodedProjectDirs = await this.resolveFolderNames(projects, desktop)
     const { sessions, records } = buildSessions({
       desktop,
       projects,
       fileHistory,
       sessionEnv,
-      appArchived: this.deps.localArchive.keys(),
-      liveSessions: processStatus?.liveSessions ?? []
+      hidden: this.deps.hidden.keys(),
+      liveSessions: processStatus?.liveSessions ?? [],
+      decodedProjectDirs
     })
+    // One project per real workspace: drive-letter/case variants and junctions collapse.
+    await canonicalizeProjects(sessions)
+    for (const r of records.values()) {
+      const p = r.session.projectPath
+      if (p && !r.workspacePaths.some((w) => pathKey(w) === pathKey(p))) r.workspacePaths.push(p)
+    }
     this.records = records
 
     if (projects) {
@@ -151,6 +176,34 @@ export class SessionRepository extends EventEmitter {
     )
     this.emit('changed', snapshot)
     return snapshot
+  }
+
+  /**
+   * Map encoded project folder names (storage locators) to real workspace
+   * paths for folders whose sessions carry no cwd of their own: first from
+   * cwds recorded elsewhere, then by decoding the name against the real
+   * filesystem (read-only directory listings).
+   */
+  private async resolveFolderNames(projects: ProjectsScan | null, desktop: DesktopRootScan[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>()
+    if (!projects) return map
+    const known: string[] = []
+    for (const t of projects.transcripts) if (t.summary.cwd) known.push(t.summary.cwd)
+    for (const d of desktop) for (const r of d.records) for (const c of [r.cwd, r.originCwd]) if (c) known.push(c)
+    for (const d of projects.dataDirs) if (d.declaredCwd) known.push(d.declaredCwd)
+    for (const c of known) {
+      const key = sanitizeProjectPath(c).toLowerCase()
+      if (!map.has(key)) map.set(key, c)
+    }
+    if (this.deps.decodeFolderNames === false) return map
+    const needed = new Set(
+      projects.dataDirs.filter((d) => !d.declaredCwd && !map.has(d.projectDirName.toLowerCase())).map((d) => d.projectDirName)
+    )
+    for (const name of needed) {
+      const decoded = await decodeProjectDirName(name).catch(() => undefined)
+      if (decoded) map.set(name.toLowerCase(), decoded)
+    }
+    return map
   }
 
   async getDetails(id: string): Promise<SessionDetails | null> {

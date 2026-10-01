@@ -10,9 +10,8 @@ import type {
   ScanSnapshot
 } from '../../../shared/types'
 
-export type SessionFilter = 'all' | 'active' | 'archived' | 'transcript-only' | 'problems'
-export type SortKey = 'updated-desc' | 'updated-asc' | 'title' | 'size-desc' | 'size-asc'
-export type GroupBy = 'date' | 'project' | 'none'
+import type { GroupBy, SessionFilter, SortKey } from '../../../shared/sessionQuery'
+export type { GroupBy, SessionFilter, SortKey }
 
 export type View =
   | { kind: 'sessions'; filter: SessionFilter; project?: string }
@@ -253,12 +252,26 @@ export async function archive(id: string, archived: boolean): Promise<void> {
   if (r) reportResult(r)
 }
 
-export async function bulkArchive(ids: string[], archived: boolean): Promise<void> {
-  const r: BulkActionResult | undefined = await withBusy(() => (archived ? api().bulkArchive(ids) : api().bulkRestore(ids)))
+function reportBulk(r: BulkActionResult | undefined): void {
   if (!r) return
   const first = r.results.find((x) => !x.ok)
   toast(r.ok ? (r.results.some((x) => x.dryRun) ? 'info' : 'success') : 'warning', first ? `${r.message} ${first.title}: ${first.message}` : r.message)
   if (r.ok) setState({ checked: [] })
+}
+
+/** Claude Desktop archive (sessions with real metadata only). */
+export async function bulkArchive(ids: string[], archived: boolean): Promise<void> {
+  reportBulk(await withBusy(() => (archived ? api().bulkArchive(ids) : api().bulkRestore(ids))))
+}
+
+/** Manager-only hide/show (never touches Claude files). */
+export async function hideInManager(id: string, hidden: boolean): Promise<void> {
+  const r = await withBusy(() => (hidden ? api().hideSession(id) : api().unhideSession(id)))
+  if (r) reportResult(r)
+}
+
+export async function bulkHideInManager(ids: string[], hidden: boolean): Promise<void> {
+  reportBulk(await withBusy(() => (hidden ? api().bulkHide(ids) : api().bulkUnhide(ids))))
 }
 
 function reportExport(r: ExportResult | undefined): void {

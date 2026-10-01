@@ -113,19 +113,43 @@ describe('archive / restore of Claude Desktop sessions', () => {
   })
 })
 
-describe('app-local archive for Claude Code CLI sessions', () => {
-  it('archives without touching any Claude file, even while Claude Desktop runs', async () => {
+describe('manager-only hide for Claude Code transcript-only sessions', () => {
+  it('refuses Claude "Archive" for a session without Claude Desktop metadata (no fake metadata is created)', async () => {
+    const transcript = await fake.writeTranscript(PROJ, U.B, [userLine(U.B, 'cli', '2026-09-29T01:00:00Z')])
+    const h = createHarness(fake)
+    const [s] = (await h.repo.scan()).sessions
+    const r = await h.archive.setArchived(s.id, true)
+    expect(r).toMatchObject({ ok: false, code: 'NOT_SUPPORTED' })
+    expect(r.message).toMatch(/Hide in manager/)
+    expect(await readdir(fake.orgDir)).toEqual([]) // no local_*.json invented
+    expect(await readFile(transcript, 'utf8')).toContain('"cli"')
+  })
+
+  it('Hide / Show in manager changes only the manager list, even while Claude Desktop runs', async () => {
     const transcript = await fake.writeTranscript(PROJ, U.B, [userLine(U.B, 'cli', '2026-09-29T01:00:00Z')])
     const before = await readFile(transcript, 'utf8')
+    const mtime = (await stat(transcript)).mtimeMs
     const h = createHarness(fake)
     h.processes.push({ pid: 10, name: 'claude.exe', executablePath: DESKTOP_EXE })
     const [s] = (await h.repo.scan()).sessions
-    const r = await h.archive.setArchived(s.id, true)
+
+    const r = await h.archive.setHidden(s.id, true)
     expect(r.ok).toBe(true)
-    const after = h.repo.getSnapshot()!.sessions[0]
-    expect(after).toMatchObject({ archived: true, archiveSource: 'app-local', status: 'transcript-only' })
+    expect(r.message).toMatch(/Claude's files and archive state are untouched/)
+    const hidden = h.repo.getSnapshot()!.sessions[0]
+    expect(hidden).toMatchObject({ hiddenInManager: true, archived: false, status: 'transcript-only' })
     expect(await readFile(transcript, 'utf8')).toBe(before)
-    await h.archive.setArchived(s.id, false)
-    expect(h.repo.getSnapshot()!.sessions[0].archived).toBe(false)
+    expect((await stat(transcript)).mtimeMs).toBe(mtime)
+    expect(JSON.parse(await readFile(h.hidden.filePath!, 'utf8')).hidden).toHaveProperty([`cli:${transcript.toLowerCase()}`])
+
+    await h.archive.setHidden(s.id, false)
+    expect(h.repo.getSnapshot()!.sessions[0].hiddenInManager).toBe(false)
+  })
+
+  it('Claude Desktop sessions use real Archive, not Hide', async () => {
+    await setup()
+    const h = createHarness(fake)
+    const [s] = (await h.repo.scan()).sessions
+    expect(await h.archive.setHidden(s.id, true)).toMatchObject({ ok: false, code: 'NOT_SUPPORTED' })
   })
 })

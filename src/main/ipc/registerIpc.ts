@@ -1,6 +1,6 @@
 import { ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
 import { IPC } from '../../shared/ipc'
-import type { ActionResult, AppInfo, AppSettings, ExportFormat } from '../../shared/types'
+import type { ActionResult, AppInfo, AppSettings } from '../../shared/types'
 import { isDirectory, lstatOrNull } from '../util/fsx'
 import { errorMessage, logger } from '../util/logger'
 import type { ArchiveService } from '../services/archiveService'
@@ -8,7 +8,7 @@ import type { ScanCache } from '../services/cacheService'
 import type { DeleteService } from '../services/deleteService'
 import type { ExportService } from '../services/exportService'
 import type { ProcessService } from '../services/processService'
-import { SESSION_ID_RE } from '../services/sessionBuilder'
+import { assertFormat, assertId, assertIds, assertPlanId, assertString } from './validators'
 import type { SessionRepository } from '../services/sessionRepository'
 import type { SettingsService } from '../services/settingsService'
 import { computeStorageInfo } from '../services/storageService'
@@ -24,29 +24,6 @@ export interface IpcContext {
   appInfo: AppInfo
   onSettingsChanged(settings: AppSettings): void
   isTrustedSender(event: IpcMainInvokeEvent): boolean
-}
-
-const MAX_BULK = 5000
-const FORMATS: ExportFormat[] = ['jsonl', 'info', 'markdown']
-
-function assertId(v: unknown): string {
-  if (typeof v !== 'string' || !SESSION_ID_RE.test(v)) throw new Error('Invalid session id')
-  return v
-}
-
-function assertIds(v: unknown): string[] {
-  if (!Array.isArray(v) || v.length === 0 || v.length > MAX_BULK) throw new Error('Invalid session id list')
-  return [...new Set(v.map(assertId))]
-}
-
-function assertFormat(v: unknown): ExportFormat {
-  if (typeof v !== 'string' || !FORMATS.includes(v as ExportFormat)) throw new Error('Invalid export format')
-  return v as ExportFormat
-}
-
-function assertString(v: unknown, max = 200): string {
-  if (typeof v !== 'string' || v.length > max) throw new Error('Invalid argument')
-  return v
 }
 
 async function reveal(p: string | undefined, label: string): Promise<ActionResult> {
@@ -81,14 +58,18 @@ export function registerIpc(ctx: IpcContext): void {
   handle(IPC.restoreSession, (id) => ctx.archive.setArchived(assertId(id), false))
   handle(IPC.bulkArchive, (ids) => ctx.archive.bulk(assertIds(ids), true))
   handle(IPC.bulkRestore, (ids) => ctx.archive.bulk(assertIds(ids), false))
+  handle(IPC.hideSession, (id) => ctx.archive.setHidden(assertId(id), true))
+  handle(IPC.unhideSession, (id) => ctx.archive.setHidden(assertId(id), false))
+  handle(IPC.bulkHide, (ids) => ctx.archive.bulkHidden(assertIds(ids), true))
+  handle(IPC.bulkUnhide, (ids) => ctx.archive.bulkHidden(assertIds(ids), false))
 
   handle(IPC.createDeletePlan, (id) => ctx.deleter.createPlan([assertId(id)], false))
-  handle(IPC.deleteSession, (id, confirmation, token) =>
-    ctx.deleter.execute([assertId(id)], assertString(confirmation), assertString(token), false)
+  handle(IPC.deleteSession, (id, confirmation, planId) =>
+    ctx.deleter.execute([assertId(id)], assertString(confirmation), assertPlanId(planId), false)
   )
   handle(IPC.createBulkDeletePlan, (ids) => ctx.deleter.createPlan(assertIds(ids), true))
-  handle(IPC.bulkDelete, (ids, confirmation, token) =>
-    ctx.deleter.execute(assertIds(ids), assertString(confirmation), assertString(token), true)
+  handle(IPC.bulkDelete, (ids, confirmation, planId) =>
+    ctx.deleter.execute(assertIds(ids), assertString(confirmation), assertPlanId(planId), true)
   )
 
   handle(IPC.exportSession, (id, format) => ctx.exporter.exportOne(assertId(id), assertFormat(format)))

@@ -16,6 +16,7 @@ import { stripBom } from './metadataParser'
 import {
   emptySummary,
   parseTranscriptFile,
+  readDeclaredField,
   readDeclaredSessionId,
   readHeadHash,
   type ParseResult,
@@ -51,10 +52,14 @@ export interface SessionDataDirEntry {
   projectDirName: string
   bytes: number
   files: number
+  /** Sub-folders inside, not counting the folder itself. */
+  dirs: number
   links: number
   mtimeMs: number
   customTitle?: string
   subagentLogs: number
+  /** `cwd` declared by records inside (only read for folders without a sibling transcript). */
+  declaredCwd?: string
 }
 
 export interface LegacySubagentLog {
@@ -71,6 +76,7 @@ export interface UuidDirEntry {
   dirPath: string
   bytes: number
   files: number
+  dirs: number
   links: number
 }
 
@@ -218,6 +224,7 @@ export async function scanProjects(root: string, cache: ScanCache, opts: ScanOpt
             projectDirName: project.name,
             bytes: usage.bytes,
             files: usage.files,
+            dirs: usage.dirs,
             links: usage.links,
             mtimeMs: Math.max(usage.newestMtimeMs, st?.mtimeMs ?? 0),
             customTitle: await readCustomTitleJson(full),
@@ -233,12 +240,31 @@ export async function scanProjects(root: string, cache: ScanCache, opts: ScanOpt
     }
   }
 
+  // Folders without a transcript next to them: learn their real cwd from the
+  // records inside (e.g. subagent logs), so the project is not guessed from
+  // the encoded folder name.
+  const transcriptKeys = new Set(transcriptJobs.map((t) => `${t.projectDir}|${t.uuid}`))
+  for (const d of out.dataDirs) {
+    if (transcriptKeys.has(`${d.projectDir}|${d.uuid}`)) continue
+    d.declaredCwd = await readFolderCwd(d.dirPath).catch(() => undefined)
+  }
+
   out.transcripts = await mapLimit(transcriptJobs, opts.concurrency ?? 3, async (job) => {
     const { summary, error } = await summarizeTranscript(job.filePath, job.size, job.mtimeMs, cache, out.stats, opts)
     if (error) out.issues.push({ path: job.filePath, message: error })
     return { ...job, summary, parseError: error }
   })
   return out
+}
+
+async function readFolderCwd(dir: string): Promise<string | undefined> {
+  const subagents = path.join(dir, 'subagents')
+  const logs = (await readdirSafe(subagents)).filter((e) => e.isFile() && AGENT_JSONL_RE.test(e.name)).slice(0, 3)
+  for (const log of logs) {
+    const cwd = await readDeclaredField(path.join(subagents, log.name), 'cwd')
+    if (cwd) return cwd
+  }
+  return undefined
 }
 
 /** Scan a folder of `<uuid>/` sub-folders (file-history, session-env). */
@@ -254,6 +280,7 @@ export async function scanUuidDirs(root: string | null): Promise<Map<string, Uui
       dirPath,
       bytes: usage.bytes,
       files: usage.files,
+      dirs: usage.dirs,
       links: usage.links
     })
   }
@@ -279,7 +306,8 @@ export async function readLiveSessionRegistry(dir: string | null): Promise<Array
         cwd: typeof obj.cwd === 'string' ? obj.cwd : undefined,
         status: typeof obj.status === 'string' ? obj.status : undefined,
         name: typeof obj.name === 'string' ? obj.name : undefined,
-        entrypoint: typeof obj.entrypoint === 'string' ? obj.entrypoint : undefined
+        entrypoint: typeof obj.entrypoint === 'string' ? obj.entrypoint : undefined,
+        procStart: typeof obj.procStart === 'string' && /^\d{1,20}$/.test(obj.procStart) ? obj.procStart : undefined
       })
     } catch {
       /* file may be mid-write; ignore */

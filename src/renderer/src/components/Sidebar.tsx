@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactElement } from 'react'
 import { formatBytes } from '../../../shared/format'
 import { refreshProcess, setView, useAppState, type SessionFilter } from '../stores/appStore'
-import { filterCounts, projectsOf } from '../utils/sessionQuery'
+import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
 import {
   AppMark,
   IconAlert,
@@ -9,6 +9,7 @@ import {
   IconChevron,
   IconCircleDot,
   IconDatabase,
+  IconEyeOff,
   IconFileText,
   IconFolder,
   IconLayers,
@@ -19,7 +20,8 @@ import {
 const FILTERS: Array<{ id: SessionFilter; label: string; icon: (p: { size?: number }) => ReactElement }> = [
   { id: 'all', label: 'All sessions', icon: IconLayers },
   { id: 'active', label: 'Active', icon: IconCircleDot },
-  { id: 'archived', label: 'Archived', icon: IconArchive },
+  { id: 'archived', label: 'Archived (Claude)', icon: IconArchive },
+  { id: 'hidden', label: 'Hidden in manager', icon: IconEyeOff },
   { id: 'transcript-only', label: 'Transcript only', icon: IconFileText },
   { id: 'problems', label: 'Metadata only / Problems', icon: IconAlert }
 ]
@@ -34,7 +36,8 @@ export function Sidebar(): ReactElement {
 
   const sessions = useMemo(() => snapshot?.sessions ?? [], [snapshot])
   const counts = useMemo(() => filterCounts(sessions), [sessions])
-  const projects = useMemo(() => projectsOf(sessions), [sessions])
+  // One entry per canonical workspace; hidden sessions are not counted.
+  const projects = useMemo(() => projectsOf(sessions.filter((s) => !s.hiddenInManager)), [sessions])
   const totalSize = useMemo(() => sessions.reduce((n, s) => n + s.totalSize, 0), [sessions])
 
   const activeFilter = view.kind === 'sessions' && !view.project ? view.filter : null
@@ -76,10 +79,10 @@ export function Sidebar(): ReactElement {
                 key={p.key}
                 className={`nav-item nav-project ${activeProject === p.key ? 'active' : ''}`}
                 onClick={() => setView({ kind: 'sessions', filter: 'all', project: p.key })}
-                title={`${p.path ?? p.name}\n${p.count} session(s) · ${formatBytes(p.totalSize)}`}
+                title={`${p.path ?? 'Workspace path unknown'}\n${p.count} session(s) · ${formatBytes(p.totalSize)}`}
               >
                 <IconFolder size={14} />
-                <span className="nav-text">{p.name}</span>
+                <span className="nav-text">{p.label}</span>
                 <span className="nav-count">{p.count}</span>
               </button>
             ))}

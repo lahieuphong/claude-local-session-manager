@@ -1,7 +1,17 @@
-import type { ClaudeSession } from '../../../shared/types'
-import type { GroupBy, SessionFilter, SortKey } from '../stores/appStore'
+import type { ClaudeSession } from './types'
 
+/** Pure session list logic (filter, search, sort, group, projects), DOM-free so it is unit-testable. */
+export type SessionFilter = 'all' | 'active' | 'archived' | 'hidden' | 'transcript-only' | 'problems'
+export type SortKey = 'updated-desc' | 'updated-asc' | 'title' | 'size-desc' | 'size-asc'
+export type GroupBy = 'date' | 'project' | 'none'
+
+/**
+ * Hidden-in-manager sessions appear only in the "Hidden in manager" view.
+ * "Archived" means Claude Desktop's own archive flag, nothing else.
+ */
 export function matchesFilter(s: ClaudeSession, filter: SessionFilter): boolean {
+  if (filter === 'hidden') return s.hiddenInManager
+  if (s.hiddenInManager) return false
   switch (filter) {
     case 'all':
       return true
@@ -120,24 +130,46 @@ export function groupSessions(list: ClaudeSession[], groupBy: GroupBy, now = new
 export interface ProjectEntry {
   key: string
   name: string
+  /** Name shown in the sidebar; disambiguated when two workspaces share a name. */
+  label: string
   path?: string
   count: number
   totalSize: number
 }
 
+function parentName(p: string | undefined): string | undefined {
+  const parts = (p ?? '').split(/[\\/]+/).filter(Boolean)
+  return parts.length >= 2 ? parts[parts.length - 2] : undefined
+}
+
+/** One entry per canonical workspace (projectKey), never per Claude storage folder. */
 export function projectsOf(sessions: ClaudeSession[]): ProjectEntry[] {
   const map = new Map<string, ProjectEntry>()
   for (const s of sessions) {
-    const p = map.get(s.projectKey) ?? { key: s.projectKey, name: s.projectName, path: s.projectPath, count: 0, totalSize: 0 }
+    const p = map.get(s.projectKey) ?? {
+      key: s.projectKey,
+      name: s.projectName,
+      label: s.projectName,
+      path: s.projectPath,
+      count: 0,
+      totalSize: 0
+    }
     p.count++
     p.totalSize += s.totalSize
     map.set(s.projectKey, p)
   }
-  return [...map.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+  const list = [...map.values()]
+  const byName = new Map<string, number>()
+  for (const p of list) byName.set(p.name.toLowerCase(), (byName.get(p.name.toLowerCase()) ?? 0) + 1)
+  for (const p of list) {
+    const parent = parentName(p.path)
+    if ((byName.get(p.name.toLowerCase()) ?? 0) > 1 && parent) p.label = `${p.name} · ${parent}`
+  }
+  return list.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
 }
 
 export function filterCounts(sessions: ClaudeSession[]): Record<SessionFilter, number> {
-  const filters: SessionFilter[] = ['all', 'active', 'archived', 'transcript-only', 'problems']
+  const filters: SessionFilter[] = ['all', 'active', 'archived', 'hidden', 'transcript-only', 'problems']
   return Object.fromEntries(filters.map((f) => [f, sessions.filter((s) => matchesFilter(s, f)).length])) as Record<
     SessionFilter,
     number

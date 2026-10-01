@@ -10,6 +10,9 @@ import {
 } from '../util/fsx'
 import type { PlanItemKind } from '../../shared/types'
 
+/** Plan item kinds that are Claude files on disk (manager records are not). */
+export type ClaudeTargetKind = Exclude<PlanItemKind, 'manager-record'>
+
 /**
  * Canonical (realpath'd) roots that the app is allowed to modify.
  * Produced by discovery; never supplied by the renderer or by settings.
@@ -57,7 +60,7 @@ const desktop = (r: AllowedRoots): Array<string | null> => r.desktopRoots
  *   file-history  <~/.claude/file-history>/<uuid>/
  *   session-env   <~/.claude/session-env>/<uuid>/
  */
-export const TARGET_RULES: Record<PlanItemKind, TargetRule> = {
+export const TARGET_RULES: Record<ClaudeTargetKind, TargetRule> = {
   transcript: { roots: projects, type: 'file', depth: [2], name: UUID_JSONL_RE },
   'session-data': { roots: projects, type: 'directory', depth: [2], name: UUID_RE },
   'subagent-log': { roots: projects, type: 'file', depth: [2], name: AGENT_JSONL_RE },
@@ -84,7 +87,7 @@ function samePath(a: string, b: string): boolean {
 }
 
 /** Lexical checks that do not touch the disk. */
-export function checkLexical(target: unknown, kind: PlanItemKind, roots: AllowedRoots): { resolved: string; root: string } {
+export function checkLexical(target: unknown, kind: ClaudeTargetKind, roots: AllowedRoots): { resolved: string; root: string } {
   if (typeof target !== 'string' || target.length === 0) {
     throw new PathRejectedError('Path is empty or not a string', String(target))
   }
@@ -125,7 +128,7 @@ export interface ValidatedTarget {
  *
  * A missing target is reported as `exists: false` (nothing to delete).
  */
-export async function validateTarget(target: unknown, kind: PlanItemKind, roots: AllowedRoots): Promise<ValidatedTarget> {
+export async function validateTarget(target: unknown, kind: ClaudeTargetKind, roots: AllowedRoots): Promise<ValidatedTarget> {
   const { resolved, root } = checkLexical(target, kind, roots)
   const rule = TARGET_RULES[kind]
 
@@ -154,6 +157,19 @@ async function assertCanonical(p: string, root: string, reported: string): Promi
   }
   if (!samePath(real, p)) throw new PathRejectedError('Path resolves through a link to a different location', reported)
   if (!isStrictlyInside(real, realRoot)) throw new PathRejectedError('Canonical path escapes the allowed root', reported)
+}
+
+/**
+ * Refuse a target that IS a protected path (a project workspace, an approved
+ * root, the home folder, a drive root) or CONTAINS one (is its ancestor).
+ * Deleting such a target would destroy a workspace or a whole root.
+ */
+export function assertNotProtected(target: string, protectedPaths: Iterable<string>): void {
+  for (const p of protectedPaths) {
+    if (!p) continue
+    if (samePath(target, p)) throw new PathRejectedError(`Target equals a protected path (${p})`, target)
+    if (isStrictlyInside(p, target)) throw new PathRejectedError(`Target is an ancestor of a protected path (${p})`, target)
+  }
 }
 
 /** True if `p` is inside any Claude storage root (used to refuse export targets). */

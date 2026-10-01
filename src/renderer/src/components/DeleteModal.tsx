@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react'
-import type { DeleteItemResult, DeletePlan, DeletePlanItem, DeleteResult, PlanItemKind } from '../../../shared/types'
+import type {
+  DeleteItemResult,
+  DeletePlan,
+  DeletePlanItem,
+  DeleteResult,
+  PlanItemKind,
+  SessionDeletePlan
+} from '../../../shared/types'
 import { isConfirmationValid } from '../../../shared/confirm'
-import { formatBytes } from '../../../shared/format'
+import { formatBytes, formatDateTime } from '../../../shared/format'
 import { closeDelete, errText, refreshProcess, setChecked, toast, useAppState } from '../stores/appStore'
-import { IconAlert, IconCheck, IconMinus, IconRefresh, IconTrash, IconX } from './Icons'
+import { IconAlert, IconCheck, IconCopy, IconMinus, IconRefresh, IconTrash, IconX } from './Icons'
 
 const api = (): Window['sessionManager'] => window.sessionManager
 
@@ -15,7 +22,8 @@ const KIND_LABEL: Record<PlanItemKind, string> = {
   'file-history': 'File history',
   'session-env': 'Session env',
   tombstone: 'Tombstone',
-  'archive-index': 'Archive index'
+  'archive-index': 'Archive index',
+  'manager-record': 'Manager record'
 }
 
 function actionLabel(i: DeletePlanItem): string {
@@ -23,11 +31,25 @@ function actionLabel(i: DeletePlanItem): string {
     case 'delete-file':
       return 'delete file'
     case 'delete-directory':
-      return `delete folder${i.fileCount !== undefined ? ` (${i.fileCount} files)` : ''}`
+      return `delete folder · ${i.fileCount ?? 0} file(s), ${i.dirCount ?? 1} folder(s)`
     case 'create-file':
-      return 'create'
+      return 'create file'
     case 'update-file':
-      return 'update'
+      return 'update file'
+    case 'remove-record':
+      return 'remove record'
+  }
+}
+
+const exactBytes = (n: number): string => `${formatBytes(n)} (${n.toLocaleString('en-US')} bytes)`
+
+async function copyText(text: string | undefined, what: string): Promise<void> {
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    toast('info', `${what} copied to clipboard`)
+  } catch (err) {
+    toast('error', `Copy failed: ${errText(err)}`)
   }
 }
 
@@ -43,11 +65,9 @@ export function DeleteModal(): ReactElement | null {
   const loadPlan = useCallback(async () => {
     if (!request) return
     setLoading(true)
-    setError(null)
     setConfirmText('')
     try {
-      const p = request.bulk ? await api().createBulkDeletePlan(request.ids) : await api().createDeletePlan(request.ids[0])
-      setPlan(p)
+      setPlan(request.bulk ? await api().createBulkDeletePlan(request.ids) : await api().createDeletePlan(request.ids[0]))
     } catch (err) {
       setError(errText(err))
     } finally {
@@ -58,6 +78,7 @@ export function DeleteModal(): ReactElement | null {
   useEffect(() => {
     setPlan(null)
     setResult(null)
+    setError(null)
     void loadPlan()
   }, [loadPlan])
 
@@ -72,25 +93,30 @@ export function DeleteModal(): ReactElement | null {
   if (!request) return null
 
   const valid = !!plan && isConfirmationValid(confirmText, plan.confirmationPhrases)
-  const canDelete = !!plan && !plan.globalBlockedReason && plan.sessions.length > 0 && valid && !running
+  // A dry run mutates nothing, so it may run even while real deletion is blocked.
+  const blockedForReal = !!plan?.globalBlockedReason && !plan.dryRun
+  const canRun = !!plan && plan.sessions.length > 0 && valid && !running && !blockedForReal
 
   const execute = async (): Promise<void> => {
-    if (!plan || !canDelete) return
+    if (!plan || !canRun) return
     setRunning(true)
+    setError(null)
     try {
       const ids = plan.sessions.map((s) => s.sessionId)
+      // Only internal session IDs, the plan ID and the typed confirmation cross IPC.
       const r = request.bulk
-        ? await api().bulkDelete(ids, confirmText.trim(), plan.token)
-        : await api().deleteSession(ids[0], confirmText.trim(), plan.token)
+        ? await api().bulkDelete(ids, confirmText.trim(), plan.planId)
+        : await api().deleteSession(ids[0], confirmText.trim(), plan.planId)
+      if (r.sessions.length === 0) {
+        // Refused before anything ran (stale plan, path rejected, …): show why and a fresh plan.
+        setError(r.message)
+        toast('error', r.message)
+        await loadPlan()
+        return
+      }
       setResult(r)
       if (r.ok && !r.dryRun) setChecked([])
-      toast(r.ok ? (r.dryRun ? 'info' : 'success') : 'error', r.message)
-      if (!r.ok && r.sessions.length === 0) {
-        // Rejected before anything ran (e.g. files changed): show a fresh plan.
-        setResult(null)
-        setError(r.message)
-        await loadPlan()
-      }
+      toast(r.ok ? (r.dryRun ? 'info' : 'success') : r.dryRun ? 'warning' : 'error', r.message)
     } catch (err) {
       setError(errText(err))
     } finally {
@@ -100,18 +126,26 @@ export function DeleteModal(): ReactElement | null {
 
   const recheck = async (): Promise<void> => {
     await refreshProcess(true)
+    setError(null)
     await loadPlan()
   }
 
   const n = request.ids.length
-  const title = request.bulk && n > 1 ? `Delete ${n} sessions permanently` : 'Delete session permanently'
+  const title = result
+    ? result.dryRun
+      ? 'Dry run result'
+      : 'Delete result'
+    : request.bulk && n > 1
+      ? `Delete ${n} sessions permanently`
+      : 'Delete session permanently'
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !running && closeDelete()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
         <header className="modal-header">
           <IconTrash size={18} className="danger-text" />
-          <h2>{result ? (result.dryRun ? 'Dry run result' : 'Delete result') : title}</h2>
+          <h2>{title}</h2>
+          {plan && <span className="plan-id mono">plan {plan.planId.slice(0, 12)}…</span>}
           <div className="spacer" />
           <button className="icon-btn" onClick={closeDelete} disabled={running} title="Close (Esc)">
             <IconX size={16} />
@@ -123,19 +157,23 @@ export function DeleteModal(): ReactElement | null {
           {error && <div className="notice error">{error}</div>}
 
           {result ? (
-            <ResultView result={result} />
+            <ResultView result={result} plan={plan} />
           ) : (
             plan && (
               <>
                 {plan.dryRun && (
                   <div className="notice info">
-                    <strong>DRY RUN mode.</strong> Nothing will be deleted; the planned paths are only written to the log.
+                    <strong>DRY RUN mode.</strong> The full validation pipeline runs and the exact plan is logged, but no Claude file is
+                    modified.
                   </div>
                 )}
                 {plan.globalBlockedReason && (
                   <div className="notice warn row-flex">
                     <IconAlert size={16} />
-                    <span>{plan.globalBlockedReason}</span>
+                    <span>
+                      {plan.dryRun ? 'A real delete would be blocked right now: ' : ''}
+                      {plan.globalBlockedReason}
+                    </span>
                     <div className="spacer" />
                     <button className="btn small" onClick={() => void recheck()}>
                       <IconRefresh size={13} /> Re-check
@@ -144,7 +182,7 @@ export function DeleteModal(): ReactElement | null {
                 )}
                 {plan.blocked.length > 0 && (
                   <div className="notice warn">
-                    <strong>{plan.blocked.length} session(s) will be skipped:</strong>
+                    <strong>{plan.blocked.length} session(s) cannot be deleted and are not part of this plan:</strong>
                     <ul className="plain-list">
                       {plan.blocked.map((b) => (
                         <li key={b.sessionId}>
@@ -162,39 +200,29 @@ export function DeleteModal(): ReactElement | null {
                       <div>
                         <strong>This action permanently deletes these local files.</strong>
                         <div className="small">
-                          They are not moved to the Recycle Bin and cannot be recovered unless you have your own backup. Only the exact paths
-                          listed below are touched.
+                          Not moved to the Recycle Bin; unrecoverable without your own backup. Only the exact paths below are touched, and
+                          only if every check still passes at execution time.
                         </div>
                       </div>
                     </div>
 
                     <div className="plan-summary">
-                      {plan.sessions.length} session(s) · {plan.totalItems} item(s) · {formatBytes(plan.totalBytes)} will be freed
+                      {plan.sessions.length} session(s) · {plan.totalFiles} file(s) · {plan.totalDirs} folder(s) ·{' '}
+                      {exactBytes(plan.totalBytes)}
                     </div>
 
                     <div className="plan-list">
                       {plan.sessions.map((s) => (
-                        <div key={s.sessionId} className="plan-session">
-                          <div className="plan-session-head">
-                            <span className="strong">{s.displayTitle}</span>
-                            <span className="muted small">{formatBytes(s.totalBytes)}</span>
-                          </div>
-                          {s.items.map((i) => (
-                            <div key={i.path} className={`plan-item ${i.action.startsWith('delete') ? '' : 'non-delete'}`}>
-                              <span className="plan-kind">{KIND_LABEL[i.kind]}</span>
-                              <span className="plan-action">{actionLabel(i)}</span>
-                              {i.sizeBytes !== undefined && <span className="plan-size">{formatBytes(i.sizeBytes)}</span>}
-                              <div className="plan-path">{i.path}</div>
-                              {i.note && <div className="plan-note">{i.note}</div>}
-                            </div>
-                          ))}
-                          {s.warnings.map((w, idx) => (
-                            <div key={idx} className="plan-note warn-text">
-                              {w}
-                            </div>
-                          ))}
-                        </div>
+                        <SessionPlanCard key={s.sessionId} plan={s} />
                       ))}
+                    </div>
+
+                    <div className="plan-meta mono">
+                      <div>Plan ID: {plan.planId}</div>
+                      <div>Content hash: sha256:{plan.contentHash}</div>
+                      <div>
+                        Created {formatDateTime(plan.createdAt)} · expires {formatDateTime(plan.expiresAt)}
+                      </div>
                     </div>
 
                     <label className="confirm-label">
@@ -211,7 +239,7 @@ export function DeleteModal(): ReactElement | null {
                         value={confirmText}
                         onChange={(e) => setConfirmText(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && void execute()}
-                        disabled={!!plan.globalBlockedReason || running}
+                        disabled={blockedForReal || running}
                         autoFocus
                         spellCheck={false}
                         placeholder={plan.confirmationPhrases[0]}
@@ -219,13 +247,23 @@ export function DeleteModal(): ReactElement | null {
                     </label>
                   </>
                 )}
-                {plan.sessions.length === 0 && !plan.globalBlockedReason && <div className="muted">Nothing can be deleted.</div>}
+                {plan.sessions.length === 0 && <div className="muted">Nothing in this selection can be deleted.</div>}
               </>
             )
           )}
         </div>
 
         <footer className="modal-footer">
+          {plan && (
+            <button
+              className="btn"
+              onClick={() => void copyText(result?.reportText ?? plan.reportText, result ? 'Delete result' : 'Delete plan')}
+              title="Copy the exact plan as text for independent review"
+            >
+              <IconCopy size={14} /> {result ? 'COPY RESULT' : 'COPY DELETE PLAN'}
+            </button>
+          )}
+          <div className="spacer" />
           {result ? (
             <button className="btn" onClick={closeDelete}>
               Close
@@ -235,9 +273,9 @@ export function DeleteModal(): ReactElement | null {
               <button className="btn ghost" onClick={closeDelete} disabled={running}>
                 Cancel
               </button>
-              <button className="btn danger solid" disabled={!canDelete} onClick={() => void execute()}>
+              <button className="btn danger solid" disabled={!canRun} onClick={() => void execute()}>
                 <IconTrash size={14} />
-                {running ? 'Deleting…' : plan?.dryRun ? 'Run dry-run delete' : 'Delete permanently'}
+                {running ? (plan?.dryRun ? 'Validating…' : 'Deleting…') : plan?.dryRun ? 'Run dry-run validation' : 'Delete permanently'}
               </button>
             </>
           )}
@@ -247,35 +285,105 @@ export function DeleteModal(): ReactElement | null {
   )
 }
 
-function OutcomeIcon({ item }: { item: DeleteItemResult }): ReactElement {
-  if (item.outcome === 'deleted' || item.outcome === 'created' || item.outcome === 'updated') return <IconCheck size={14} className="ok-text" />
-  if (item.outcome === 'failed') return <IconX size={14} className="danger-text" />
+function ItemRow({ item }: { item: DeletePlanItem | DeleteItemResult }): ReactElement {
+  const outcome = 'outcome' in item ? item.outcome : undefined
+  return (
+    <div className={`plan-item ${item.action.startsWith('delete') ? '' : 'non-delete'}`}>
+      {outcome && <OutcomeIcon outcome={outcome} />}
+      <span className="plan-kind">{KIND_LABEL[item.kind]}</span>
+      <span className="plan-action">{outcome ?? actionLabel(item)}</span>
+      {item.sizeBytes !== undefined && item.action.startsWith('delete') && <span className="plan-size">{formatBytes(item.sizeBytes)}</span>}
+      <div className="plan-path">{item.path}</div>
+      {item.note && <div className="plan-note">{item.note}</div>}
+      {'error' in item && item.error && <div className="plan-note danger-text">{item.error}</div>}
+    </div>
+  )
+}
+
+function SessionPlanCard({ plan: s, items }: { plan: SessionDeletePlan; items?: Array<DeletePlanItem | DeleteItemResult> }): ReactElement {
+  const list = items ?? s.items
+  const groups: Array<[string, Array<DeletePlanItem | DeleteItemResult>]> = [
+    ['Will delete', list.filter((i) => i.action === 'delete-file' || i.action === 'delete-directory')],
+    ['Will change (Claude Desktop bookkeeping)', list.filter((i) => i.action === 'create-file' || i.action === 'update-file')],
+    ['Manager records removed (this app only)', list.filter((i) => i.action === 'remove-record')]
+  ]
+  return (
+    <div className="plan-session">
+      <div className="plan-session-head">
+        <span className="strong">{s.displayTitle}</span>
+        <span className="muted small">
+          {s.totalFiles} file(s) · {s.totalDirs} folder(s) · {exactBytes(s.totalBytes)}
+        </span>
+      </div>
+      <dl className="kv plan-kv">
+        <dt>CLI session ID</dt>
+        <dd className="mono">{s.cliSessionId ?? '—'}</dd>
+        {s.desktopSessionId && (
+          <>
+            <dt>Desktop session ID</dt>
+            <dd className="mono">{s.desktopSessionId}</dd>
+          </>
+        )}
+        <dt>Project</dt>
+        <dd>{s.projectName}</dd>
+        <dt>Project path</dt>
+        <dd className="mono">{s.projectPath ?? 'unknown'}</dd>
+      </dl>
+      {groups.map(([label, group]) =>
+        group.length ? (
+          <div key={label} className="plan-group">
+            <div className="plan-group-label">{label}</div>
+            {group.map((i) => (
+              <ItemRow key={`${i.kind}|${i.path}|${i.note ?? ''}`} item={i} />
+            ))}
+          </div>
+        ) : null
+      )}
+      <div className="plan-group keep">
+        <div className="plan-group-label">Will NOT delete</div>
+        {s.willNotDelete.map((k) => (
+          <div key={k.path} className="keep-item">
+            <div className="plan-path">{k.path}</div>
+            <div className="plan-note">{k.reason}</div>
+          </div>
+        ))}
+      </div>
+      {s.warnings.map((w, idx) => (
+        <div key={idx} className="plan-note warn-text">
+          {w}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function OutcomeIcon({ outcome }: { outcome: DeleteItemResult['outcome'] }): ReactElement {
+  if (outcome === 'deleted' || outcome === 'created' || outcome === 'updated') return <IconCheck size={14} className="ok-text" />
+  if (outcome === 'failed') return <IconX size={14} className="danger-text" />
+  if (outcome === 'dry-run') return <IconCheck size={14} className="info-text" />
   return <IconMinus size={14} className="muted" />
 }
 
-function ResultView({ result }: { result: DeleteResult }): ReactElement {
+function ResultView({ result, plan }: { result: DeleteResult; plan: DeletePlan | null }): ReactElement {
   return (
     <>
-      <div className={`notice ${result.ok ? (result.dryRun ? 'info' : 'success') : 'error'}`}>{result.message}</div>
+      <div className={`notice ${result.ok ? (result.dryRun ? 'info' : 'success') : result.dryRun ? 'warn' : 'error'}`}>{result.message}</div>
+      {result.dryRun && (
+        <div className="notice subtle small">
+          Every target below passed validation (approved root, exact shape, canonical path, no link escape, not a workspace) and was
+          logged. Nothing was deleted.
+        </div>
+      )}
       <div className="plan-list">
-        {result.sessions.map((s) => (
-          <div key={s.sessionId} className="plan-session">
-            <div className="plan-session-head">
-              <span className="strong">{s.displayTitle}</span>
-              <span className={`badge outcome-${s.outcome}`}>{s.outcome}</span>
+        {result.sessions.map((r) => {
+          const p = plan?.sessions.find((s) => s.sessionId === r.sessionId)
+          return p ? (
+            <div key={r.sessionId}>
+              <span className={`badge outcome-${r.outcome}`}>{r.outcome}</span>
+              <SessionPlanCard plan={p} items={r.items} />
             </div>
-            {s.error && <div className="plan-note danger-text">{s.error}</div>}
-            {s.items.map((i) => (
-              <div key={i.path} className="plan-item">
-                <OutcomeIcon item={i} />
-                <span className="plan-kind">{KIND_LABEL[i.kind]}</span>
-                <span className="plan-action">{i.outcome}</span>
-                <div className="plan-path">{i.path}</div>
-                {i.error && <div className="plan-note danger-text">{i.error}</div>}
-              </div>
-            ))}
-          </div>
-        ))}
+          ) : null
+        })}
       </div>
     </>
   )

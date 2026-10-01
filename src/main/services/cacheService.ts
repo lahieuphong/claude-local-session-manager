@@ -73,6 +73,22 @@ export class ScanCache {
     this.dirty = true
   }
 
+  /** Remove the cached entries for specific files (after they were deleted). */
+  forget(filePaths: string[]): number {
+    let removed = 0
+    for (const p of filePaths) {
+      const key = pathKey(p)
+      for (const table of [this.data.transcripts, this.data.subagents] as Array<Record<string, unknown>>) {
+        if (key in table) {
+          delete table[key]
+          removed++
+          this.dirty = true
+        }
+      }
+    }
+    return removed
+  }
+
   /** Drop entries for files that no longer exist. */
   prune(livePaths: Iterable<string>): void {
     const live = new Set([...livePaths].map(pathKey))

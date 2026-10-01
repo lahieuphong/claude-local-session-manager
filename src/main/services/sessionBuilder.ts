@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
-import type { ClaudeSession, LiveCliSession, SessionStatus } from '../../shared/types'
+import path from 'node:path'
+import type { ClaudeSession, LiveCliSession, LiveState, ProjectSource, SessionStatus } from '../../shared/types'
 import { resolveDisplayTitle } from '../../shared/titles'
 import { pathKey } from '../util/fsx'
 import {
@@ -8,6 +9,7 @@ import {
   type DesktopRootScan,
   type DesktopStorageDir
 } from './metadataParser'
+import { normalizeWorkspacePath, projectKeyFor, sanitizeProjectPath, workspaceName } from './projectResolver'
 import type {
   LegacySubagentLog,
   ProjectsScan,
@@ -15,6 +17,8 @@ import type {
   TranscriptEntry,
   UuidDirEntry
 } from './sessionScanner'
+
+export { sanitizeProjectPath } from './projectResolver'
 
 /**
  * Main-process-only view of a session: the exact files that belong to it.
@@ -29,6 +33,8 @@ export interface SessionRecord {
   /** Transcripts shown for this session but shared with another metadata file: never deleted. */
   sharedTranscripts: TranscriptEntry[]
   dataDir?: SessionDataDirEntry
+  /** Same-UUID session folders in other project folders (written from another cwd). */
+  extraDataDirs: SessionDataDirEntry[]
   legacySubagentLogs: LegacySubagentLog[]
   fileHistoryDir?: UuidDirEntry
   sessionEnvDir?: UuidDirEntry
@@ -36,8 +42,10 @@ export interface SessionRecord {
   ownedUuids: string[]
   /** UUIDs checked against running Claude Code processes. */
   guardUuids: string[]
-  /** Key in the app-local archive store (CLI sessions only). */
-  appArchiveKey?: string
+  /** Key in the manager's own hidden list (sessions without Claude Desktop metadata). */
+  managerKey?: string
+  /** Workspace paths that must never be touched for this session. */
+  workspacePaths: string[]
 }
 
 export interface BuildInput {
@@ -45,8 +53,11 @@ export interface BuildInput {
   projects: ProjectsScan | null
   fileHistory: Map<string, UuidDirEntry>
   sessionEnv: Map<string, UuidDirEntry>
-  appArchived: Set<string>
+  /** Manager-only hidden keys. */
+  hidden: Set<string>
   liveSessions: LiveCliSession[]
+  /** Encoded project folder name (lowercase) → real path, from decoding. */
+  decodedProjectDirs?: Map<string, string>
 }
 
 export function makeSessionId(kind: string, keyPath: string): string {
@@ -55,23 +66,18 @@ export function makeSessionId(kind: string, keyPath: string): string {
 
 export const SESSION_ID_RE = /^[a-f0-9]{20}$/
 
-/** Claude Code names project folders by replacing non-alphanumerics with "-". */
-export function sanitizeProjectPath(cwd: string): string {
-  return cwd.replace(/[^a-zA-Z0-9]/g, '-')
-}
-
-function baseName(p: string): string {
-  const parts = p.replace(/[\\/]+$/, '').split(/[\\/]/)
-  return parts[parts.length - 1] || p
-}
-
-function projectKeyOf(projectPath: string | undefined, projectDirName: string | undefined): string {
-  if (projectPath) return 'path:' + projectPath.replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase()
-  return 'dir:' + (projectDirName ?? 'unknown').toLowerCase()
-}
-
-export function appArchiveKeyFor(transcriptPath: string): string {
+export function managerKeyForTranscript(transcriptPath: string): string {
   return 'cli:' + pathKey(transcriptPath)
+}
+
+export function managerKeyForFolder(dirPath: string): string {
+  return 'orphan:' + pathKey(dirPath)
+}
+
+export function liveStateOf(status: string | undefined): LiveState {
+  if (status === 'busy') return 'running'
+  if (status === 'idle') return 'idle'
+  return 'in-use'
 }
 
 function maxDefined(...values: Array<number | undefined>): number | undefined {
@@ -83,21 +89,38 @@ function dataDirKey(projectDir: string, uuid: string): string {
   return pathKey(projectDir) + '|' + uuid.toLowerCase()
 }
 
+function newRecord(partial: Partial<SessionRecord> & { problems: string[] }): SessionRecord {
+  const { problems, ...rest } = partial
+  return {
+    session: { problems } as ClaudeSession,
+    extraTranscripts: [],
+    sharedTranscripts: [],
+    extraDataDirs: [],
+    legacySubagentLogs: [],
+    ownedUuids: [],
+    guardUuids: [],
+    workspacePaths: [],
+    ...rest
+  }
+}
+
 /**
  * Join metadata, transcripts and session folders into sessions.
  *
  * Mapping rules (no guessing):
  *  - Desktop metadata → transcript by `cliSessionId` (and prior/unarchived
- *    IDs) matched against `<uuid>.jsonl` file names. If several project
- *    folders contain the same UUID, the one matching the sanitized `cwd` is
- *    used; otherwise the link is reported as ambiguous and not made.
+ *    IDs) matched exactly against `<uuid>.jsonl` file names. If several
+ *    project folders contain the same UUID, the one matching the sanitized
+ *    `cwd` is used; otherwise the link is reported as ambiguous.
  *  - A transcript referenced by more than one metadata file is shown but
  *    excluded from deletion for both.
  *  - Unclaimed `<uuid>.jsonl` → transcript-only session.
- *  - `<uuid>/` session folder → same project folder + same UUID as a
- *    transcript; otherwise an orphan entry.
- *  - file-history / session-env `<uuid>/` → attached only when exactly one
- *    session owns that UUID.
+ *  - `<uuid>/` session folder → the transcript with the same UUID in the same
+ *    project folder; else the single session owning that UUID (Claude Code
+ *    writes a session's folder under the project folder of its *current*
+ *    cwd, so a `cd` into a sub-folder leaves a same-UUID folder elsewhere);
+ *    else an orphan entry.
+ *  - file-history / session-env `<uuid>/` → only when exactly one session owns that UUID.
  */
 export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; records: Map<string, SessionRecord> } {
   const transcripts = input.projects?.transcripts ?? []
@@ -105,11 +128,7 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
   const legacyLogs = input.projects?.legacySubagentLogs ?? []
 
   const byUuid = new Map<string, TranscriptEntry[]>()
-  for (const t of transcripts) {
-    const list = byUuid.get(t.uuid) ?? []
-    list.push(t)
-    byUuid.set(t.uuid, list)
-  }
+  for (const t of transcripts) byUuid.set(t.uuid, [...(byUuid.get(t.uuid) ?? []), t])
   const dataDirByKey = new Map<string, SessionDataDirEntry>()
   const dataDirsByUuid = new Map<string, SessionDataDirEntry[]>()
   for (const d of dataDirs) {
@@ -135,18 +154,8 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
 
   // 1. Claude Desktop sessions --------------------------------------------
   for (const { rec, storageDir } of allMeta) {
-    const problems: string[] = []
-    if (rec.parseError) problems.push(rec.parseError)
-    const record: SessionRecord = {
-      session: undefined as unknown as ClaudeSession,
-      metadata: rec,
-      storageDir,
-      extraTranscripts: [],
-      sharedTranscripts: [],
-      legacySubagentLogs: [],
-      ownedUuids: [],
-      guardUuids: []
-    }
+    const record = newRecord({ metadata: rec, storageDir, problems: rec.parseError ? [rec.parseError] : [] })
+    const problems = record.session.problems
     const ids = transcriptIdsOf(rec).map((x) => x.toLowerCase())
     const primaryId = (rec.cliSessionId ?? rec.unarchivedCliSessionId)?.toLowerCase()
     const cwd = rec.originCwd ?? rec.cwd
@@ -184,7 +193,6 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
       record.ownedUuids.push(primaryId)
     }
     record.guardUuids = [...ids]
-    record.session = { problems } as ClaudeSession
     records.push(record)
   }
 
@@ -193,25 +201,27 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
     if (used.has(t)) continue
     used.add(t)
     const problems: string[] = []
-    if ((byUuid.get(t.uuid)?.length ?? 0) > 1) {
-      problems.push(`The same session UUID also exists in another project folder.`)
-    }
+    if ((byUuid.get(t.uuid)?.length ?? 0) > 1) problems.push('The same session UUID also exists in another project folder.')
     if (t.parseError) problems.push(t.parseError)
-    records.push({
-      session: { problems } as ClaudeSession,
-      transcript: t,
-      extraTranscripts: [],
-      sharedTranscripts: [],
-      legacySubagentLogs: [],
-      ownedUuids: [t.uuid],
-      guardUuids: [t.uuid],
-      appArchiveKey: appArchiveKeyFor(t.filePath)
-    })
+    records.push(
+      newRecord({
+        transcript: t,
+        ownedUuids: [t.uuid],
+        guardUuids: [t.uuid],
+        managerKey: managerKeyForTranscript(t.filePath),
+        problems
+      })
+    )
+  }
+
+  // UUID → the single session that owns it (shared UUIDs map to null).
+  const owners = new Map<string, SessionRecord | null>()
+  for (const r of records) {
+    for (const u of r.ownedUuids) owners.set(u, owners.has(u) ? null : r)
   }
 
   // 3. Session data folders + legacy subagent logs ------------------------
   for (const r of records) {
-    const owned = [r.transcript, ...r.extraTranscripts].filter((x): x is TranscriptEntry => !!x)
     const primary = r.transcript && !r.sharedTranscripts.includes(r.transcript) ? r.transcript : undefined
     if (primary) {
       const d = dataDirByKey.get(dataDirKey(primary.projectDir, primary.uuid))
@@ -219,49 +229,41 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
         r.dataDir = d
         usedDataDirs.add(d)
       }
-    } else if (r.metadata && !r.transcript && r.ownedUuids.length) {
-      // Metadata-only: attach a session folder only if its UUID is unique.
-      const cands = dataDirsByUuid.get(r.ownedUuids[0]) ?? []
-      if (cands.length === 1 && !usedDataDirs.has(cands[0])) {
-        r.dataDir = cands[0]
-        usedDataDirs.add(cands[0])
-      }
     }
-    for (const t of owned) {
-      if (r.sharedTranscripts.includes(t)) continue
+    for (const t of [r.transcript, ...r.extraTranscripts]) {
+      if (!t || r.sharedTranscripts.includes(t)) continue
       for (const log of legacyLogs) {
         if (log.parentSessionId === t.uuid && pathKey(log.projectDir) === pathKey(t.projectDir)) r.legacySubagentLogs.push(log)
       }
     }
+  }
+  // Same-UUID folders elsewhere belong to the single owner of that UUID.
+  for (const d of dataDirs) {
+    if (usedDataDirs.has(d)) continue
+    const owner = owners.get(d.uuid)
+    if (!owner) continue
+    if (!owner.dataDir && !owner.transcript) owner.dataDir = d
+    else owner.extraDataDirs.push(d)
+    usedDataDirs.add(d)
   }
 
   // 4. Orphan session folders ---------------------------------------------
   for (const d of dataDirs) {
     if (usedDataDirs.has(d)) continue
     const problems = ['Session data folder without a transcript or metadata file (orphan).']
-    if (byUuid.has(d.uuid)) problems.push(`A transcript with the same UUID exists in another project folder.`)
-    records.push({
-      session: { problems } as ClaudeSession,
-      dataDir: d,
-      extraTranscripts: [],
-      sharedTranscripts: [],
-      legacySubagentLogs: [],
-      ownedUuids: [],
-      guardUuids: [d.uuid]
-    })
+    if (owners.get(d.uuid) === null) problems.push('Several sessions own this UUID; the folder is not attached to any of them.')
+    records.push(newRecord({ dataDir: d, guardUuids: [d.uuid], managerKey: managerKeyForFolder(d.dirPath), problems }))
   }
 
   // 5. file-history / session-env: only when exactly one owner ------------
-  const owners = new Map<string, SessionRecord[]>()
-  for (const r of records) {
-    for (const u of r.ownedUuids) owners.set(u, [...(owners.get(u) ?? []), r])
-  }
   const attach = (map: Map<string, UuidDirEntry>, assign: (r: SessionRecord, e: UuidDirEntry) => void, label: string): void => {
     for (const [uuid, entry] of map) {
-      const list = owners.get(uuid) ?? []
-      if (list.length === 1) assign(list[0], entry)
-      else if (list.length > 1) {
-        for (const r of list) r.session.problems.push(`${label} folder ${uuid} is shared by ${list.length} sessions; excluded from deletion.`)
+      const owner = owners.get(uuid)
+      if (owner) assign(owner, entry)
+      else if (owner === null) {
+        for (const r of records) {
+          if (r.ownedUuids.includes(uuid)) r.session.problems.push(`${label} folder ${uuid} is shared by several sessions; excluded from deletion.`)
+        }
       }
     }
   }
@@ -281,6 +283,17 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
   return { sessions, records: map }
 }
 
+function resolveProject(r: SessionRecord, input: BuildInput): { path?: string; source: ProjectSource } {
+  const meta = r.metadata
+  if (meta?.originCwd ?? meta?.cwd) return { path: meta.originCwd ?? meta.cwd, source: 'metadata-cwd' }
+  if (r.transcript?.summary.cwd) return { path: r.transcript.summary.cwd, source: 'transcript-cwd' }
+  if (r.dataDir?.declaredCwd) return { path: r.dataDir.declaredCwd, source: 'folder-records' }
+  const dirName = r.transcript?.projectDirName ?? r.dataDir?.projectDirName
+  const decoded = dirName ? input.decodedProjectDirs?.get(dirName.toLowerCase()) : undefined
+  if (decoded) return { path: decoded, source: 'decoded-folder-name' }
+  return { source: 'unresolved' }
+}
+
 function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
   const problems = r.session.problems
   const meta = r.metadata
@@ -290,8 +303,6 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
   const keyPath = meta?.filePath ?? t?.filePath ?? r.dataDir!.dirPath
   const id = makeSessionId(kind, keyPath)
 
-  const appArchived = !!r.appArchiveKey && input.appArchived.has(r.appArchiveKey)
-  const archived = meta ? meta.isArchived : appArchived
   let status: SessionStatus
   if (meta) status = t ? (meta.isArchived ? 'archived' : 'active') : 'metadata-only'
   else if (t) status = 'transcript-only'
@@ -308,15 +319,18 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
     lastPrompt: s?.lastPrompt
   })
 
-  const projectPath = meta?.originCwd ?? meta?.cwd ?? s?.cwd
+  const project = resolveProject(r, input)
+  const projectPath = project.path ? normalizeWorkspacePath(project.path) : undefined
   const projectDirName = t?.projectDirName ?? r.dataDir?.projectDirName
-  const projectName = projectPath ? baseName(projectPath) : projectDirName ?? 'Unknown project'
+  const projectStorageDir = t?.projectDir ?? r.dataDir?.projectDir
+  if (projectPath) r.workspacePaths = [projectPath]
 
   const transcriptSize = [t, ...r.extraTranscripts].reduce((n, x) => n + (x?.size ?? 0), 0)
   const otherSize =
     (r.fileHistoryDir?.bytes ?? 0) + (r.sessionEnvDir?.bytes ?? 0) + r.legacySubagentLogs.reduce((n, l) => n + l.size, 0)
-  const sessionDataSize = r.dataDir?.bytes ?? 0
+  const sessionDataSize = (r.dataDir?.bytes ?? 0) + r.extraDataDirs.reduce((n, d) => n + d.bytes, 0)
   const metadataSize = meta?.size ?? 0
+  const hasDataDirs = !!r.dataDir || r.extraDataDirs.length > 0
 
   const live = input.liveSessions.find((l) => l.alive && r.guardUuids.includes(l.sessionId))
 
@@ -334,23 +348,26 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
     cliSessionId: meta ? meta.cliSessionId ?? meta.unarchivedCliSessionId : t?.uuid ?? r.dataDir?.uuid,
     priorCliSessionIds: meta?.priorCliSessionIds ?? [],
     projectPath,
-    projectName,
-    projectKey: projectKeyOf(projectPath, projectDirName),
+    projectName: projectPath ? workspaceName(projectPath) : 'Unknown project',
+    projectKey: projectPath ? projectKeyFor(projectPath) : 'unresolved',
+    projectSource: project.source,
     projectDirName,
+    projectStorageDir,
     metadataFile: meta?.filePath,
     transcriptFile: t?.filePath,
     extraTranscriptFiles: r.extraTranscripts.map((x) => x.filePath),
     sessionDataDirectory: r.dataDir?.dirPath,
+    extraSessionDataDirectories: r.extraDataDirs.map((d) => d.dirPath),
     fileHistoryDirectory: r.fileHistoryDir?.dirPath,
     sessionEnvDirectory: r.sessionEnvDir?.dirPath,
     legacySubagentLogs: r.legacySubagentLogs.map((l) => l.filePath),
-    archived,
-    archiveSource: archived ? (meta ? 'desktop-metadata' : 'app-local') : undefined,
+    archived: meta?.isArchived === true,
+    hiddenInManager: !!r.managerKey && input.hidden.has(r.managerKey),
     createdAt: meta?.createdAt ?? s?.firstTimestamp ?? r.dataDir?.mtimeMs,
     updatedAt: maxDefined(meta?.lastActivityAt, s?.lastTimestamp) ?? t?.mtimeMs ?? meta?.mtimeMs ?? r.dataDir?.mtimeMs,
     transcriptSize: t ? transcriptSize : undefined,
     metadataSize: meta ? metadataSize : undefined,
-    sessionDataSize: r.dataDir ? sessionDataSize : undefined,
+    sessionDataSize: hasDataDirs ? sessionDataSize : undefined,
     otherSize: otherSize || undefined,
     totalSize: transcriptSize + metadataSize + sessionDataSize + otherSize,
     model: meta?.model ?? s?.model,
@@ -360,13 +377,28 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
     lastPrompt: s?.lastPrompt,
     userMessageCount: s?.userMessageCount,
     assistantMessageCount: s?.assistantMessageCount,
+    toolUseCount: s?.toolUseCount,
+    transcriptRecordCount: s?.lineCount,
     gitBranch: s?.gitBranch,
     claudeVersion: s?.version,
     entrypoint: s?.entrypoint,
     hasMetadata: !!meta,
     hasTranscript: !!t,
     remoteKind: meta?.remoteKind,
-    live: live ? { pid: live.pid, status: live.status, name: live.name, entrypoint: live.entrypoint } : undefined,
+    live: live
+      ? { pid: live.pid, state: liveStateOf(live.status), status: live.status, name: live.name, entrypoint: live.entrypoint }
+      : undefined,
     problems
   }
+}
+
+/** Every project workspace path known from the sessions (used by delete guards). */
+export function knownWorkspacePaths(records: Iterable<SessionRecord>): string[] {
+  const out = new Map<string, string>()
+  for (const r of records) {
+    for (const p of r.workspacePaths) out.set(pathKey(p), p)
+    const cwds = [r.metadata?.cwd, r.metadata?.originCwd, r.transcript?.summary.cwd, r.dataDir?.declaredCwd]
+    for (const c of cwds) if (c && path.isAbsolute(c)) out.set(pathKey(c), c)
+  }
+  return [...out.values()]
 }

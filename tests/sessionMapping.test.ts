@@ -73,7 +73,7 @@ describe('scanner and metadata → transcript mapping', () => {
     const [s] = (await repo.scan()).sessions
     expect(s.status).toBe('archived')
     expect(s.archived).toBe(true)
-    expect(s.archiveSource).toBe('desktop-metadata')
+    expect(s.hiddenInManager).toBe(false)
   })
 
   it('never treats agent-*.jsonl as a session (legacy root layout and subagents/)', async () => {

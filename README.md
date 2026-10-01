@@ -22,13 +22,14 @@ export or permanently delete sessions.
   - every file path, with reveal in Explorer
   - first and last prompt preview
   - raw metadata JSON (collapsed)
-- Archive / Restore, with atomic metadata writes.
+- **Archive / Restore** (Claude Desktop's own `isArchived` flag, atomic metadata writes) for Desktop sessions;
+  **Hide / Show in manager** for Claude Code transcript-only sessions (this app's list only, never Claude's files).
 - **Permanent delete**:
   - an exact preview of every path that will be removed
   - typed confirmation
   - path validation before each removal
   - a full per-file result report (partial failures are reported as such)
-- Bulk select: archive, restore, export and delete (bulk delete requires typing `DELETE <n>`).
+- Bulk select: archive/restore (Desktop sessions), hide/show in manager, export and delete (bulk delete requires typing `DELETE <n>`).
 - Export: raw `.jsonl` copy, session info `.json`, readable Markdown conversation. Exports are copies; originals are never modified.
 - Storage dashboard: totals, disk usage breakdown, top projects, largest sessions.
 - Safety guards:
@@ -98,8 +99,26 @@ The Settings page lists every location that was checked and which ones exist.
   metadata file claims.
 - **Metadata-only**: a metadata file whose transcript is missing (or is remote, for SSH/WSL sessions).
 - **Orphan**: a `<uuid>\` session folder with neither transcript nor metadata.
+  Claude Code writes a session's folder under the project folder of its
+  *current* cwd, so after `cd tools` a second `<uuid>\` folder can appear in
+  e.g. `E--…-nhahattphcm-tools`. Such a same-UUID folder is attached to the
+  single session that owns the UUID (shown as an extra session folder and
+  included in its delete plan) instead of becoming an orphan.
 - `agent-*.jsonl` files are subagent logs and never count as sessions. Legacy
   project-level ones are attributed to their parent through their declared `sessionId`.
+
+**Projects.** A project is the canonical workspace path (the real `cwd`
+from metadata or the transcript, normalized and resolved with `realpath`),
+so `e:\x`, `E:\X\` and a junction to it are one project. The encoded folder
+name under `~/.claude/projects` is only a storage locator. For folders with
+no recorded cwd, the app tries records inside the folder, then cwds recorded
+elsewhere, then decodes the folder name against the real filesystem
+(read-only); otherwise the project is "Unknown project", never the encoded name.
+
+**Message counts.** "Prompts" are meaningful user prompts; "assistant
+messages" are distinct model API responses (one per step, so one prompt
+usually yields many because every tool-use step is a separate response);
+"tool calls" are `tool_use` blocks; "transcript records" are JSONL lines.
 
 **Title.** The UI title is chosen in this order: metadata `title` → `/rename`
 custom title → AI title → summary → first meaningful prompt → last prompt →
@@ -116,10 +135,12 @@ is not used. The Details panel always shows the raw value as well.
   verify it. If Claude Desktop's `archived-sessions.idx` exists, it is updated
   in the same format Desktop writes. The transcript is untouched. Restore
   reverses it.
-- **Claude Code CLI sessions** have no archive flag on disk. For them,
-  Archive is stored only in this app (`app-archive.json` in the app's data
-  folder). No Claude file is modified, and the session still appears in
-  `claude --resume`.
+- **Claude Code transcript-only sessions** have no archive flag on disk,
+  so the app does **not** offer "Archive" for them and never invents Claude
+  metadata. Instead there is **Hide in manager / Show in manager**: an entry in
+  `manager-hidden.json` in this app's data folder. It changes only this app's
+  list; Claude's files and archive state are untouched and the session still
+  appears in Claude. Hidden sessions appear only under "Hidden in manager".
 
 **Permanent delete** removes the session's files from disk. The modal lists
 **exactly** what will happen:
@@ -133,8 +154,18 @@ is not used. The Details panel always shows the raw value as well.
 | legacy `agent-*.jsonl` belonging to the session | delete file |
 | `<uuid>\` session data folder | delete folder |
 | `file-history\<uuid>\`, `session-env\<uuid>\` | delete folder (only when exactly one session owns that UUID) |
+| the manager's own records (hidden-list entry, cached summary) | removed after the Claude files are gone |
 
-Never deleted: project folders, the `memory\` folder, the
+The modal shows, per session: display title, CLI session ID, Desktop ID,
+project and project path, every exact target with file/folder counts and
+bytes, the tombstone/index changes (only when required), the manager records,
+and a **WILL NOT DELETE** list (the source workspace, the Claude project
+folder itself and its `memory\`). It also shows the plan ID and SHA-256
+content hash, and **COPY DELETE PLAN** copies the whole plan as text for
+independent review.
+
+Never deleted: the source workspace (it can never be a target, and no target
+may contain it), project folders, the `memory\` folder, the
 `projects` / `claude-code-sessions` roots, any transcript shared by two
 metadata files, or anything else not listed in the preview.
 
@@ -154,10 +185,13 @@ Without a backup the data cannot be recovered.
 - **Claude must be closed.** Archive, restore and delete are blocked while
   Claude Desktop is running (detected by its executable path under
   `WindowsApps\Claude_*` or `AnthropicClaude`). They are also blocked if the
-  process check fails. A session open in a running Claude Code process
-  (from `~/.claude/sessions/<pid>.json`, PID verified to be alive) cannot be
-  deleted or have its metadata changed. Use **Re-check** after closing Claude.
-  Scanning, browsing and export always work.
+  process check fails. A session attached to a running Claude Code process
+  (from `~/.claude/sessions/<pid>.json`; the PID must be alive, be a
+  Claude/node process and have the recorded start time, so a reused PID does
+  not count) is shown as **RUNNING** (busy), **IDLE** or **IN USE** and cannot
+  be deleted or have its metadata changed. A transcript written in the last
+  30 seconds is also treated as possibly in use. Use **Re-check** after
+  closing Claude. Scanning, browsing, export and hide-in-manager always work.
 - **DRY RUN.** With `CLAUDE_SESSION_MANAGER_DRY_RUN=true`, archive, restore
   and delete only log what they would do. DRY RUN is **on by default in
   development** (`yarn dev`) and off in the packaged app. Override either way:
@@ -167,17 +201,26 @@ Without a backup the data cannot be recovered.
   $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "true"; & ".\dist\win-unpacked\Claude Local Session Manager.exe"
   ```
 
-  The UI shows a DRY RUN banner and badge when active.
+  The UI shows a DRY RUN banner and badge when active. In DRY RUN,
+  "Delete permanently" runs the **full** pipeline below (rescan, identity,
+  content hash, path validation), logs exactly what would be deleted, reports
+  whether a real delete would currently be blocked, and modifies nothing.
 - **Delete checks** (in the main process, every time):
-  1. A one-time plan token, valid for 15 minutes, must match the selected session IDs.
-  2. The confirmation must be exactly `DELETE` / `DELETE PERMANENTLY`, or `DELETE <n>` for bulk.
-  3. A fresh rescan must produce byte-for-byte the plan the user reviewed (same paths, sizes, file counts); otherwise the delete aborts with "files changed".
-  4. Every path is validated before anything is touched, and again right before its own removal:
+  1. The renderer sends only internal session IDs (20 hex), the plan ID (32 hex) and the typed confirmation — never a path.
+  2. The plan ID must exist, be unused (single use) and unexpired (15 minutes), and match the same session IDs.
+  3. The confirmation must be exactly `DELETE` / `DELETE PERMANENTLY`, or `DELETE <n>` for bulk.
+  4. A fresh rescan rebuilds the plan: the CLI/Desktop session IDs must be unchanged, and the SHA-256 content hash (targets, sizes, file/folder counts) must equal the reviewed one; otherwise the plan is **stale** and nothing runs (new or vanished targets are named in the error).
+  5. Every path is validated before anything is touched, and again right before its own removal:
      - absolute, no `..` segments, no device paths
-     - inside the correct allowed root (projects root, a discovered `claude-code-sessions` root, `file-history`, `session-env`)
+     - inside the correct approved root (projects root, a discovered `claude-code-sessions` root, `file-history`, `session-env`)
      - exact depth and file-name shape per kind (e.g. `<root>\<project>\<uuid>.jsonl`)
      - not itself a symlink or junction, and `realpath` equal to the lexical path (no link escape)
-  5. `fs.rm` is only called on those validated exact paths. There are no wildcards and no globbing.
+     - not equal to, and not an ancestor of, any project workspace, approved root, the Claude home or the user's home folder
+  6. `fs.rm` is only called on those validated exact paths. There are no wildcards and no globbing.
+
+- **Test isolation.** `CLAUDE_SESSION_MANAGER_USER_DATA=<folder>` runs the app with
+  a separate data folder (and single-instance lock), e.g. to verify a build
+  while another instance is open.
 
 ## Architecture
 
@@ -253,6 +296,6 @@ transcripts, a cold scan takes about 1.6 s and a cached rescan about 50 ms.
 - Claude Desktop metadata handling follows Claude Desktop 2.16120's code
   (field names, `archived-sessions.idx`, `deleted_*` tombstones). It was
   verified with fixtures; the test machine had no Desktop "Code" sessions.
-- Claude Code CLI sessions have no on-disk archive flag; their archive state lives only in this app.
+- Claude Code transcript-only sessions have no on-disk archive flag; "Hide in manager" lives only in this app.
 - Remote (SSH/WSL) Desktop sessions: only the local metadata can be managed.
 - Executables are unsigned.

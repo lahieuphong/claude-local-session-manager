@@ -19,11 +19,15 @@ const api: SessionManagerApi = {
   restoreSession: (id) => ipcRenderer.invoke(IPC.restoreSession, id),
   bulkArchive: (ids) => ipcRenderer.invoke(IPC.bulkArchive, ids),
   bulkRestore: (ids) => ipcRenderer.invoke(IPC.bulkRestore, ids),
+  hideSession: (id) => ipcRenderer.invoke(IPC.hideSession, id),
+  unhideSession: (id) => ipcRenderer.invoke(IPC.unhideSession, id),
+  bulkHide: (ids) => ipcRenderer.invoke(IPC.bulkHide, ids),
+  bulkUnhide: (ids) => ipcRenderer.invoke(IPC.bulkUnhide, ids),
 
   createDeletePlan: (id) => ipcRenderer.invoke(IPC.createDeletePlan, id),
-  deleteSession: (id, confirmation, planToken) => ipcRenderer.invoke(IPC.deleteSession, id, confirmation, planToken),
+  deleteSession: (id, confirmation, planId) => ipcRenderer.invoke(IPC.deleteSession, id, confirmation, planId),
   createBulkDeletePlan: (ids) => ipcRenderer.invoke(IPC.createBulkDeletePlan, ids),
-  bulkDelete: (ids, confirmation, planToken) => ipcRenderer.invoke(IPC.bulkDelete, ids, confirmation, planToken),
+  bulkDelete: (ids, confirmation, planId) => ipcRenderer.invoke(IPC.bulkDelete, ids, confirmation, planId),
 
   exportSession: (id, format) => ipcRenderer.invoke(IPC.exportSession, id, format),
   exportSessions: (ids, formats) => ipcRenderer.invoke(IPC.exportSessions, ids, formats),

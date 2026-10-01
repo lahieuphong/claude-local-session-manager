@@ -40,7 +40,8 @@ export function StoragePage(): ReactElement {
       <div className="stat-grid">
         <Stat label="Total sessions" value={formatCount(info.totalSessions)} />
         <Stat label="Active" value={formatCount(info.active)} />
-        <Stat label="Archived" value={formatCount(info.archived)} />
+        <Stat label="Archived (Claude)" value={formatCount(info.archived)} />
+        <Stat label="Hidden in manager" value={formatCount(info.hiddenInManager)} />
         <Stat label="Transcript-only" value={formatCount(info.transcriptOnly)} />
         <Stat label="Metadata-only / orphan" value={formatCount(info.metadataOnly + info.orphan)} />
         <Stat label="Total disk usage" value={formatBytes(info.totalSize)} emphasis />

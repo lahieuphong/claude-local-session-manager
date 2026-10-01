@@ -3,6 +3,7 @@ import type { ClaudeSession } from '../../../shared/types'
 import { formatBytes, formatRelative } from '../../../shared/format'
 import {
   bulkArchive,
+  bulkHideInManager,
   exportMany,
   openDelete,
   refresh,
@@ -16,14 +17,15 @@ import {
   type GroupBy,
   type SortKey
 } from '../stores/appStore'
-import { groupSessions, matchesFilter, matchesSearch, projectsOf, sortSessions } from '../utils/sessionQuery'
+import { groupSessions, matchesFilter, matchesSearch, projectsOf, sortSessions } from '../../../shared/sessionQuery'
 import { SessionBadges } from './Badges'
-import { IconArchive, IconDownload, IconRefresh, IconRestore, IconSearch, IconTrash, IconX } from './Icons'
+import { IconArchive, IconDownload, IconEye, IconEyeOff, IconRefresh, IconRestore, IconSearch, IconTrash, IconX } from './Icons'
 
 const FILTER_TITLES = {
   all: 'All sessions',
   active: 'Active sessions',
-  archived: 'Archived sessions',
+  archived: 'Archived in Claude',
+  hidden: 'Hidden in manager',
   'transcript-only': 'Transcript-only sessions',
   problems: 'Metadata only / Problems'
 } as const
@@ -45,7 +47,7 @@ export function SessionList(): ReactElement {
   const project = view.kind === 'sessions' ? view.project : undefined
 
   const all = useMemo(() => snapshot?.sessions ?? [], [snapshot])
-  const projectName = useMemo(() => (project ? projectsOf(all).find((p) => p.key === project)?.name : undefined), [all, project])
+  const projectName = useMemo(() => (project ? projectsOf(all).find((p) => p.key === project)?.label : undefined), [all, project])
   const visible = useMemo(() => {
     const filtered = all.filter((s) => matchesFilter(s, filter) && (!project || s.projectKey === project) && matchesSearch(s, search))
     return sortSessions(filtered, sort)
@@ -55,6 +57,11 @@ export function SessionList(): ReactElement {
   const checkedSet = useMemo(() => new Set(checked), [checked])
   const allVisibleChecked = visible.length > 0 && visible.every((s) => checkedSet.has(s.id))
   const checkedSessions = useMemo(() => all.filter((s) => checkedSet.has(s.id)), [all, checkedSet])
+  const ids = (list: typeof checkedSessions): string[] => list.map((s) => s.id)
+  const selDesktopActive = ids(checkedSessions.filter((s) => s.hasMetadata && !s.archived))
+  const selDesktopArchived = ids(checkedSessions.filter((s) => s.hasMetadata && s.archived))
+  const selHideable = ids(checkedSessions.filter((s) => !s.hasMetadata && !s.hiddenInManager))
+  const selHidden = ids(checkedSessions.filter((s) => s.hiddenInManager))
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -132,12 +139,33 @@ export function SessionList(): ReactElement {
       {checked.length > 0 && (
         <div className="bulk-bar">
           <span className="bulk-count">{checked.length} selected</span>
-          <button className="btn small" disabled={busy} onClick={() => void bulkArchive(checked, true)}>
-            <IconArchive size={13} /> Archive
-          </button>
-          <button className="btn small" disabled={busy} onClick={() => void bulkArchive(checked, false)}>
-            <IconRestore size={13} /> Restore
-          </button>
+          {/* Claude archive only applies to sessions with Claude Desktop metadata. */}
+          {selDesktopActive.length > 0 && (
+            <button className="btn small" disabled={busy} onClick={() => void bulkArchive(selDesktopActive, true)} title="Set Claude Desktop's isArchived flag">
+              <IconArchive size={13} /> Archive ({selDesktopActive.length})
+            </button>
+          )}
+          {selDesktopArchived.length > 0 && (
+            <button className="btn small" disabled={busy} onClick={() => void bulkArchive(selDesktopArchived, false)}>
+              <IconRestore size={13} /> Restore ({selDesktopArchived.length})
+            </button>
+          )}
+          {/* Manager-only hiding for sessions Claude cannot archive. */}
+          {selHideable.length > 0 && (
+            <button
+              className="btn small"
+              disabled={busy}
+              onClick={() => void bulkHideInManager(selHideable, true)}
+              title="Hide in this manager only; Claude's files and archive state are not modified"
+            >
+              <IconEyeOff size={13} /> Hide in manager ({selHideable.length})
+            </button>
+          )}
+          {selHidden.length > 0 && (
+            <button className="btn small" disabled={busy} onClick={() => void bulkHideInManager(selHidden, false)}>
+              <IconEye size={13} /> Show in manager ({selHidden.length})
+            </button>
+          )}
           <button
             className="btn small"
             disabled={busy || !checkedSessions.some((s) => s.hasTranscript)}

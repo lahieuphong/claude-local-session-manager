@@ -14,7 +14,19 @@ export interface RawProcess {
   name: string
   executablePath?: string
   commandLine?: string
+  /** Process creation time (epoch ms), when known. */
+  startMs?: number
 }
+
+/** Windows FILETIME (100 ns ticks since 1601) → epoch ms. */
+export function filetimeToMs(filetime: string): number | undefined {
+  if (!/^\d{1,20}$/.test(filetime)) return undefined
+  const ms = Number(BigInt(filetime) / 10000n) - 11644473600000
+  return Number.isFinite(ms) && ms > 0 ? ms : undefined
+}
+
+/** Tolerance when matching a registry procStart against the live process start time. */
+const START_TOLERANCE_MS = 5000
 
 /**
  * Decide whether a process is Claude Desktop, Claude Code, or unrelated.
@@ -65,7 +77,8 @@ export const windowsRunner: Runner = async (pids) => {
     '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
     `$pids = @(${pidList})`,
     "Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(claude|node|bun)(\\.exe)?$' -or $pids -contains [int]$_.ProcessId } |",
-    '  Select-Object ProcessId, Name, ExecutablePath, CommandLine | ConvertTo-Json -Compress -Depth 2'
+    "  Select-Object ProcessId, Name, ExecutablePath, CommandLine, @{n='StartMs';e={ if ($_.CreationDate) { ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }} |",
+    '  ConvertTo-Json -Compress -Depth 2'
   ].join('\n')
   const out = await runCommand('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script])
   const text = out.trim()
@@ -78,7 +91,8 @@ export const windowsRunner: Runner = async (pids) => {
       pid: p.ProcessId as number,
       name: p.Name as string,
       executablePath: typeof p.ExecutablePath === 'string' ? p.ExecutablePath : undefined,
-      commandLine: typeof p.CommandLine === 'string' ? p.CommandLine : undefined
+      commandLine: typeof p.CommandLine === 'string' ? p.CommandLine : undefined,
+      startMs: typeof p.StartMs === 'number' ? p.StartMs : undefined
     }))
 }
 
@@ -121,9 +135,16 @@ export function buildProcessStatus(
   }
   const byPid = new Map(processes.map((p) => [p.pid, p]))
   const liveSessions: LiveCliSession[] = registry.map((r) => {
-    const proc = byPid.get(r.pid)
     // If the process query failed, fall back to "PID exists" (conservative).
-    const alive = error ? pidExists(r.pid) : !!proc && LIVE_NAME_RE.test(proc.name)
+    if (error) return { ...r, alive: pidExists(r.pid) }
+    const proc = byPid.get(r.pid)
+    let alive = !!proc && LIVE_NAME_RE.test(proc.name)
+    // A stale registry file whose PID now belongs to another process: the
+    // start times differ, so the session is not actually attached.
+    const recorded = r.procStart ? filetimeToMs(r.procStart) : undefined
+    if (alive && recorded !== undefined && proc?.startMs !== undefined && Math.abs(recorded - proc.startMs) > START_TOLERANCE_MS) {
+      alive = false
+    }
     return { ...r, alive }
   })
   return {

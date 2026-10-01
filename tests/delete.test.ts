@@ -79,9 +79,21 @@ describe('delete plan', () => {
       ['transcript', 'delete-file', target.transcript],
       ['session-data', 'delete-directory', target.dataDir],
       ['file-history', 'delete-directory', target.fileHistory],
-      ['session-env', 'delete-directory', target.sessionEnv]
+      ['session-env', 'delete-directory', target.sessionEnv],
+      ['manager-record', 'remove-record', h.cache.filePath]
     ])
+    const s = plan.sessions[0]
+    expect(s).toMatchObject({ cliSessionId: U.A, desktopSessionId: 'local_target', projectPath: 'C:\\Work\\demo' })
+    // metadata + transcript + 2 files in session data + 1 file-history + 1 session-env backup
+    expect(s.totalFiles).toBe(1 + 1 + 2 + 1 + 1)
+    // session-data folder (+ its 2 sub-folders) + file-history + session-env
+    expect(s.totalDirs).toBe(3 + 1 + 1)
+    expect(s.willNotDelete.map((k) => k.path)).toEqual(
+      expect.arrayContaining(['C:\\Work\\demo', path.join(fake.projects, PROJ), path.join(fake.projects, PROJ, 'memory')])
+    )
     expect(plan.totalBytes).toBeGreaterThan(0)
+    expect(plan.reportText).toContain('WILL NOT DELETE')
+    expect(plan.reportText).toContain(target.transcript)
   })
 
   it('a CLI-only session gets no tombstones or metadata items', async () => {
@@ -89,7 +101,10 @@ describe('delete plan', () => {
     const h = createHarness(fake)
     const id = await scanAndFind(h, 'cli keep')
     const plan = await h.deleter.createPlan([id], false)
-    expect(plan.sessions[0].items.map((i) => i.kind)).toEqual(['transcript'])
+    expect(plan.sessions[0].items.map((i) => [i.kind, i.recordType])).toEqual([
+      ['transcript', undefined],
+      ['manager-record', 'scan-cache']
+    ])
   })
 
   it('bulk plans require DELETE <n>', async () => {
@@ -108,7 +123,7 @@ describe('delete execution', () => {
     const id = await scanAndFind(h, 'Target')
     const plan = await h.deleter.createPlan([id], false)
     const before = Date.now()
-    const r = await h.deleter.execute([id], 'DELETE', plan.token, false)
+    const r = await h.deleter.execute([id], 'DELETE', plan.planId, false)
 
     expect(r.ok).toBe(true)
     expect(r.partial).toBe(false)
@@ -133,12 +148,12 @@ describe('delete execution', () => {
     const h = createHarness(fake)
     const id = await scanAndFind(h, 'Target')
     const plan = await h.deleter.createPlan([id], false)
-    expect(await h.deleter.execute([id], 'delete', plan.token, false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+    expect(await h.deleter.execute([id], 'delete', plan.planId, false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
     expect(await h.deleter.execute([id], 'DELETE', 'bogus', false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
     expect(await lstatOrNull(target.transcript)).not.toBeNull()
 
-    expect((await h.deleter.execute([id], 'DELETE', plan.token, false)).ok).toBe(true)
-    expect(await h.deleter.execute([id], 'DELETE', plan.token, false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+    expect((await h.deleter.execute([id], 'DELETE', plan.planId, false)).ok).toBe(true)
+    expect(await h.deleter.execute([id], 'DELETE', plan.planId, false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
   })
 
   it('rejects ids that differ from the previewed plan', async () => {
@@ -147,7 +162,7 @@ describe('delete execution', () => {
     const id = await scanAndFind(h, 'Target')
     const other = await scanAndFind(h, 'cli keep')
     const plan = await h.deleter.createPlan([id], false)
-    expect(await h.deleter.execute([other], 'DELETE', plan.token, false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+    expect(await h.deleter.execute([other], 'DELETE', plan.planId, false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
   })
 
   it('aborts when files changed after the preview', async () => {
@@ -156,8 +171,8 @@ describe('delete execution', () => {
     const id = await scanAndFind(h, 'Target')
     const plan = await h.deleter.createPlan([id], false)
     await appendFile(target.transcript, JSON.stringify(userLine(U.A, 'new message', '2026-09-30T00:00:00Z')) + '\n')
-    const r = await h.deleter.execute([id], 'DELETE', plan.token, false)
-    expect(r).toMatchObject({ ok: false, code: 'CHANGED_ON_DISK' })
+    const r = await h.deleter.execute([id], 'DELETE', plan.planId, false)
+    expect(r).toMatchObject({ ok: false, code: 'STALE_PLAN' })
     expect(await lstatOrNull(target.transcript)).not.toBeNull()
     expect(await lstatOrNull(target.meta)).not.toBeNull()
   })
@@ -172,7 +187,7 @@ describe('delete execution', () => {
     const plan = await h.deleter.createPlan([id], false)
     await rm(target.dataDir, { recursive: true })
     await symlink(outside, target.dataDir, 'junction')
-    const r = await h.deleter.execute([id], 'DELETE', plan.token, false)
+    const r = await h.deleter.execute([id], 'DELETE', plan.planId, false)
     expect(r.ok).toBe(false)
     expect(await readFile(path.join(outside, 'important.txt'), 'utf8')).toBe('must survive')
     expect(await lstatOrNull(target.transcript)).not.toBeNull()
@@ -185,7 +200,7 @@ describe('delete execution', () => {
     const id = await scanAndFind(h, 'Target')
     const plan = await h.deleter.createPlan([id], false)
     expect(plan.globalBlockedReason).toBe('Close Claude Desktop before modifying session files.')
-    const r = await h.deleter.execute([id], 'DELETE', plan.token, false)
+    const r = await h.deleter.execute([id], 'DELETE', plan.planId, false)
     expect(r).toMatchObject({ ok: false, code: 'CLAUDE_RUNNING' })
     expect(await lstatOrNull(target.transcript)).not.toBeNull()
   })
@@ -201,7 +216,7 @@ describe('delete execution', () => {
     expect(plan.blocked.map((b) => b.blockedCode)).toEqual(['SESSION_IN_USE'])
     expect(plan.sessions.map((s) => s.sessionId)).toEqual([target])
     expect(plan.confirmationPhrases).toEqual(['DELETE 1'])
-    const r = await h.deleter.execute([target], 'DELETE 1', plan.token, true)
+    const r = await h.deleter.execute([target], 'DELETE 1', plan.planId, true)
     expect(r.ok).toBe(true)
     expect(await lstatOrNull(path.join(fake.projects, PROJ, `${U.C}.jsonl`))).not.toBeNull()
   })
@@ -212,7 +227,7 @@ describe('delete execution', () => {
     const id = await scanAndFind(h, 'Target')
     const plan = await h.deleter.createPlan([id], false)
     expect(plan.dryRun).toBe(true)
-    const r = await h.deleter.execute([id], 'DELETE', plan.token, false)
+    const r = await h.deleter.execute([id], 'DELETE', plan.planId, false)
     expect(r).toMatchObject({ ok: true, dryRun: true })
     expect(r.sessions[0].items.every((i) => i.outcome === 'dry-run')).toBe(true)
     for (const p of Object.values(target)) expect(await lstatOrNull(p)).not.toBeNull()
@@ -224,9 +239,9 @@ describe('delete execution', () => {
     const h = createHarness(fake)
     const ids = [await scanAndFind(h, 'Target'), await scanAndFind(h, 'cli keep')]
     const plan = await h.deleter.createPlan(ids, true)
-    expect(await h.deleter.execute(ids, 'DELETE 1', plan.token, true)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+    expect(await h.deleter.execute(ids, 'DELETE 1', plan.planId, true)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
     const plan2 = await h.deleter.createPlan(ids, true)
-    const r = await h.deleter.execute(ids, 'DELETE 2', plan2.token, true)
+    const r = await h.deleter.execute(ids, 'DELETE 2', plan2.planId, true)
     expect(r.ok).toBe(true)
     expect(h.repo.getSnapshot()!.sessions.map((s) => s.displayTitle)).toEqual(['Other'])
   })
@@ -240,7 +255,7 @@ describe('delete execution', () => {
     const plan = await h.deleter.createPlan([id], false)
     expect(plan.sessions[0].items.map((i) => i.kind)).toEqual(['metadata', 'tombstone'])
     expect(plan.sessions[0].warnings.join(' ')).toMatch(/referenced by another session/)
-    await h.deleter.execute([id], 'DELETE', plan.token, false)
+    await h.deleter.execute([id], 'DELETE', plan.planId, false)
     expect(await lstatOrNull(shared)).not.toBeNull()
   })
 })

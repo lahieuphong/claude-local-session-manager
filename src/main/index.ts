@@ -8,7 +8,7 @@ import { ScanCache } from './services/cacheService'
 import { envFromProcess } from './services/claudeDiscovery'
 import { DeleteService } from './services/deleteService'
 import { ExportService } from './services/exportService'
-import { LocalArchiveStore } from './services/localArchiveStore'
+import { ManagerHiddenStore } from './services/managerHiddenStore'
 import { ProcessService } from './services/processService'
 import { SessionRepository } from './services/sessionRepository'
 import { SettingsService } from './services/settingsService'
@@ -17,6 +17,10 @@ import { errorMessage, logger } from './util/logger'
 
 const APP_NAME = 'Claude Local Session Manager'
 app.setName(APP_NAME)
+// Separate app data (and single-instance lock) for test/verification runs.
+if (process.env.CLAUDE_SESSION_MANAGER_USER_DATA) {
+  app.setPath('userData', path.resolve(process.env.CLAUDE_SESSION_MANAGER_USER_DATA))
+}
 if (process.platform === 'win32') app.setAppUserModelId('local.claude-session-manager')
 
 /**
@@ -74,13 +78,13 @@ async function start(): Promise<void> {
 
   const cache = new ScanCache(cachePath)
   await cache.load()
-  const localArchive = new LocalArchiveStore(path.join(userData, 'app-archive.json'))
-  await localArchive.load()
+  const hidden = new ManagerHiddenStore(path.join(userData, 'manager-hidden.json'))
+  await hidden.load()
 
   const processes = new ProcessService(null)
-  const repo = new SessionRepository({ env: envFromProcess(), cache, localArchive, processService: processes })
-  const archive = new ArchiveService(repo, processes, localArchive, dryRun)
-  const deleter = new DeleteService(repo, processes, dryRun)
+  const repo = new SessionRepository({ env: envFromProcess(), cache, hidden, processService: processes })
+  const archive = new ArchiveService(repo, processes, hidden, dryRun)
+  const deleter = new DeleteService(repo, processes, { dryRun })
   const exporter = new ExportService(repo, {
     chooseFile: async (defaultName: string, format: ExportFormat) => {
       const filters =

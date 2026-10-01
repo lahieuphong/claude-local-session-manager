@@ -30,6 +30,10 @@ export const IPC = {
   restoreSession: 'sessions:restore',
   bulkArchive: 'sessions:bulk-archive',
   bulkRestore: 'sessions:bulk-restore',
+  hideSession: 'sessions:hide',
+  unhideSession: 'sessions:unhide',
+  bulkHide: 'sessions:bulk-hide',
+  bulkUnhide: 'sessions:bulk-unhide',
   createDeletePlan: 'sessions:delete-plan',
   deleteSession: 'sessions:delete',
   createBulkDeletePlan: 'sessions:bulk-delete-plan',
@@ -63,15 +67,23 @@ export interface SessionManagerApi {
   refreshSessions(): Promise<ScanSnapshot>
   getSession(id: string): Promise<SessionDetails | null>
 
+  /** Claude Desktop archive (`isArchived` in metadata). Desktop sessions only. */
   archiveSession(id: string): Promise<ActionResult>
   restoreSession(id: string): Promise<ActionResult>
   bulkArchive(ids: string[]): Promise<BulkActionResult>
   bulkRestore(ids: string[]): Promise<BulkActionResult>
 
+  /** Hide/show inside this manager only. Never touches Claude files or Claude's archive state. */
+  hideSession(id: string): Promise<ActionResult>
+  unhideSession(id: string): Promise<ActionResult>
+  bulkHide(ids: string[]): Promise<BulkActionResult>
+  bulkUnhide(ids: string[]): Promise<BulkActionResult>
+
   createDeletePlan(id: string): Promise<DeletePlan>
-  deleteSession(id: string, confirmation: string, planToken: string): Promise<DeleteResult>
+  /** Only the session ID, plan ID and typed confirmation cross IPC — never paths. */
+  deleteSession(id: string, confirmation: string, planId: string): Promise<DeleteResult>
   createBulkDeletePlan(ids: string[]): Promise<DeletePlan>
-  bulkDelete(ids: string[], confirmation: string, planToken: string): Promise<DeleteResult>
+  bulkDelete(ids: string[], confirmation: string, planId: string): Promise<DeleteResult>
 
   exportSession(id: string, format: ExportFormat): Promise<ExportResult>
   exportSessions(ids: string[], formats: ExportFormat[]): Promise<ExportResult>
