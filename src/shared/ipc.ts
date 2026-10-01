@@ -2,6 +2,7 @@ import type {
   ActionResult,
   AppInfo,
   AppSettings,
+  ArmResult,
   BulkActionResult,
   DeletePlan,
   DeleteResult,
@@ -9,6 +10,7 @@ import type {
   ExportResult,
   LogEntry,
   ProcessStatus,
+  SafetyModeState,
   ScanSnapshot,
   SessionDetails,
   StorageInfo
@@ -49,6 +51,10 @@ export const IPC = {
   getSettings: 'settings:get',
   updateSettings: 'settings:update',
   clearCache: 'cache:clear',
+  getSafetyMode: 'safety:get',
+  armRealDelete: 'safety:arm',
+  returnToSafeMode: 'safety:disarm',
+  safetyModeChanged: 'safety:changed',
   /** main → renderer push */
   sessionsChanged: 'sessions:changed',
   scanStateChanged: 'sessions:scan-state'
@@ -99,6 +105,13 @@ export interface SessionManagerApi {
   getSettings(): Promise<AppSettings>
   updateSettings(patch: Partial<AppSettings>): Promise<AppSettings>
   clearCache(): Promise<ActionResult>
+
+  /** Deletion safety mode. Lives in main-process memory only; every launch starts in Safe Mode. */
+  getSafetyMode(): Promise<SafetyModeState>
+  /** Requires exactly "ENABLE DELETE" and Claude Desktop closed. */
+  armRealDelete(confirmation: string): Promise<ArmResult>
+  returnToSafeMode(): Promise<SafetyModeState>
+  onSafetyModeChanged(listener: (state: SafetyModeState) => void): () => void
 
   onSessionsChanged(listener: (snapshot: ScanSnapshot) => void): () => void
   onScanStateChanged(listener: (state: ScanState) => void): () => void

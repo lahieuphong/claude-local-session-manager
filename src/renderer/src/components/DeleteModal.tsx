@@ -55,6 +55,7 @@ async function copyText(text: string | undefined, what: string): Promise<void> {
 
 export function DeleteModal(): ReactElement | null {
   const request = useAppState((s) => s.deleteRequest)
+  const safety = useAppState((s) => s.safety)
   const [plan, setPlan] = useState<DeletePlan | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +82,12 @@ export function DeleteModal(): ReactElement | null {
     setError(null)
     void loadPlan()
   }, [loadPlan])
+
+  // The safety mode changed while the dialog is open (armed, returned, expired):
+  // a plan is bound to the mode it was created in, so build a fresh one.
+  useEffect(() => {
+    if (plan && !result && !running && safety && safety.dryRun !== plan.dryRun) void loadPlan()
+  }, [safety, plan, result, running, loadPlan])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -161,10 +168,18 @@ export function DeleteModal(): ReactElement | null {
           ) : (
             plan && (
               <>
-                {plan.dryRun && (
-                  <div className="notice info">
-                    <strong>DRY RUN mode.</strong> The full validation pipeline runs and the exact plan is logged, but no Claude file is
-                    modified.
+                {plan.dryRun ? (
+                  <div className="mode-indicator safe">
+                    <span className="safety-label">SAFE MODE · DRY RUN</span>
+                    <span>
+                      The full validation pipeline runs and the exact plan is logged, but no Claude file is modified. To delete for real,
+                      arm real deletion in Settings → Deletion Safety.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mode-indicator armed">
+                    <span className="safety-label">REAL DELETE ARMED</span>
+                    <span>Files below will be permanently deleted. The app returns to Safe Mode right after this delete.</span>
                   </div>
                 )}
                 {plan.globalBlockedReason && (

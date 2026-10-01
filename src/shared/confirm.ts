@@ -15,3 +15,10 @@ export function isConfirmationValid(input: unknown, phrases: string[]): boolean 
   const value = input.trim()
   return phrases.some((p) => p === value)
 }
+
+/** Phrase that arms real deletion for the current app session. Exact, case-sensitive, no trimming. */
+export const ARM_CONFIRMATION_PHRASE = 'ENABLE DELETE'
+
+export function isArmConfirmationValid(input: unknown): boolean {
+  return input === ARM_CONFIRMATION_PHRASE
+}

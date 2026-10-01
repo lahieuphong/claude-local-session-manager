@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactElement } from 'react'
 import { formatBytes } from '../../../shared/format'
 import { refreshProcess, setView, useAppState, type SessionFilter } from '../stores/appStore'
+import { SafetyPill } from './SafetyMode'
 import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
 import {
   AppMark,
@@ -31,7 +32,6 @@ export function Sidebar(): ReactElement {
   const view = useAppState((s) => s.view)
   const process = useAppState((s) => s.process)
   const checking = useAppState((s) => s.processChecking)
-  const appInfo = useAppState((s) => s.appInfo)
   const [projectsOpen, setProjectsOpen] = useState(true)
 
   const sessions = useMemo(() => snapshot?.sessions ?? [], [snapshot])
@@ -128,7 +128,7 @@ export function Sidebar(): ReactElement {
               {process.liveSessions.filter((l) => l.alive).length} Claude Code session(s) open
             </div>
           )}
-          {appInfo?.dryRun && <div className="dry-pill">DRY RUN</div>}
+          <SafetyPill />
         </div>
       </div>
     </aside>

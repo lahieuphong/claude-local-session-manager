@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, Menu, session, type IpcMainInvokeEvent } from 'electron'
 import path from 'node:path'
 import { IPC } from '../shared/ipc'
-import type { AppInfo, ExportFormat } from '../shared/types'
+import type { AppInfo, ExportFormat, SafetyModeState } from '../shared/types'
 import { registerIpc } from './ipc/registerIpc'
 import { ArchiveService } from './services/archiveService'
 import { ScanCache } from './services/cacheService'
@@ -10,6 +10,7 @@ import { DeleteService } from './services/deleteService'
 import { ExportService } from './services/exportService'
 import { ManagerHiddenStore } from './services/managerHiddenStore'
 import { ProcessService } from './services/processService'
+import { resolveInitialMode, SafetyModeController } from './services/safetyMode'
 import { SessionRepository } from './services/sessionRepository'
 import { SettingsService } from './services/settingsService'
 import { WatchService } from './services/watchService'
@@ -22,17 +23,6 @@ if (process.env.CLAUDE_SESSION_MANAGER_USER_DATA) {
   app.setPath('userData', path.resolve(process.env.CLAUDE_SESSION_MANAGER_USER_DATA))
 }
 if (process.platform === 'win32') app.setAppUserModelId('local.claude-session-manager')
-
-/**
- * DRY RUN: mutating actions only log what they would do.
- * Default: on in development (`yarn dev`), off in the packaged app.
- * Override either way with CLAUDE_SESSION_MANAGER_DRY_RUN=true|false.
- */
-function resolveDryRun(): boolean {
-  const v = process.env.CLAUDE_SESSION_MANAGER_DRY_RUN
-  if (v !== undefined && v.trim() !== '') return /^(1|true|yes|on)$/i.test(v.trim())
-  return !app.isPackaged
-}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -57,12 +47,12 @@ async function start(): Promise<void> {
   const logPath = path.join(userData, 'logs', 'main.log')
   await logger.setLogFile(logPath)
 
-  const dryRun = resolveDryRun()
+  // Every launch starts in SAFE MODE (dry run); see safetyMode.ts. Kept in memory only.
+  const initialMode = resolveInitialMode({ isPackaged: app.isPackaged, env: process.env })
   const cachePath = path.join(userData, 'scan-cache', 'transcript-index.json')
   const appInfo: AppInfo = {
     name: APP_NAME,
     version: app.getVersion(),
-    dryRun,
     isPackaged: app.isPackaged,
     platform: `${process.platform} ${process.arch}`,
     userDataPath: userData,
@@ -70,7 +60,8 @@ async function start(): Promise<void> {
     logPath,
     electronVersion: process.versions.electron
   }
-  logger.info(`${APP_NAME} ${appInfo.version} starting (dryRun=${dryRun}, packaged=${app.isPackaged})`)
+  logger.info(`${APP_NAME} ${appInfo.version} starting (dryRun=${initialMode.dryRun}, packaged=${app.isPackaged})`)
+  if (initialMode.notice) logger.warn(initialMode.notice)
 
   const settings = new SettingsService(path.join(userData, 'settings.json'))
   await settings.load()
@@ -82,9 +73,18 @@ async function start(): Promise<void> {
   await hidden.load()
 
   const processes = new ProcessService(null)
+  const safety = new SafetyModeController({ initial: initialMode, processes })
   const repo = new SessionRepository({ env: envFromProcess(), cache, hidden, processService: processes })
-  const archive = new ArchiveService(repo, processes, hidden, dryRun)
-  const deleter = new DeleteService(repo, processes, { dryRun })
+  const archive = new ArchiveService(repo, processes, hidden, () => safety.isDryRun())
+  const deleter = new DeleteService(repo, processes, {
+    dryRun: () => safety.isDryRun(),
+    // Arming is single-use: any real delete execution returns the app to Safe Mode.
+    onRealDeleteExecuted: () => safety.disarm('after-delete')
+  })
+  safety.on('changed', (state: SafetyModeState) => {
+    logger.info(`Safety mode: ${state.dryRun ? 'SAFE MODE (dry run)' : 'REAL DELETE ARMED'} (${state.reason})`)
+    mainWindow?.webContents.send(IPC.safetyModeChanged, state)
+  })
   const exporter = new ExportService(repo, {
     chooseFile: async (defaultName: string, format: ExportFormat) => {
       const filters =
@@ -120,6 +120,7 @@ async function start(): Promise<void> {
     deleter,
     exporter,
     processes,
+    safety,
     settings,
     cache,
     appInfo,
@@ -136,6 +137,7 @@ async function start(): Promise<void> {
 
   app.on('window-all-closed', () => {
     watcher.stop()
+    safety.dispose()
     void cache.save().finally(() => app.quit())
   })
 }

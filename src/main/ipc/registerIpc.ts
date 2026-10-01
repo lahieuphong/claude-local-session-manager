@@ -8,6 +8,7 @@ import type { ScanCache } from '../services/cacheService'
 import type { DeleteService } from '../services/deleteService'
 import type { ExportService } from '../services/exportService'
 import type { ProcessService } from '../services/processService'
+import type { SafetyModeController } from '../services/safetyMode'
 import { assertFormat, assertId, assertIds, assertPlanId, assertString } from './validators'
 import type { SessionRepository } from '../services/sessionRepository'
 import type { SettingsService } from '../services/settingsService'
@@ -19,6 +20,7 @@ export interface IpcContext {
   deleter: DeleteService
   exporter: ExportService
   processes: ProcessService
+  safety: SafetyModeController
   settings: SettingsService
   cache: ScanCache
   appInfo: AppInfo
@@ -101,6 +103,10 @@ export function registerIpc(ctx: IpcContext): void {
     ctx.onSettingsChanged(next)
     return next
   })
+  handle(IPC.getSafetyMode, () => ctx.safety.getState())
+  handle(IPC.armRealDelete, (confirmation) => ctx.safety.arm(assertString(confirmation, 40)))
+  handle(IPC.returnToSafeMode, () => ctx.safety.disarm('returned-by-user'))
+
   handle(IPC.clearCache, async (): Promise<ActionResult> => {
     await ctx.cache.clear()
     await ctx.repo.scan('cache-cleared')

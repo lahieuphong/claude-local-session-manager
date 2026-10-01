@@ -3,10 +3,12 @@ import type {
   ActionResult,
   AppInfo,
   AppSettings,
+  ArmResult,
   BulkActionResult,
   ExportFormat,
   ExportResult,
   ProcessStatus,
+  SafetyModeState,
   ScanSnapshot
 } from '../../../shared/types'
 
@@ -31,6 +33,9 @@ export interface DeleteRequest {
 
 export interface AppState {
   appInfo: AppInfo | null
+  /** Deletion safety mode from the main process (memory only, never persisted). */
+  safety: SafetyModeState | null
+  armModalOpen: boolean
   settings: AppSettings | null
   snapshot: ScanSnapshot | null
   scanning: boolean
@@ -69,6 +74,8 @@ function savePref(key: string, value: string): void {
 
 let state: AppState = {
   appInfo: null,
+  safety: null,
+  armModalOpen: false,
   settings: null,
   snapshot: null,
   scanning: false,
@@ -152,6 +159,11 @@ export async function init(): Promise<void> {
   initialized = true
   api().onSessionsChanged(applySnapshot)
   api().onScanStateChanged((st) => setState({ scanning: st.scanning }))
+  api().onSafetyModeChanged((safety) => setState({ safety }))
+  void api()
+    .getSafetyMode()
+    .then((safety) => setState({ safety }))
+    .catch((err) => toast('error', `Cannot read safety mode: ${errText(err)}`))
   try {
     const [appInfo, settings] = await Promise.all([api().getAppInfo(), api().getSettings()])
     setState({ appInfo, settings })
@@ -305,6 +317,45 @@ export async function updateSettings(patch: Partial<AppSettings>): Promise<void>
     setState({ settings: await api().updateSettings(patch) })
   } catch (err) {
     toast('error', `Could not save settings: ${errText(err)}`)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Deletion safety mode
+// ---------------------------------------------------------------------------
+
+export function openArmModal(open: boolean): void {
+  setState({ armModalOpen: open })
+}
+
+/** Arm real deletion (exact "ENABLE DELETE"; main also requires Claude Desktop closed). */
+export async function armRealDelete(confirmation: string): Promise<ArmResult | undefined> {
+  try {
+    const r = await api().armRealDelete(confirmation)
+    setState({ safety: r.state })
+    toast(r.ok ? 'warning' : 'error', r.message)
+    if (r.ok) setState({ armModalOpen: false })
+    return r
+  } catch (err) {
+    toast('error', errText(err))
+    return undefined
+  }
+}
+
+export async function returnToSafeMode(): Promise<void> {
+  try {
+    setState({ safety: await api().returnToSafeMode() })
+    toast('info', 'Safe Mode restored. No Claude files can be deleted.')
+  } catch (err) {
+    toast('error', errText(err))
+  }
+}
+
+export async function refreshSafetyMode(): Promise<void> {
+  try {
+    setState({ safety: await api().getSafetyMode() })
+  } catch {
+    /* next push will correct it */
   }
 }
 

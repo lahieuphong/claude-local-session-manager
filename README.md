@@ -35,7 +35,7 @@ export or permanently delete sessions.
 - Safety guards:
   - modifying actions are blocked while Claude Desktop runs
   - sessions open in a running Claude Code process are blocked
-  - DRY RUN mode
+  - Safe Mode (DRY RUN) on every launch; real deletion is armed in the app for one delete / 10 minutes
 - A parsed-transcript cache, so restarts and rescans are fast even with 100 MB+ transcripts.
 - Optional auto refresh (file watching or an interval), plus manual **Refresh** (F5).
 
@@ -49,7 +49,7 @@ export or permanently delete sessions.
 
 ```bash
 yarn install
-yarn dev        # development app (DRY RUN by default)
+yarn dev        # development app (always starts in Safe Mode / DRY RUN)
 yarn test       # automated tests (fixtures in temp folders only)
 yarn typecheck  # TypeScript, main + renderer
 yarn build      # production bundles into out/
@@ -192,19 +192,36 @@ Without a backup the data cannot be recovered.
   be deleted or have its metadata changed. A transcript written in the last
   30 seconds is also treated as possibly in use. Use **Re-check** after
   closing Claude. Scanning, browsing, export and hide-in-manager always work.
-- **DRY RUN.** With `CLAUDE_SESSION_MANAGER_DRY_RUN=true`, archive, restore
-  and delete only log what they would do. DRY RUN is **on by default in
-  development** (`yarn dev`) and off in the packaged app. Override either way:
+- **Safe Mode / real-delete arming (in the app).** Every launch starts in
+  **SAFE MODE (DRY RUN)**: archive, restore and delete only validate and log;
+  no Claude file can be changed. To delete for real:
+  1. Quit Claude Desktop (system tray → Quit).
+  2. Settings → **Deletion Safety** → **Enable real deletion**, type exactly
+     `ENABLE DELETE` (case-sensitive), click **Arm real deletion**.
+  3. A red **REAL DELETE ARMED · mm:ss remaining** banner appears. Delete the
+     session (typed `DELETE` / `DELETE <n>` as usual).
+
+  The armed state lives **only in the main process's memory** (never in
+  settings, localStorage, registry, files or env files). It returns to Safe
+  Mode on its own **right after one real delete**, after **10 minutes**, or
+  when the app closes; **Return to Safe Mode** does it immediately. Arming only
+  flips dry-run on/off: every other guard below still runs, and a plan
+  previewed in one mode cannot be executed in the other.
+
+  In Safe Mode, "Delete permanently" is labelled **Run dry-run validation** and
+  runs the **full** pipeline below (rescan, identity, content hash, path
+  validation), logs exactly what would be deleted, reports whether a real
+  delete would currently be blocked, and modifies nothing.
+- **Environment variable (development/testing only).** The packaged app
+  **ignores** `CLAUDE_SESSION_MANAGER_DRY_RUN` (a stale variable can never start
+  it armed). In development, `CLAUDE_SESSION_MANAGER_DRY_RUN=false` starts the
+  app armed only together with the explicit opt-in
+  `CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM=1`, with the same 10-minute and
+  single-delete limits:
 
   ```powershell
-  $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "false"; yarn dev   # real actions in dev
-  $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "true"; & ".\dist\win-unpacked\Claude Local Session Manager.exe"
+  $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "false"; $env:CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM = "1"; yarn dev
   ```
-
-  The UI shows a DRY RUN banner and badge when active. In DRY RUN,
-  "Delete permanently" runs the **full** pipeline below (rescan, identity,
-  content hash, path validation), logs exactly what would be deleted, reports
-  whether a real delete would currently be blocked, and modifies nothing.
 - **Delete checks** (in the main process, every time):
   1. The renderer sends only internal session IDs (20 hex), the plan ID (32 hex) and the typed confirmation — never a path.
   2. The plan ID must exist, be unused (single use) and unexpired (15 minutes), and match the same session IDs.

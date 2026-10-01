@@ -2,6 +2,7 @@ import { useEffect, type ReactElement } from 'react'
 import { Banners } from './components/Banners'
 import { DeleteModal } from './components/DeleteModal'
 import { DetailsPanel } from './components/DetailsPanel'
+import { ArmModal } from './components/SafetyMode'
 import { SessionList } from './components/SessionList'
 import { Sidebar } from './components/Sidebar'
 import { Toasts } from './components/Toasts'
@@ -38,6 +39,7 @@ export default function App(): ReactElement {
         )}
       </main>
       {deleteRequest && <DeleteModal />}
+      <ArmModal />
       <Toasts />
     </div>
   )

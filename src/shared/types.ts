@@ -448,7 +448,6 @@ export interface AppSettings {
 export interface AppInfo {
   name: string
   version: string
-  dryRun: boolean
   isPackaged: boolean
   platform: string
   userDataPath: string
@@ -461,4 +460,36 @@ export interface LogEntry {
   time: number
   level: 'debug' | 'info' | 'warn' | 'error'
   message: string
+}
+
+// ---------------------------------------------------------------------------
+// Deletion safety mode (process memory only, never persisted)
+// ---------------------------------------------------------------------------
+
+export type SafetyModeReason =
+  /** Every launch starts here. */
+  | 'startup'
+  /** Development run started armed via an explicitly allowed env variable. */
+  | 'env-dev'
+  | 'armed-in-ui'
+  | 'returned-by-user'
+  | 'expired'
+  /** A real delete ran; arming is single-use. */
+  | 'after-delete'
+
+export interface SafetyModeState {
+  /** true = SAFE MODE (dry run). false = REAL DELETE ARMED. */
+  dryRun: boolean
+  reason: SafetyModeReason
+  changedAt: number
+  armedAt?: number
+  /** Armed mode returns to Safe Mode automatically at this time. */
+  expiresAt?: number
+  armDurationMs: number
+  /** e.g. a stale environment variable that was ignored at startup. */
+  notice?: string
+}
+
+export interface ArmResult extends ActionResult {
+  state: SafetyModeState
 }

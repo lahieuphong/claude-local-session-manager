@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { IPC, type ScanState, type SessionManagerApi } from '../shared/ipc'
-import type { ScanSnapshot } from '../shared/types'
+import type { SafetyModeState, ScanSnapshot } from '../shared/types'
 
 /**
  * The only bridge between the renderer and the main process.
@@ -43,6 +43,15 @@ const api: SessionManagerApi = {
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.updateSettings, patch),
   clearCache: () => ipcRenderer.invoke(IPC.clearCache),
+
+  getSafetyMode: () => ipcRenderer.invoke(IPC.getSafetyMode),
+  armRealDelete: (confirmation) => ipcRenderer.invoke(IPC.armRealDelete, confirmation),
+  returnToSafeMode: () => ipcRenderer.invoke(IPC.returnToSafeMode),
+  onSafetyModeChanged: (listener) => {
+    const wrapped = (_e: IpcRendererEvent, state: SafetyModeState): void => listener(state)
+    ipcRenderer.on(IPC.safetyModeChanged, wrapped)
+    return () => ipcRenderer.removeListener(IPC.safetyModeChanged, wrapped)
+  },
 
   onSessionsChanged: (listener) => {
     const wrapped = (_e: IpcRendererEvent, snapshot: ScanSnapshot): void => listener(snapshot)

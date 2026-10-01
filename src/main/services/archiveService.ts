@@ -117,8 +117,12 @@ export class ArchiveService {
     private repo: SessionRepository,
     private processes: ProcessService,
     private hidden: ManagerHiddenStore,
-    private dryRun: boolean
-  ) {}
+    dryRun: boolean | (() => boolean)
+  ) {
+    this.isDryRun = typeof dryRun === 'function' ? dryRun : () => dryRun
+  }
+
+  private readonly isDryRun: () => boolean
 
   async setArchived(id: string, archived: boolean, opts: { rescan?: boolean } = {}): Promise<ActionResult> {
     const record = this.repo.getRecord(id)
@@ -129,7 +133,7 @@ export class ArchiveService {
     const status = await this.processes.getStatus(true)
     const guard = globalGuard(status) ?? sessionGuard(status, record.guardUuids)
     if (guard) return { ok: false, ...guard }
-    const result = await setDesktopArchived(record.metadata, archived, roots, this.dryRun)
+    const result = await setDesktopArchived(record.metadata, archived, roots, this.isDryRun())
     if (result.ok && !result.dryRun && opts.rescan !== false) await this.repo.scan(archived ? 'archive' : 'restore')
     return result
   }

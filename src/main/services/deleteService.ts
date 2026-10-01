@@ -33,7 +33,10 @@ import type { SessionRecord } from './sessionBuilder'
 import type { SessionRepository } from './sessionRepository'
 
 export interface DeleteServiceOptions {
-  dryRun: boolean
+  /** Current mode. A function lets the in-app safety switch change it at runtime. */
+  dryRun: boolean | (() => boolean)
+  /** Called after a real (non-dry-run) delete executed (fully or partially). */
+  onRealDeleteExecuted?: (result: DeleteResult) => void
   /** Refuse to delete a transcript written to within this window (it may be in use). */
   recentWriteMs?: number
   planTtlMs?: number
@@ -189,23 +192,28 @@ interface StoredPlan {
   targets: string[]
   createdAt: number
   expiresAt: number
+  /** Mode the plan was previewed in; execution must happen in the same mode. */
+  dryRun: boolean
 }
 
 export class DeleteService {
   private plans = new Map<string, StoredPlan>()
-  private readonly dryRun: boolean
+  private readonly isDryRun: () => boolean
   private readonly recentWriteMs: number
   private readonly planTtlMs: number
+  private readonly onRealDeleteExecuted?: (result: DeleteResult) => void
 
   constructor(
     private repo: SessionRepository,
     private processes: ProcessService,
     options: DeleteServiceOptions | boolean
   ) {
-    const o = typeof options === 'boolean' ? { dryRun: options } : options
-    this.dryRun = o.dryRun
+    const o: DeleteServiceOptions = typeof options === 'boolean' ? { dryRun: options } : options
+    const mode = o.dryRun
+    this.isDryRun = typeof mode === 'function' ? mode : () => mode
     this.recentWriteMs = o.recentWriteMs ?? DEFAULT_RECENT_WRITE_MS
     this.planTtlMs = o.planTtlMs ?? DEFAULT_PLAN_TTL_MS
+    this.onRealDeleteExecuted = o.onRealDeleteExecuted
   }
 
   /** Workspaces, approved roots, home and drive roots: never a target, never inside a target. */
@@ -297,6 +305,7 @@ export class DeleteService {
   /** Build the preview shown in the confirmation modal. Read-only. */
   async createPlan(ids: string[], bulk: boolean): Promise<DeletePlan> {
     this.expirePlans()
+    const dryRun = this.isDryRun()
     const status = await this.processes.getStatus(true)
     const { ok, blocked } = this.sessionPlans(ids, status)
     const global = globalGuard(status)
@@ -312,14 +321,15 @@ export class DeleteService {
       identities: new Map(ok.map((s) => [s.sessionId, { cli: s.cliSessionId, desktop: s.desktopSessionId }])),
       targets: ok.flatMap((s) => s.items.map((i) => i.path)),
       createdAt,
-      expiresAt
+      expiresAt,
+      dryRun
     })
     const plan: Omit<DeletePlan, 'reportText'> = {
       planId,
       contentHash,
       createdAt,
       expiresAt,
-      dryRun: this.dryRun,
+      dryRun,
       bulk,
       sessions: ok,
       blocked,
@@ -339,10 +349,12 @@ export class DeleteService {
    * The renderer supplies only session IDs, the plan ID and the typed confirmation.
    */
   async execute(ids: string[], confirmation: unknown, planId: unknown, bulk: boolean): Promise<DeleteResult> {
+    // The mode is read once; the whole operation runs in that mode.
+    const dryRun = this.isDryRun()
     const fail = (code: ActionErrorCode, message: string): DeleteResult => ({
       ok: false,
       partial: false,
-      dryRun: this.dryRun,
+      dryRun,
       code,
       message,
       planId: typeof planId === 'string' ? planId : undefined,
@@ -361,12 +373,17 @@ export class DeleteService {
     if (!isConfirmationValid(confirmation, confirmationPhrases(stored.ids.length, bulk))) {
       return fail('INVALID_INPUT', 'Confirmation text does not match.')
     }
+    if (stored.dryRun !== dryRun) {
+      this.plans.delete(stored.planId)
+      const name = (d: boolean): string => (d ? 'SAFE MODE (dry run)' : 'REAL DELETE ARMED')
+      return fail('STALE_PLAN', `Safety mode changed since this plan was created (${name(stored.dryRun)} → ${name(dryRun)}). Review the plan again.`)
+    }
     this.plans.delete(stored.planId) // single use
 
     // 1. Process safety.
     const status = await this.processes.getStatus(true)
     const global = globalGuard(status)
-    if (global && !this.dryRun) return fail(global.code, global.message)
+    if (global && !dryRun) return fail(global.code, global.message)
 
     // 2. Re-scan and rebuild the plan from scratch.
     await this.repo.scan('pre-delete')
@@ -410,7 +427,7 @@ export class DeleteService {
     }
 
     // 6. DRY RUN stops here: everything validated, nothing mutated.
-    if (this.dryRun) {
+    if (dryRun) {
       const sessions: SessionDeleteResult[] = fresh.ok.map((s) => ({
         sessionId: s.sessionId,
         displayTitle: s.displayTitle,
@@ -462,6 +479,7 @@ export class DeleteService {
     }
     result.reportText = formatResultReport(result, fresh.ok)
     logger.info(`Delete plan ${stored.planId} executed: ${message}`)
+    this.onRealDeleteExecuted?.(result)
     return result
   }
 

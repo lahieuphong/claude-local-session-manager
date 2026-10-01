@@ -1389,3 +1389,78 @@ input[type='radio'] {
 .modal-footer .spacer {
   flex: 1;
 }
+
+/* ---------------------------------------------------------------- deletion safety mode */
+.banner.danger {
+  background: rgba(217, 56, 62, 0.18);
+  color: #ffc2c4;
+  border-bottom-color: rgba(240, 86, 91, 0.5);
+}
+.armed-pill {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: var(--red-strong);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+.notice.danger {
+  background: var(--red-bg);
+  border-color: rgba(240, 86, 91, 0.45);
+  color: #ffb3b5;
+}
+.safety-card.armed {
+  border-color: rgba(240, 86, 91, 0.55);
+}
+.safety-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+.safety-status.safe,
+.mode-indicator.safe {
+  background: var(--accent-bg);
+  border: 1px solid rgba(122, 162, 255, 0.35);
+  color: #c3d4ff;
+}
+.safety-status.armed,
+.mode-indicator.armed {
+  background: var(--red-bg);
+  border: 1px solid rgba(240, 86, 91, 0.55);
+  color: #ffb3b5;
+}
+.safety-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.mode-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  font-size: 12.5px;
+}
+.req-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 10px;
+}
+.req-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+.modal.narrow {
+  width: min(560px, 100%);
+}

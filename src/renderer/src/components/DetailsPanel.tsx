@@ -81,7 +81,7 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
   const settings = useAppState((st) => st.settings)
   const process = useAppState((st) => st.process)
   const busy = useAppState((st) => st.busy)
-  const appInfo = useAppState((st) => st.appInfo)
+  const safety = useAppState((st) => st.safety)
   const raw = settings?.showRawPaths ?? false
 
   const desktopBlocked = !!process && (process.desktopRunning || !!process.error)
@@ -147,8 +147,10 @@ function SessionDetailsView({ session: s, details, error }: { session: ClaudeSes
             Claude&apos;s files or archive state, and the session still appears in Claude.
           </div>
         )}
-        {appInfo?.dryRun && (
-          <div className="notice info small">DRY RUN mode: archive, restore and delete only validate and log; no Claude file is modified.</div>
+        {safety && !safety.dryRun && (
+          <div className="notice danger small">
+            <strong>REAL DELETE ARMED</strong> — Delete permanently will really remove this session&apos;s files.
+          </div>
         )}
 
         {s.problems.length > 0 && (

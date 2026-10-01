@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import type { LogEntry, RefreshMode } from '../../../shared/types'
 import { formatDateTime } from '../../../shared/format'
 import { AppMark, IconCheck, IconX } from '../components/Icons'
+import { DeletionSafetySection } from '../components/SafetyMode'
 import { clearCache, errText, toast, updateSettings, useAppState } from '../stores/appStore'
 
 const api = (): Window['sessionManager'] => window.sessionManager
@@ -155,17 +156,7 @@ export function SettingsPage(): ReactElement {
         )}
       </section>
 
-      <section className="card">
-        <h3 className="section-title">Safety</h3>
-        <ul className="plain-list small">
-          <li>
-            Mode: {appInfo?.dryRun ? <strong className="info-text">DRY RUN</strong> : <strong>Live</strong>}{' '}
-            <span className="muted">(environment variable CLAUDE_SESSION_MANAGER_DRY_RUN=true|false; dry run is the default in development)</span>
-          </li>
-          <li>Archive, restore and delete are blocked while Claude Desktop is running, and for any session open in a running Claude Code process.</li>
-          <li>Delete requires a typed confirmation and re-validates every path (allowed root, exact shape, no symlink/junction escape) right before removal.</li>
-        </ul>
-      </section>
+      <DeletionSafetySection />
 
       <section className="card about">
         <AppMark size={40} />

@@ -1,15 +1,15 @@
 import type { ReactElement } from 'react'
 import { refreshProcess, useAppState } from '../stores/appStore'
-import { IconAlert, IconInfo, IconRefresh } from './Icons'
+import { IconAlert, IconRefresh } from './Icons'
+import { SafetyBanner } from './SafetyMode'
 
-export function Banners(): ReactElement | null {
+export function Banners(): ReactElement {
   const process = useAppState((s) => s.process)
-  const appInfo = useAppState((s) => s.appInfo)
   const checking = useAppState((s) => s.processChecking)
   const showClaude = !!process && (process.desktopRunning || !!process.error)
-  if (!showClaude && !appInfo?.dryRun) return null
   return (
     <div className="banners">
+      <SafetyBanner />
       {showClaude && (
         <div className="banner warn">
           <IconAlert size={15} />
@@ -22,15 +22,6 @@ export function Banners(): ReactElement | null {
           <button className="btn small" onClick={() => void refreshProcess(true)} disabled={checking}>
             <IconRefresh size={13} className={checking ? 'spin' : ''} /> Re-check
           </button>
-        </div>
-      )}
-      {appInfo?.dryRun && (
-        <div className="banner info">
-          <IconInfo size={15} />
-          <span>
-            <strong>DRY RUN</strong> — archive, restore and delete only log the planned changes; no Claude files are modified. Set{' '}
-            <code>CLAUDE_SESSION_MANAGER_DRY_RUN=false</code> to disable.
-          </span>
         </div>
       )}
     </div>

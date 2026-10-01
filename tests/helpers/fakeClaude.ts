@@ -9,6 +9,7 @@ import { ProcessService, type RawProcess } from '../../src/main/services/process
 import { SessionRepository } from '../../src/main/services/sessionRepository'
 import { ArchiveService } from '../../src/main/services/archiveService'
 import { DeleteService } from '../../src/main/services/deleteService'
+import type { DeleteResult } from '../../src/shared/types'
 
 export const FIXTURES = path.resolve(__dirname, '../../fixtures')
 
@@ -160,7 +161,14 @@ export interface Harness {
  */
 export function createHarness(
   fake: FakeClaude,
-  opts: { dryRun?: boolean; recentWriteMs?: number; decodeFolderNames?: boolean; planTtlMs?: number } = {}
+  opts: {
+    /** A boolean, or a getter such as () => safety.isDryRun() for the in-app safety switch. */
+    dryRun?: boolean | (() => boolean)
+    onRealDeleteExecuted?: (result: DeleteResult) => void
+    recentWriteMs?: number
+    decodeFolderNames?: boolean
+    planTtlMs?: number
+  } = {}
 ): Harness {
   const processes: RawProcess[] = []
   const processService = new ProcessService(null, async () => processes, 0)
@@ -182,6 +190,7 @@ export function createHarness(
     archive: new ArchiveService(repo, processService, hidden, opts.dryRun ?? false),
     deleter: new DeleteService(repo, processService, {
       dryRun: opts.dryRun ?? false,
+      onRealDeleteExecuted: opts.onRealDeleteExecuted,
       recentWriteMs: opts.recentWriteMs ?? 0,
       planTtlMs: opts.planTtlMs
     })
