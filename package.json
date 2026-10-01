@@ -1,0 +1,36 @@
+{
+  "name": "claude-local-session-manager",
+  "productName": "Claude Local Session Manager",
+  "version": "1.0.0",
+  "description": "Unofficial local session manager for Claude Code/Desktop on Windows.",
+  "author": "Claude Local Session Manager contributors",
+  "license": "MIT",
+  "private": true,
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "icon": "node scripts/generate-icon.mjs",
+    "build": "electron-vite build",
+    "dist": "npm run build && electron-builder --win --x64 --publish never"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^5.0.3"
+  }
+}

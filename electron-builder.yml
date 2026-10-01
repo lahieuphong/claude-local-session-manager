@@ -1,0 +1,29 @@
+appId: local.claude-session-manager
+productName: Claude Local Session Manager
+copyright: Unofficial utility. Not affiliated with Anthropic.
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+  - "!**/*.map"
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: build/icon.ico
+  artifactName: ${productName}-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Claude Local Session Manager
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+portable:
+  artifactName: ${productName}-Portable-${version}-${arch}.${ext}
+npmRebuild: false
