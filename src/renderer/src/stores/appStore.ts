@@ -9,7 +9,8 @@ import type {
   ExportResult,
   ProcessStatus,
   SafetyModeState,
-  ScanSnapshot
+  ScanSnapshot,
+  UpdateState
 } from '../../../shared/types'
 
 import type { GroupBy, SessionFilter, SortKey } from '../../../shared/sessionQuery'
@@ -36,6 +37,7 @@ export interface AppState {
   /** Deletion safety mode from the main process (memory only, never persisted). */
   safety: SafetyModeState | null
   armModalOpen: boolean
+  updates: UpdateState | null
   settings: AppSettings | null
   snapshot: ScanSnapshot | null
   scanning: boolean
@@ -76,6 +78,7 @@ let state: AppState = {
   appInfo: null,
   safety: null,
   armModalOpen: false,
+  updates: null,
   settings: null,
   snapshot: null,
   scanning: false,
@@ -160,6 +163,11 @@ export async function init(): Promise<void> {
   api().onSessionsChanged(applySnapshot)
   api().onScanStateChanged((st) => setState({ scanning: st.scanning }))
   api().onSafetyModeChanged((safety) => setState({ safety }))
+  api().onUpdateStateChanged((updates) => setState({ updates }))
+  void api()
+    .getUpdateState()
+    .then((updates) => setState({ updates }))
+    .catch(() => undefined)
   void api()
     .getSafetyMode()
     .then((safety) => setState({ safety }))
@@ -356,6 +364,38 @@ export async function refreshSafetyMode(): Promise<void> {
     setState({ safety: await api().getSafetyMode() })
   } catch {
     /* next push will correct it */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Updates
+// ---------------------------------------------------------------------------
+
+async function updateCall(fn: () => Promise<UpdateState>): Promise<void> {
+  try {
+    setState({ updates: await fn() })
+  } catch (err) {
+    toast('error', `Update: ${errText(err)}`)
+  }
+}
+
+export const checkForUpdates = (): Promise<void> => updateCall(() => api().checkForUpdates())
+export const downloadUpdate = (): Promise<void> => updateCall(() => api().downloadUpdate())
+
+export async function installUpdate(): Promise<void> {
+  try {
+    const r = await api().installUpdate()
+    toast(r.ok ? 'info' : 'error', r.message)
+  } catch (err) {
+    toast('error', `Update: ${errText(err)}`)
+  }
+}
+
+export async function openReleasesPage(): Promise<void> {
+  try {
+    await api().openReleasesPage()
+  } catch (err) {
+    toast('error', errText(err))
   }
 }
 

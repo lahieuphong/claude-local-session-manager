@@ -1,8 +1,9 @@
 import { useState, type ReactElement } from 'react'
 import type { LogEntry, RefreshMode } from '../../../shared/types'
 import { formatDateTime } from '../../../shared/format'
-import { AppMark, IconCheck, IconX } from '../components/Icons'
+import { IconCheck, IconX } from '../components/Icons'
 import { DeletionSafetySection } from '../components/SafetyMode'
+import { AboutSection } from '../components/Updates'
 import { clearCache, errText, toast, updateSettings, useAppState } from '../stores/appStore'
 
 const api = (): Window['sessionManager'] => window.sessionManager
@@ -158,17 +159,7 @@ export function SettingsPage(): ReactElement {
 
       <DeletionSafetySection />
 
-      <section className="card about">
-        <AppMark size={40} />
-        <div>
-          <div className="strong">{appInfo?.name ?? 'Claude Local Session Manager'}</div>
-          <div className="muted small">
-            Version {appInfo?.version} · Electron {appInfo?.electronVersion} · {appInfo?.platform}
-          </div>
-          <p className="small">Unofficial local session manager for Claude Code/Desktop on Windows.</p>
-          <p className="small strong">This is an unofficial local utility and is not affiliated with Anthropic.</p>
-        </div>
-      </section>
+      <AboutSection />
     </div>
   )
 }

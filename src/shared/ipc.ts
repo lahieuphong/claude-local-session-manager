@@ -13,7 +13,8 @@ import type {
   SafetyModeState,
   ScanSnapshot,
   SessionDetails,
-  StorageInfo
+  StorageInfo,
+  UpdateState
 } from './types'
 
 /**
@@ -55,6 +56,12 @@ export const IPC = {
   armRealDelete: 'safety:arm',
   returnToSafeMode: 'safety:disarm',
   safetyModeChanged: 'safety:changed',
+  getUpdateState: 'updates:get',
+  checkForUpdates: 'updates:check',
+  downloadUpdate: 'updates:download',
+  installUpdate: 'updates:install',
+  openReleasesPage: 'updates:open-releases',
+  updateStateChanged: 'updates:changed',
   /** main → renderer push */
   sessionsChanged: 'sessions:changed',
   scanStateChanged: 'sessions:scan-state'
@@ -112,6 +119,16 @@ export interface SessionManagerApi {
   armRealDelete(confirmation: string): Promise<ArmResult>
   returnToSafeMode(): Promise<SafetyModeState>
   onSafetyModeChanged(listener: (state: SafetyModeState) => void): () => void
+
+  /** Updates from GitHub Releases. No arguments: the renderer cannot pass a URL or a file to run. */
+  getUpdateState(): Promise<UpdateState>
+  checkForUpdates(): Promise<UpdateState>
+  downloadUpdate(): Promise<UpdateState>
+  /** Restart and install a downloaded update (installed Setup build only). */
+  installUpdate(): Promise<ActionResult>
+  /** Opens the fixed GitHub Releases page of this project. */
+  openReleasesPage(): Promise<ActionResult>
+  onUpdateStateChanged(listener: (state: UpdateState) => void): () => void
 
   onSessionsChanged(listener: (snapshot: ScanSnapshot) => void): () => void
   onScanStateChanged(listener: (state: ScanState) => void): () => void

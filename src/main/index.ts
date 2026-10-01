@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, Menu, session, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, Menu, session, shell, type IpcMainInvokeEvent } from 'electron'
 import path from 'node:path'
+import { APP_ID, APP_NAME, RELEASES_URL } from '../shared/appIdentity'
 import { IPC } from '../shared/ipc'
-import type { AppInfo, ExportFormat, SafetyModeState } from '../shared/types'
+import type { AppInfo, ExportFormat, SafetyModeState, UpdateState } from '../shared/types'
 import { registerIpc } from './ipc/registerIpc'
 import { ArchiveService } from './services/archiveService'
 import { ScanCache } from './services/cacheService'
@@ -11,18 +12,21 @@ import { ExportService } from './services/exportService'
 import { ManagerHiddenStore } from './services/managerHiddenStore'
 import { ProcessService } from './services/processService'
 import { resolveInitialMode, SafetyModeController } from './services/safetyMode'
+import type { AppUpdater } from 'electron-updater'
+import { detectUpdateMode, UpdateService, type UpdaterLike } from './services/updateService'
 import { SessionRepository } from './services/sessionRepository'
 import { SettingsService } from './services/settingsService'
 import { WatchService } from './services/watchService'
 import { errorMessage, logger } from './util/logger'
 
-const APP_NAME = 'Claude Local Session Manager'
 app.setName(APP_NAME)
 // Separate app data (and single-instance lock) for test/verification runs.
 if (process.env.CLAUDE_SESSION_MANAGER_USER_DATA) {
   app.setPath('userData', path.resolve(process.env.CLAUDE_SESSION_MANAGER_USER_DATA))
 }
-if (process.platform === 'win32') app.setAppUserModelId('local.claude-session-manager')
+// Same ID the installer writes into the shortcuts, so the running window, the
+// Start Menu entry and taskbar pins are one app across upgrades.
+if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
 
 let mainWindow: BrowserWindow | null = null
 
@@ -104,6 +108,40 @@ async function start(): Promise<void> {
     }
   })
 
+  // Updates (GitHub Releases). electron-updater is loaded only in packaged builds.
+  const updateMode = detectUpdateMode({ isPackaged: app.isPackaged, execPath: process.execPath, productName: APP_NAME, env: process.env })
+  let updater: UpdaterLike | null = null
+  if (updateMode !== 'development') {
+    try {
+      // electron-updater exposes autoUpdater through a getter, which a dynamic
+      // import from this CommonJS bundle places under `default`.
+      const mod = (await import('electron-updater')) as unknown as {
+        autoUpdater?: AppUpdater
+        default?: { autoUpdater?: AppUpdater }
+      }
+      const autoUpdater = mod.autoUpdater ?? mod.default?.autoUpdater
+      if (!autoUpdater) throw new Error('electron-updater did not provide autoUpdater')
+      autoUpdater.logger = {
+        info: (m?: unknown) => logger.info(`[updater] ${String(m)}`),
+        warn: (m?: unknown) => logger.warn(`[updater] ${String(m)}`),
+        error: (m?: unknown) => logger.error(`[updater] ${String(m)}`),
+        debug: (m: string) => logger.debug(`[updater] ${m}`)
+      }
+      updater = autoUpdater as unknown as UpdaterLike
+    } catch (err) {
+      logger.warn(`Updater unavailable: ${errorMessage(err)}`)
+    }
+  }
+  const updates = new UpdateService({
+    mode: updateMode,
+    currentVersion: app.getVersion(),
+    releasesUrl: RELEASES_URL,
+    updater,
+    openExternal: (url) => shell.openExternal(url)
+  })
+  updates.on('changed', (state: UpdateState) => mainWindow?.webContents.send(IPC.updateStateChanged, state))
+  logger.info(`Update mode: ${updateMode}`)
+
   const watcher = new WatchService((reason) => {
     repo.scan(reason).catch((err) => logger.error(`Auto refresh failed: ${errorMessage(err)}`))
   })
@@ -121,6 +159,7 @@ async function start(): Promise<void> {
     exporter,
     processes,
     safety,
+    updates,
     settings,
     cache,
     appInfo,
@@ -134,6 +173,11 @@ async function start(): Promise<void> {
   hardenSession()
   Menu.setApplicationMenu(null)
   createWindow(settings)
+
+  // Non-blocking update check a little after startup (never delays the window).
+  if (updateMode !== 'development') {
+    setTimeout(() => void updates.check('startup'), 8000).unref?.()
+  }
 
   app.on('window-all-closed', () => {
     watcher.stop()

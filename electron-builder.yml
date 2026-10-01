@@ -1,14 +1,26 @@
-appId: local.claude-session-manager
+# Windows packaging for Claude Local Session Manager.
+#
+# IDENTITY — never change these between releases. Windows uses appId for the
+# shortcut/taskbar AppUserModelID and the uninstall registry key; electron-updater
+# and the installed location depend on productName/name staying the same.
+# src/main/index.ts uses the same value for app.setAppUserModelId().
+appId: com.lahieuphong.claude-local-session-manager
 productName: Claude Local Session Manager
+executableName: Claude Local Session Manager
 copyright: Unofficial utility. Not affiliated with Anthropic.
+
 directories:
   output: dist
   buildResources: build
+
+# Only the compiled app goes into the package (no sources, tests, fixtures).
 files:
   - out/**/*
   - package.json
   - "!**/*.map"
 asar: true
+npmRebuild: false
+
 win:
   target:
     - target: nsis
@@ -17,13 +29,36 @@ win:
       arch: [x64]
   icon: build/icon.ico
   artifactName: ${productName}-${version}-${arch}.${ext}
+  # Unsigned unless CSC_LINK / CSC_KEY_PASSWORD (or WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD)
+  # are provided at build time. Never commit certificates or passwords.
+
+# Setup (recommended): per-user one-click installer.
+#  - installs to %LOCALAPPDATA%\Programs\<app> (no admin rights, stable path)
+#  - upgrades reuse the same location, shortcuts and identity
+#  - Start Menu shortcut always; Desktop shortcut on first install only
+#    (not recreated on upgrade if the user deleted it; skip it entirely with
+#    `Setup.exe --no-desktop-shortcut`)
+#  - uninstall keeps %APPDATA%\Claude Local Session Manager unless the
+#    uninstaller is run with `--delete-app-data`; it never touches ~/.claude
 nsis:
-  oneClick: false
+  oneClick: true
   perMachine: false
-  allowToChangeInstallationDirectory: true
+  runAfterFinish: true
+  createStartMenuShortcut: true
   createDesktopShortcut: true
   shortcutName: Claude Local Session Manager
+  uninstallDisplayName: Claude Local Session Manager
+  deleteAppDataOnUninstall: false
   artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+
+# Portable: single exe, no installation, no Start Menu or uninstall entry.
 portable:
   artifactName: ${productName}-Portable-${version}-${arch}.${ext}
-npmRebuild: false
+
+# electron-updater reads this (embedded as resources/app-update.yml).
+# Local `yarn dist` never publishes; GitHub Actions uploads the release assets.
+publish:
+  - provider: github
+    owner: lahieuphong
+    repo: claude-local-session-manager
+    releaseType: release

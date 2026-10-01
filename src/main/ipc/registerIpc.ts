@@ -9,6 +9,7 @@ import type { DeleteService } from '../services/deleteService'
 import type { ExportService } from '../services/exportService'
 import type { ProcessService } from '../services/processService'
 import type { SafetyModeController } from '../services/safetyMode'
+import type { UpdateService } from '../services/updateService'
 import { assertFormat, assertId, assertIds, assertPlanId, assertString } from './validators'
 import type { SessionRepository } from '../services/sessionRepository'
 import type { SettingsService } from '../services/settingsService'
@@ -21,6 +22,7 @@ export interface IpcContext {
   exporter: ExportService
   processes: ProcessService
   safety: SafetyModeController
+  updates: UpdateService
   settings: SettingsService
   cache: ScanCache
   appInfo: AppInfo
@@ -106,6 +108,13 @@ export function registerIpc(ctx: IpcContext): void {
   handle(IPC.getSafetyMode, () => ctx.safety.getState())
   handle(IPC.armRealDelete, (confirmation) => ctx.safety.arm(assertString(confirmation, 40)))
   handle(IPC.returnToSafeMode, () => ctx.safety.disarm('returned-by-user'))
+
+  // Updates: argument-free; URLs and installer files come only from the build's app-update.yml.
+  handle(IPC.getUpdateState, () => ctx.updates.getState())
+  handle(IPC.checkForUpdates, () => ctx.updates.check('manual'))
+  handle(IPC.downloadUpdate, () => ctx.updates.download())
+  handle(IPC.installUpdate, () => ctx.updates.install())
+  handle(IPC.openReleasesPage, () => ctx.updates.openReleasesPage())
 
   handle(IPC.clearCache, async (): Promise<ActionResult> => {
     await ctx.cache.clear()

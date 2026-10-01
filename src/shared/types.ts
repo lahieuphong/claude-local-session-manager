@@ -493,3 +493,30 @@ export interface SafetyModeState {
 export interface ArmResult extends ActionResult {
   state: SafetyModeState
 }
+
+// ---------------------------------------------------------------------------
+// Updates (GitHub Releases via electron-updater; main process only)
+// ---------------------------------------------------------------------------
+
+/**
+ * installed  = NSIS Setup install (can download + install updates)
+ * portable   = Portable exe or an unpacked build (notify only, manual download)
+ * development = not packaged (`yarn dev`): update checks are disabled
+ */
+export type UpdateMode = 'installed' | 'portable' | 'development'
+
+export type UpdateStatus = 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'downloaded' | 'error' | 'unsupported'
+
+export interface UpdateState {
+  mode: UpdateMode
+  status: UpdateStatus
+  currentVersion: string
+  latestVersion?: string
+  progressPercent?: number
+  checkedAt?: number
+  message?: string
+  canCheck: boolean
+  canDownload: boolean
+  canInstall: boolean
+  releasesUrl: string
+}

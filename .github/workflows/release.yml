@@ -1,0 +1,86 @@
+name: Release
+
+# Builds and publishes a Windows release when a version tag (v1.2.3) is pushed.
+# Nothing is published unless the tag matches package.json and the tests,
+# typecheck and build all pass.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write # create the GitHub Release and upload assets (GITHUB_TOKEN only)
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish Windows release
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Verify tag matches package.json version
+        run: node scripts/check-tag-version.mjs "${{ github.ref_name }}"
+
+      - name: Release metadata
+        id: meta
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Test
+        run: yarn test
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Build
+        run: yarn build
+
+      - name: Package (Setup + Portable, unsigned unless signing secrets are configured)
+        run: yarn dist
+        env:
+          # Code signing (optional, see README "Code signing"). When these
+          # secrets are not configured the build is simply unsigned.
+          # CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          # CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Collect release assets
+        run: yarn release:assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Claude Local Session Manager ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            ## Downloads
+
+            - **Setup — recommended:** `Claude-Local-Session-Manager-Setup-${{ steps.meta.outputs.version }}-x64.exe` — installs per user, adds a Start Menu shortcut, updates itself from GitHub Releases.
+            - **Portable — no installation required:** `Claude-Local-Session-Manager-Portable-${{ steps.meta.outputs.version }}-x64.exe` — runs directly; does not update itself.
+
+            Unofficial local utility — not affiliated with Anthropic. Builds are not code-signed yet, so Windows SmartScreen may show a warning ("More info" → "Run anyway").
+            Verify downloads with `SHA256SUMS.txt`.
+          files: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+            release/SHA256SUMS.txt

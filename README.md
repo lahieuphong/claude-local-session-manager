@@ -39,13 +39,98 @@ export or permanently delete sessions.
 - A parsed-transcript cache, so restarts and rescans are fast even with 100 MB+ transcripts.
 - Optional auto refresh (file watching or an interval), plus manual **Refresh** (F5).
 
-## Requirements
+## Installation
 
-- Windows 10/11 x64 (the main target; macOS/Linux discovery paths exist but are untested)
-- Node.js 20+ (developed with Node 24)
-- Yarn 1.x (classic) — the project uses `yarn.lock`; there is no npm lockfile
+Download from **[GitHub Releases](https://github.com/lahieuphong/claude-local-session-manager/releases)**:
 
-## Getting started
+| File | Use it when |
+|---|---|
+| `Claude-Local-Session-Manager-Setup-X.Y.Z-x64.exe` | **Recommended.** Normal installation. |
+| `Claude-Local-Session-Manager-Portable-X.Y.Z-x64.exe` | Advanced/testing: runs without installing. |
+
+(GitHub shows dashes instead of spaces in the file names. Locally `yarn dist`
+writes `Claude Local Session Manager-Setup-X.Y.Z-x64.exe` /
+`…-Portable-X.Y.Z-x64.exe` into `dist/`.)
+
+**Setup (recommended)**
+- Installs per user, no admin rights, into
+  `%LOCALAPPDATA%\Programs\claude-local-session-manager\`.
+- Adds a **Start Menu** entry *Claude Local Session Manager* (press Windows, type the name).
+- Adds a **Desktop** shortcut on the first install only. Delete it if you don't
+  want it — upgrades will not recreate it. To skip it entirely, run
+  `Setup.exe --no-desktop-shortcut`.
+- Pin it to the **Taskbar** yourself (right-click the running app or the Start
+  entry → *Pin to taskbar*). The app has a stable Windows identity
+  (AppUserModelID `com.lahieuphong.claude-local-session-manager`), so pins keep
+  working across upgrades.
+- Appears in **Settings → Apps → Installed apps** for uninstalling.
+- Checks GitHub Releases for updates and can install them.
+
+**Portable**
+- A single exe; nothing is installed or registered (no Start Menu entry, no
+  uninstall entry). It checks for updates but never replaces itself — download
+  the new release manually.
+- Don't pin a portable exe from a build folder as your everyday app; use Setup.
+
+> **Unsigned builds / SmartScreen.** Releases are not code-signed yet, so
+> Windows SmartScreen may warn the first time ("Windows protected your PC" →
+> *More info* → *Run anyway*). Verify a download against `SHA256SUMS.txt` in
+> the release.
+
+### One-time migration from an old shortcut
+
+Older test builds were sometimes pinned straight from `dist\`, which breaks
+("Problem with Shortcut") whenever `dist\` is rebuilt. Once:
+1. Unpin/delete the broken shortcut.
+2. Install the **Setup** build.
+3. Launch it from the Start Menu.
+4. Pin the installed app to the Taskbar.
+
+`dist/` only holds build output; it is never the installed application path.
+
+## Updating
+
+- **Setup:** the app checks GitHub Releases in the background a few seconds
+  after start (never delaying startup), and on **Settings → About → Check for
+  updates**. States: *Checking for updates… · You're up to date · Update
+  available: X.Y.Z · Downloading update… · Update ready to install · Update
+  failed*. Downloading and installing only happen when you click
+  **Download update** and then **Restart and install** — never silently, and
+  not automatically on quit. The installer replaces the app in the same folder;
+  settings and data are kept.
+- **Portable:** shows *Update available: X.Y.Z* and a link to GitHub Releases.
+- **Development (`yarn dev`):** update checks are disabled.
+- Every start after an update is in **Safe Mode** (real-delete arming is never stored).
+
+Update security: everything runs in the main process via electron-updater,
+over HTTPS from this repository's GitHub Releases only (configured at build
+time in `app-update.yml`). The renderer can only call `checkForUpdates()`,
+`downloadUpdate()`, `installUpdate()` and `openReleasesPage()` — no URLs,
+paths or commands. Downloads are verified against the SHA-512 in `latest.yml`.
+
+## Uninstalling
+
+Windows **Settings → Apps → Installed apps → Claude Local Session Manager →
+Uninstall** removes:
+- the installed files in `%LOCALAPPDATA%\Programs\claude-local-session-manager\`
+- the Start Menu and Desktop shortcuts it created
+- its Installed-apps (uninstall registry) entry
+
+It intentionally **keeps** the app's own data in
+`%APPDATA%\Claude Local Session Manager\` (settings, hidden-in-manager list,
+scan cache, logs), so reinstalling picks up where you left off. To remove that
+too, delete the folder manually or run the uninstaller with `--delete-app-data`
+(it then removes only `%APPDATA%\Claude Local Session Manager` and
+`%APPDATA%\claude-local-session-manager`).
+
+Uninstalling **never** touches `~\.claude`, `~\.claude\projects`, Claude
+Desktop storage, Claude session transcripts or your source-code projects.
+
+## Development
+
+Requirements: Windows 10/11 x64 (macOS/Linux discovery paths exist but are
+untested), Node.js 24 (CI uses 24), Yarn 1.x classic (the project uses
+`yarn.lock`; there is no npm lockfile).
 
 ```bash
 yarn install
@@ -53,18 +138,72 @@ yarn dev        # development app (always starts in Safe Mode / DRY RUN)
 yarn test       # automated tests (fixtures in temp folders only)
 yarn typecheck  # TypeScript, main + renderer
 yarn build      # production bundles into out/
-yarn dist       # Windows x64 installer + portable exe into dist/
+yarn dist       # clean dist/, build, then Setup + Portable into dist/ (never publishes)
+yarn clean      # remove build output only: dist/, release/, out/
 ```
 
-`yarn dist` produces:
+`yarn dist` produces in `dist/`: the Setup exe + `.blockmap`, the Portable
+exe, `latest.yml` (updater metadata) and `win-unpacked/` (unpacked app for
+debugging). `yarn icon` regenerates `build/icon.ico` / `build/icon.png` (a
+neutral glyph, not a Claude logo).
 
-- `dist/Claude Local Session Manager-Setup-<version>-x64.exe`: NSIS installer (per-user, lets you pick the install directory)
-- `dist/Claude Local Session Manager-Portable-<version>-x64.exe`: single portable exe
-- `dist/win-unpacked/`: the unpacked app
+## Versioning and releases
 
-The executables are not code-signed, so Windows SmartScreen may warn on first launch ("More info" → "Run anyway").
+`package.json` `"version"` is the single source of truth (shown in the About
+page, embedded in the build and in the artifact names). Versions are
+`MAJOR.MINOR.PATCH`.
 
-`yarn icon` regenerates `build/icon.ico` / `build/icon.png` (a neutral glyph, not a Claude logo).
+```bash
+yarn version:patch   # 1.0.0 -> 1.0.1   (only edits package.json; prints the result)
+yarn version:minor   # 1.0.1 -> 1.1.0
+yarn version:major   # 1.1.0 -> 2.0.0
+```
+
+**Release process** (GitHub Actions does the packaging and publishing):
+
+```bash
+git pull
+yarn test
+yarn typecheck
+yarn build
+
+yarn version:patch                  # e.g. 1.0.0 -> 1.0.1
+git add package.json
+git commit -m "release: v1.0.1"
+git tag v1.0.1
+git push origin main
+git push origin v1.0.1              # starts .github/workflows/release.yml
+```
+
+Or prepare the commit and tag in one step (still pushes nothing):
+
+```bash
+yarn release:patch                  # bump + commit "release: vX.Y.Z" + tag vX.Y.Z (requires a clean tree)
+git push origin main
+git push origin vX.Y.Z
+```
+
+The **Release** workflow runs on `v*.*.*` tags on a Windows runner (Node 24):
+it fails unless the tag equals `v` + package.json version, then runs
+`yarn install --frozen-lockfile`, `yarn test`, `yarn typecheck`, `yarn build`
+and `yarn dist`, collects the assets (`yarn release:assets`) and publishes the
+GitHub Release *Claude Local Session Manager vX.Y.Z* with generated notes,
+using only the built-in `GITHUB_TOKEN` (`contents: write`). Attached assets:
+`Claude-Local-Session-Manager-Setup-X.Y.Z-x64.exe`, its `.blockmap`,
+`Claude-Local-Session-Manager-Portable-X.Y.Z-x64.exe`, `latest.yml` and
+`SHA256SUMS.txt` (never `win-unpacked/` or debug files). The names use dashes
+because that is what `latest.yml` references.
+
+### Code signing (future)
+
+Builds are unsigned unless a certificate is provided at build time. Later,
+add repository secrets (e.g. `WIN_CSC_LINK` = base64 .pfx, `WIN_CSC_KEY_PASSWORD`)
+and uncomment the `CSC_LINK` / `CSC_KEY_PASSWORD` lines in
+`.github/workflows/release.yml` (electron-builder also reads `WIN_CSC_LINK` /
+`WIN_CSC_KEY_PASSWORD`, or Azure Trusted Signing via `win.azureSignOptions`).
+Once signed, set `win.signtoolOptions.publisherName` so electron-updater also
+verifies the publisher of downloaded updates. Never commit certificates,
+private keys, passwords or tokens.
 
 ## Where Claude stores local data
 
@@ -259,6 +398,8 @@ src/
       deleteService.ts     delete plans, verification, execution
       processService.ts    Claude Desktop / Claude Code process detection
       exportService.ts     JSONL / JSON / Markdown export (copies only)
+      safetyMode.ts        Safe Mode / REAL DELETE ARMED (memory only)
+      updateService.ts     GitHub Releases updates (installed / portable / dev)
       cacheService.ts      parsed-transcript index in userData
       watchService.ts      throttled fs.watch / interval refresh
   preload/           contextBridge API (named session-ID operations only)
@@ -315,4 +456,8 @@ transcripts, a cold scan takes about 1.6 s and a cached rescan about 50 ms.
   verified with fixtures; the test machine had no Desktop "Code" sessions.
 - Claude Code transcript-only sessions have no on-disk archive flag; "Hide in manager" lives only in this app.
 - Remote (SSH/WSL) Desktop sessions: only the local metadata can be managed.
-- Executables are unsigned.
+- Executables are not code-signed yet: SmartScreen may warn on first run, and
+  electron-updater can verify downloads only by the SHA-512 in `latest.yml`
+  (not by publisher) until a certificate is configured.
+- The Setup installer is per-user one-click: no install-folder choice and no
+  Desktop-shortcut checkbox (use `--no-desktop-shortcut` or delete the shortcut).

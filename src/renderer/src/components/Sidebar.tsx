@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactElement } from 'react'
 import { formatBytes } from '../../../shared/format'
 import { refreshProcess, setView, useAppState, type SessionFilter } from '../stores/appStore'
 import { SafetyPill } from './SafetyMode'
+import { UpdatePill } from './Updates'
 import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
 import {
   AppMark,
@@ -129,6 +130,7 @@ export function Sidebar(): ReactElement {
             </div>
           )}
           <SafetyPill />
+          <UpdatePill />
         </div>
       </div>
     </aside>

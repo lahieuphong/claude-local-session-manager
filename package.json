@@ -5,6 +5,11 @@
   "description": "Unofficial local session manager for Claude Code/Desktop on Windows.",
   "author": "Claude Local Session Manager contributors",
   "license": "MIT",
+  "homepage": "https://github.com/lahieuphong/claude-local-session-manager",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lahieuphong/claude-local-session-manager.git"
+  },
   "private": true,
   "main": "./out/main/index.js",
   "scripts": {
@@ -17,7 +22,17 @@
     "test:watch": "vitest",
     "icon": "node scripts/generate-icon.mjs",
     "build": "electron-vite build",
-    "dist": "yarn build && electron-builder --win --x64 --publish never"
+    "clean": "node scripts/clean.mjs dist release out",
+    "clean:dist": "node scripts/clean.mjs dist release",
+    "dist": "yarn clean:dist && yarn build && electron-builder --win --x64 --publish never",
+    "version:patch": "node scripts/version.mjs patch",
+    "version:minor": "node scripts/version.mjs minor",
+    "version:major": "node scripts/version.mjs major",
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major",
+    "release:assets": "node scripts/prepare-release-assets.mjs",
+    "release:check-tag": "node scripts/check-tag-version.mjs"
   },
   "packageManager": "yarn@1.22.22",
   "devDependencies": {
@@ -33,5 +48,8 @@
     "typescript": "~5.9.3",
     "vite": "^7.3.6",
     "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
