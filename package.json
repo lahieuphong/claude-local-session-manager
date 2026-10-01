@@ -12,13 +12,14 @@
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "yarn typecheck:node && yarn typecheck:web",
     "test": "vitest run",
     "test:watch": "vitest",
     "icon": "node scripts/generate-icon.mjs",
     "build": "electron-vite build",
-    "dist": "npm run build && electron-builder --win --x64 --publish never"
+    "dist": "yarn build && electron-builder --win --x64 --publish never"
   },
+  "packageManager": "yarn@1.22.22",
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",

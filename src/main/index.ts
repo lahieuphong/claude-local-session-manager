@@ -21,7 +21,7 @@ if (process.platform === 'win32') app.setAppUserModelId('local.claude-session-ma
 
 /**
  * DRY RUN: mutating actions only log what they would do.
- * Default: on in development (`npm run dev`), off in the packaged app.
+ * Default: on in development (`yarn dev`), off in the packaged app.
  * Override either way with CLAUDE_SESSION_MANAGER_DRY_RUN=true|false.
  */
 function resolveDryRun(): boolean {

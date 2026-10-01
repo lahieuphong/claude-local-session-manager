@@ -41,20 +41,21 @@ export or permanently delete sessions.
 ## Requirements
 
 - Windows 10/11 x64 (the main target; macOS/Linux discovery paths exist but are untested)
-- Node.js 20+ (developed with Node 24) and npm
+- Node.js 20+ (developed with Node 24)
+- Yarn 1.x (classic) — the project uses `yarn.lock`; there is no npm lockfile
 
 ## Getting started
 
 ```bash
-npm install
-npm run dev        # development app (DRY RUN by default)
-npm test           # automated tests (fixtures in temp folders only)
-npm run typecheck  # TypeScript, main + renderer
-npm run build      # production bundles into out/
-npm run dist       # Windows x64 installer + portable exe into dist/
+yarn install
+yarn dev        # development app (DRY RUN by default)
+yarn test       # automated tests (fixtures in temp folders only)
+yarn typecheck  # TypeScript, main + renderer
+yarn build      # production bundles into out/
+yarn dist       # Windows x64 installer + portable exe into dist/
 ```
 
-`npm run dist` produces:
+`yarn dist` produces:
 
 - `dist/Claude Local Session Manager-Setup-<version>-x64.exe`: NSIS installer (per-user, lets you pick the install directory)
 - `dist/Claude Local Session Manager-Portable-<version>-x64.exe`: single portable exe
@@ -62,7 +63,7 @@ npm run dist       # Windows x64 installer + portable exe into dist/
 
 The executables are not code-signed, so Windows SmartScreen may warn on first launch ("More info" → "Run anyway").
 
-`npm run icon` regenerates `build/icon.ico` / `build/icon.png` (a neutral glyph, not a Claude logo).
+`yarn icon` regenerates `build/icon.ico` / `build/icon.png` (a neutral glyph, not a Claude logo).
 
 ## Where Claude stores local data
 
@@ -159,10 +160,10 @@ Without a backup the data cannot be recovered.
   Scanning, browsing and export always work.
 - **DRY RUN.** With `CLAUDE_SESSION_MANAGER_DRY_RUN=true`, archive, restore
   and delete only log what they would do. DRY RUN is **on by default in
-  development** (`npm run dev`) and off in the packaged app. Override either way:
+  development** (`yarn dev`) and off in the packaged app. Override either way:
 
   ```powershell
-  $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "false"; npm run dev   # real actions in dev
+  $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "false"; yarn dev   # real actions in dev
   $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "true"; & ".\dist\win-unpacked\Claude Local Session Manager.exe"
   ```
 
@@ -232,7 +233,7 @@ transcripts, a cold scan takes about 1.6 s and a cached rescan about 50 ms.
 
 ## Troubleshooting
 
-- **`npm run dev` / electron exits with `Cannot read properties of undefined (reading 'setName')`**:
+- **`yarn dev` / electron exits with `Cannot read properties of undefined (reading 'setName')`**:
   the environment has `ELECTRON_RUN_AS_NODE=1`, which VS Code sets for
   processes spawned by extensions. Run from a normal terminal, or clear it
   first: `Remove-Item Env:ELECTRON_RUN_AS_NODE` (PowerShell) /
