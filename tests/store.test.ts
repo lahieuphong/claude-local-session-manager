@@ -340,6 +340,14 @@ describe('Store languages, assets and manifest', () => {
     expect(template).toMatch(/TargetDeviceFamily Name="Windows\.Desktop"/)
   })
 
+  it('every requested restricted capability has a certification justification', () => {
+    const notes = read('store/certification-notes.md')
+    const requested = ['runFullTrust', ...(storeBuilderConfig({ identity: FIXTURE_IDENTITY, version: '1.2.3' }).appx.capabilities as string[])]
+    expect(requested).toEqual(['runFullTrust', 'unvirtualizedResources'])
+    for (const cap of requested) expect(notes).toMatch(new RegExp(`### \`${cap}\``))
+    expect(notes).toMatch(/FileSystemWriteVirtualization=disabled/)
+  })
+
   it('the manifest review catches identity, version, capability and language problems', () => {
     const fill = (caps: string[], langs: string[], version = '1.2.3.0') =>
       read('store/AppxManifest.template.xml').replace(/\$\{(\w+)\}/g, (_m, k: string) => {

@@ -10,6 +10,7 @@ The full procedure is in [`docs/MICROSOFT_STORE.md`](../docs/MICROSOFT_STORE.md)
 | [`listing/`](listing/) | Draft Store listing text: `en-US.md`, `vi-VN.md`, `zh-CN.md`. |
 | [`screenshots/README.md`](screenshots/README.md) | Which screenshots to take and how (no real session data). |
 | [`privacy.md`](privacy.md) | Privacy policy text to publish and link from Partner Center. |
+| [`certification-notes.md`](certification-notes.md) | Restricted-capability justifications (runFullTrust, unvirtualizedResources), notes for certification, and the audit behind them. |
 
 Visual assets (StoreLogo, Square44x44, Square150x150, Wide310x150, Small/Large
 tiles, unplated taskbar icons) are generated into `build/appx/` by `yarn icon`

@@ -216,21 +216,11 @@ a higher version than the previous one, so bump `package.json` (the usual
 6. **Store listings:** use the drafts in [`store/listing/`](../store/listing/)
    (English, Tiếng Việt, 简体中文) and screenshots (see
    [`store/screenshots/README.md`](../store/screenshots/README.md)).
-7. **Submission options → Restricted capabilities:** explain why they are needed:
-   - `runFullTrust`: *Desktop (Electron) application. It reads Claude Code and
-     Claude Desktop session files in the user's profile, shows which Claude
-     processes are running, and opens folders in File Explorer.*
-   - `unvirtualizedResources`: *The app archives, and on explicit typed user
-     confirmation permanently deletes, Claude Desktop session files stored under
-     the user's AppData. With write virtualization those changes would go to the
-     app's private package copy and never reach Claude Desktop, showing the user
-     a false result. Writes only touch the exact files listed in a plan the user
-     reviewed.*
-8. **Notes for certification:** e.g. *The app starts in Safe Mode (dry run) and
-   cannot delete anything until the user arms deletion in Settings → Deletion
-   safety by typing ENABLE DELETE. It needs local Claude Code/Claude Desktop
-   data to show sessions; without it the list is empty. No account or network
-   service is required. Not affiliated with Anthropic.*
+7. **Submission options → Restricted capabilities:** paste the justifications
+   for `runFullTrust` and `unvirtualizedResources` from
+   [`store/certification-notes.md`](../store/certification-notes.md), which also
+   contains the audit showing why both are technically required.
+8. **Notes for certification:** use the text in the same file.
 9. **Submit to the Store** and wait for certification.
 
 ## 8. Later versions
