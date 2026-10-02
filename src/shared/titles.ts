@@ -83,13 +83,3 @@ export function resolveDisplayTitle(input: TitleInputs): { title: string; source
   if (isUsableTitle(input.lastPrompt)) return { title: promptToTitle(input.lastPrompt), source: 'last-prompt' }
   return { title: UNTITLED, source: 'untitled' }
 }
-
-export const TITLE_SOURCE_LABEL: Record<TitleSource, string> = {
-  metadata: 'Claude Desktop metadata title',
-  'custom-title': 'Custom title (/rename)',
-  'ai-title': 'AI-generated title',
-  summary: 'Transcript summary',
-  'first-prompt': 'First user prompt',
-  'last-prompt': 'Last prompt',
-  untitled: 'No title available'
-}

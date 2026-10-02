@@ -5,6 +5,11 @@
  * strings, numbers, booleans). Timestamps are epoch milliseconds.
  */
 
+import type { MessageRef } from './messages'
+import type { SupportedLocale } from './locale'
+
+export type { MessageRef }
+
 export type SessionStatus = 'active' | 'archived' | 'transcript-only' | 'metadata-only' | 'orphan'
 
 /** Where a session record originates from. */
@@ -148,7 +153,10 @@ export interface ClaudeSession {
   /** Set when a running Claude Code process currently owns this session. */
   live?: LiveSessionRef
 
+  /** English diagnostics (searchable, logged). */
   problems: string[]
+  /** Translation keys for `problems`, keyed by the English text (absent for raw parser/OS errors). */
+  problemMsgs?: Record<string, MessageRef>
 }
 
 export interface SessionDetails {
@@ -210,6 +218,7 @@ export interface ScanStats {
 export interface ScanIssue {
   path?: string
   message: string
+  msg?: MessageRef
 }
 
 export interface ScanSnapshot {
@@ -305,9 +314,16 @@ export type ActionErrorCode =
   | 'IO_ERROR'
   | 'CANCELLED'
 
+/**
+ * `message` is English (logs, reports). `msg` is the same message as a
+ * translation key; the renderer shows it in the UI language when present.
+ */
 export interface ActionResult {
   ok: boolean
   message: string
+  msg?: MessageRef
+  /** Extra notes appended to the message (e.g. warnings). */
+  notes?: MessageRef[]
   code?: ActionErrorCode
   dryRun?: boolean
 }
@@ -315,6 +331,7 @@ export interface ActionResult {
 export interface BulkActionResult {
   ok: boolean
   message: string
+  msg?: MessageRef
   results: Array<{ id: string; title: string } & ActionResult>
 }
 
@@ -344,6 +361,7 @@ export interface DeletePlanItem {
   /** For `manager-record` items: which manager store the record lives in. */
   recordType?: 'hidden-list' | 'scan-cache'
   note?: string
+  noteMsg?: MessageRef
 }
 
 export interface SessionDeletePlan {
@@ -360,11 +378,14 @@ export interface SessionDeletePlan {
   totalFiles: number
   totalDirs: number
   /** Paths explicitly kept (workspace, Claude project folder, project memory). */
-  willNotDelete: Array<{ path: string; reason: string }>
+  willNotDelete: Array<{ path: string; reason: string; reasonMsg?: MessageRef }>
   /** When set, this session cannot be deleted right now. */
   blockedReason?: string
+  blockedMsg?: MessageRef
   blockedCode?: ActionErrorCode
   warnings: string[]
+  /** Same as `warnings`, as translation keys (same order). */
+  warningMsgs?: MessageRef[]
 }
 
 export interface DeletePlan {
@@ -382,6 +403,7 @@ export interface DeletePlan {
   blocked: SessionDeletePlan[]
   /** Global reason that blocks real deletion (e.g. Claude Desktop running). */
   globalBlockedReason?: string
+  globalBlockedMsg?: MessageRef
   globalBlockedCode?: ActionErrorCode
   totalBytes: number
   totalItems: number
@@ -398,6 +420,7 @@ export type DeleteItemOutcome = 'deleted' | 'created' | 'updated' | 'missing' | 
 export interface DeleteItemResult extends DeletePlanItem {
   outcome: DeleteItemOutcome
   error?: string
+  errorMsg?: MessageRef
 }
 
 export interface SessionDeleteResult {
@@ -414,9 +437,11 @@ export interface DeleteResult {
   dryRun: boolean
   code?: ActionErrorCode
   message: string
+  msg?: MessageRef
   planId?: string
   /** Dry run only: the reason a real delete would be refused right now. */
   wouldBeBlocked?: string
+  wouldBeBlockedMsg?: MessageRef
   sessions: SessionDeleteResult[]
   /** Human-readable report of what was (or would be) done. */
   reportText?: string
@@ -427,6 +452,7 @@ export type ExportFormat = 'jsonl' | 'info' | 'markdown'
 export interface ExportResult {
   ok: boolean
   message: string
+  msg?: MessageRef
   files: string[]
   errors: string[]
   cancelled?: boolean
@@ -438,11 +464,17 @@ export interface ExportResult {
 
 export type RefreshMode = 'manual' | 'watch' | 'interval'
 
+/** `system` follows the OS "show animations" setting; `reduced` turns motion off in the app. */
+export type MotionPreference = 'system' | 'reduced'
+
 export interface AppSettings {
   refreshMode: RefreshMode
   refreshIntervalSec: number
   showRawPaths: boolean
   debugMode: boolean
+  /** UI language chosen by the user; null = follow the system language (first run). */
+  language: SupportedLocale | null
+  motion: MotionPreference
 }
 
 export interface AppInfo {
@@ -454,6 +486,8 @@ export interface AppInfo {
   cachePath: string
   logPath: string
   electronVersion: string
+  /** OS preferred languages (app.getPreferredSystemLanguages), used when no language is saved. */
+  systemLanguages: string[]
 }
 
 export interface LogEntry {
@@ -488,6 +522,7 @@ export interface SafetyModeState {
   armDurationMs: number
   /** e.g. a stale environment variable that was ignored at startup. */
   notice?: string
+  noticeMsg?: MessageRef
 }
 
 export interface ArmResult extends ActionResult {
@@ -515,6 +550,7 @@ export interface UpdateState {
   progressPercent?: number
   checkedAt?: number
   message?: string
+  msg?: MessageRef
   canCheck: boolean
   canDownload: boolean
   canInstall: boolean

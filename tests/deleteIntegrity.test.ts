@@ -133,7 +133,7 @@ describe('the source workspace can never enter a delete plan', () => {
       expect(lower(item.path)).not.toBe(lower(ws))
       expect(lower(ws).startsWith(lower(item.path) + path.sep)).toBe(false)
     }
-    expect(plan.sessions[0].willNotDelete[0]).toEqual({ path: ws, reason: 'project workspace (source code)' })
+    expect(plan.sessions[0].willNotDelete[0]).toEqual({ path: ws, reason: 'project workspace (source code)', reasonMsg: { key: 'keep.workspace' } })
     expect(plan.reportText).toMatch(/WILL NOT DELETE\s+- .*workspace/)
   })
 

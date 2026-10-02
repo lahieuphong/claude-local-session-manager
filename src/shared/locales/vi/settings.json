@@ -1,0 +1,68 @@
+{
+  "title": "Cài đặt",
+  "section": {
+    "general": "Chung",
+    "appearance": "Giao diện",
+    "discovery": "Tìm phiên",
+    "deletionSafety": "An toàn khi xóa",
+    "updates": "Cập nhật",
+    "about": "Giới thiệu"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "hint": "Lần đầu mở sẽ theo ngôn ngữ Windows ({{language}}). Lựa chọn của bạn được lưu và áp dụng ngay.",
+    "useSystem": "Dùng ngôn ngữ hệ thống"
+  },
+  "motion": {
+    "label": "Chuyển động",
+    "hint": "“Giảm chuyển động” tắt hiệu ứng chuyển cảnh trong ứng dụng. “Theo hệ thống” tuân theo cài đặt hiệu ứng của Windows.",
+    "system": "Theo hệ thống",
+    "reduced": "Giảm chuyển động"
+  },
+  "rawPaths": {
+    "label": "Hiện đường dẫn đầy đủ",
+    "hint": "Hiện đường dẫn tuyệt đối thay vì dạng rút gọn ~ và %LOCALAPPDATA%. Hộp thoại xóa luôn hiện đường dẫn đầy đủ."
+  },
+  "refresh": {
+    "label": "Làm mới",
+    "manual": "Chỉ thủ công",
+    "manualHint": "Quét khi mở ứng dụng và khi bạn bấm Làm mới (F5).",
+    "watch": "Theo dõi tệp",
+    "watchHint": "Quét lại ngay sau khi Claude ghi vào thư mục lưu (có giãn cách, ít bộ theo dõi).",
+    "interval": "Định kỳ",
+    "intervalHint": "Quét lại theo chu kỳ cố định.",
+    "seconds_other": "{{count}} giây",
+    "minutes_other": "{{count}} phút"
+  },
+  "roots": {
+    "label": "Thư mục dữ liệu",
+    "hint": "Được dò từ USERPROFILE, APPDATA và LOCALAPPDATA mỗi lần quét và không chỉnh sửa được: ứng dụng chỉ thay đổi tệp bên trong các thư mục này, và chỉ những đường dẫn đã được gán cho một phiên.",
+    "claudeHome": "Thư mục Claude Code",
+    "transcripts": "Thư mục bản ghi hội thoại",
+    "fileHistory": "Lịch sử tệp",
+    "sessionEnv": "Môi trường phiên",
+    "running": "Phiên đang chạy",
+    "desktop": "Siêu dữ liệu Claude Desktop",
+    "notFound": "không tìm thấy",
+    "noDesktop": "Không tìm thấy thư mục claude-code-sessions của Claude Desktop",
+    "desktopCounts": "{{sessions}} tệp phiên · {{tombstones}} dấu xóa · {{indexes}} chỉ mục lưu trữ",
+    "pending": "Đang chờ quét…",
+    "checked_other": "Tất cả vị trí đã kiểm tra ({{count}})"
+  },
+  "cache": {
+    "label": "Bộ nhớ đệm quét",
+    "hint": "Giúp quét lại nhanh hơn. Xóa bộ nhớ đệm không bao giờ đụng tới tệp của Claude.",
+    "clear": "Xóa bộ nhớ đệm quét"
+  },
+  "debug": {
+    "label": "Chế độ nhà phát triển / gỡ lỗi",
+    "hint": "Ghi nhật ký chi tiết, hiện JSON phiên đã chuẩn hóa trong khung chi tiết và DevTools (F12)."
+  },
+  "logs": {
+    "label": "Chẩn đoán",
+    "cache": "Bộ nhớ đệm",
+    "logFile": "Tệp nhật ký",
+    "show": "Xem nhật ký",
+    "empty": "(trống)"
+  }
+}

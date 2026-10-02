@@ -1,0 +1,159 @@
+{
+  "common": {
+    "sessionNotFound": "Không tìm thấy phiên. Hãy làm mới rồi thử lại."
+  },
+  "guard": {
+    "statusUnknown": "Không kiểm tra được Claude có đang chạy hay không ({{error}}). Hãy bấm kiểm tra lại tiến trình rồi thử lại.",
+    "claudeRunning": "Hãy đóng Claude Desktop trước khi thay đổi tệp phiên.",
+    "sessionInUse": "Phiên này đang mở trong một tiến trình Claude Code (PID {{pid}}). Hãy đóng nó trước.",
+    "sessionInUseNamed": "Phiên này đang mở trong một tiến trình Claude Code (PID {{pid}}, “{{name}}”). Hãy đóng nó trước."
+  },
+  "reveal": {
+    "metadata": {
+      "none": "Phiên này không có tệp siêu dữ liệu.",
+      "gone": "Tệp siêu dữ liệu không còn tồn tại: {{path}}",
+      "done": "Đã mở tệp siêu dữ liệu trong Explorer."
+    },
+    "transcript": {
+      "none": "Phiên này không có bản ghi hội thoại.",
+      "gone": "Bản ghi hội thoại không còn tồn tại: {{path}}",
+      "done": "Đã mở bản ghi hội thoại trong Explorer."
+    },
+    "sessionData": {
+      "none": "Phiên này không có thư mục dữ liệu phiên.",
+      "gone": "Thư mục dữ liệu phiên không còn tồn tại: {{path}}",
+      "done": "Đã mở thư mục dữ liệu phiên trong Explorer."
+    }
+  },
+  "project": {
+    "unknownPath": "Không rõ đường dẫn dự án của phiên này.",
+    "missingFolder": "Thư mục dự án không tồn tại: {{path}}",
+    "opened": "Đã mở thư mục dự án."
+  },
+  "cache": {
+    "cleared": "Đã xóa bộ nhớ đệm và quét lại các phiên."
+  },
+  "archive": {
+    "verb": {
+      "archive": "lưu trữ",
+      "restore": "khôi phục"
+    },
+    "metadataGone": "Tệp siêu dữ liệu đã biến mất: {{path}}",
+    "invalidJson": "Không thể {{verb}}: siêu dữ liệu không phải JSON hợp lệ ({{error}}). Tệp được giữ nguyên.",
+    "changedOnDisk": "Tệp siêu dữ liệu đã thay đổi trên đĩa (ID phiên khác). Hãy làm mới rồi thử lại.",
+    "dryRun": "CHẠY THỬ: sẽ {{verb}} (đặt isArchived={{value}}). Không tệp nào bị thay đổi.",
+    "writeFailed": "Không thể {{verb}}: {{error}}",
+    "indexUnrecognised": "{{file}} có định dạng không nhận ra nên được giữ nguyên.",
+    "indexNotUpdated": "Chưa cập nhật chỉ mục lưu trữ: {{error}}",
+    "alreadyArchived": "Phiên đã được lưu trữ từ trước.",
+    "alreadyActive": "Phiên vốn đang hoạt động.",
+    "archived": "Đã lưu trữ phiên.",
+    "restored": "Đã khôi phục phiên.",
+    "notArchivable": "Phiên Claude Code này không có siêu dữ liệu Claude Desktop nên Claude không có cờ lưu trữ cho nó. Hãy dùng “Ẩn trong trình quản lý” (chỉ thay đổi danh sách của ứng dụng này)."
+  },
+  "hide": {
+    "desktopSession": "Đây là phiên Claude Desktop: hãy dùng Lưu trữ / Khôi phục, thao tác này thay đổi trạng thái lưu trữ của chính Claude.",
+    "saveFailed": "Không lưu được danh sách ẩn của trình quản lý: {{error}}",
+    "hidden": "Đã ẩn trong trình quản lý. Chỉ danh sách của ứng dụng này thay đổi; tệp và trạng thái lưu trữ của Claude giữ nguyên.",
+    "shown": "Đã hiện lại trong trình quản lý."
+  },
+  "bulk": {
+    "verb": {
+      "archived": "Đã lưu trữ",
+      "restored": "Đã khôi phục",
+      "hidden": "Đã ẩn",
+      "shown": "Đã hiện lại"
+    },
+    "done_other": "{{verb}} {{count}} phiên.",
+    "partial": "{{verb}} {{done}}/{{count}} phiên; {{failed}} phiên bị bỏ qua hoặc lỗi."
+  },
+  "delete": {
+    "recentlyWritten": "Bản ghi hội thoại vừa được ghi {{seconds}} giây trước và có thể vẫn đang dùng. Hãy đợi rồi thử lại.",
+    "nothingOnDisk": "Không có gì trên đĩa để xóa cho phiên này.",
+    "unknownPlan": "Không tìm thấy kế hoạch xóa. Hãy mở lại hộp thoại xóa.",
+    "planExpired": "Kế hoạch xóa này đã hết hạn. Hãy mở lại hộp thoại xóa.",
+    "planTypeMismatch": "Loại kế hoạch xóa không khớp.",
+    "idsMismatch": "Các phiên gửi lên không khớp với kế hoạch xóa.",
+    "nothingToDelete": "Không có gì để xóa.",
+    "confirmationMismatch": "Nội dung xác nhận không khớp.",
+    "modeName": {
+      "safe": "CHẾ ĐỘ AN TOÀN (chạy thử)",
+      "armed": "ĐÃ BẬT XÓA THẬT"
+    },
+    "modeChanged": "Chế độ an toàn đã thay đổi kể từ khi lập kế hoạch ({{from}} → {{to}}). Hãy xem lại kế hoạch.",
+    "rootsUnavailable": "Không có thông tin các thư mục dữ liệu Claude.",
+    "sessionBlocked": "{{title}}: {{reason}}",
+    "identityChanged": "{{title}}: ID phiên CLI đã thay đổi kể từ khi lập kế hoạch (kế hoạch cũ).",
+    "staleContent": "Kế hoạch xóa đã cũ; tệp phiên đã thay đổi kể từ khi lập kế hoạch (dung lượng, số tệp hoặc nội dung đã khác). Hãy xem lại.",
+    "staleTargets": "Kế hoạch xóa đã cũ; tệp phiên đã thay đổi kể từ khi lập kế hoạch ({{changes}}). Hãy xem lại.",
+    "diffAdded": "xuất hiện mục tiêu mới ngoài dự kiến: {{added}}",
+    "diffRemoved": "mục tiêu đã biến mất: {{removed}}",
+    "diffBoth": "xuất hiện mục tiêu mới ngoài dự kiến: {{added}}; mục tiêu đã biến mất: {{removed}}",
+    "refused": "Từ chối xóa, chưa có gì bị thay đổi: {{error}}",
+    "dryRunBlocked_other": "CHẠY THỬ: {{count}} phiên đã đạt kiểm tra, nhưng nếu xóa thật lúc này sẽ bị chặn: {{reason}}",
+    "dryRunPassed_other": "CHẠY THỬ: đã đạt kiểm tra; {{count}} phiên sẽ bị xóa. Không tệp nào bị thay đổi.",
+    "done_other": "Đã xóa vĩnh viễn {{count}} phiên, giải phóng {{size}}.",
+    "incomplete": "Xóa chưa trọn vẹn: {{deleted}}/{{count}} phiên đã xóa hết; {{failed}} mục không xóa được. Xem chi tiết.",
+    "itemMetadataKept": "Tệp siêu dữ liệu chưa bị xóa",
+    "itemRecordsKept": "Được giữ lại vì một số tệp của phiên không xóa được",
+    "warnSharedTranscript": "Giữ lại: {{path}} đang được một phiên khác tham chiếu.",
+    "warnLinks": "{{count}} liên kết bên trong {{path}} chỉ bị gỡ phần liên kết; đích của chúng không bị đụng tới.",
+    "noteArchiveIndex": "Gỡ “{{id}}” khỏi chỉ mục lưu trữ của Claude Desktop",
+    "noteTombstone": "Dấu xóa, giống cách Claude Desktop ghi",
+    "noteOtherFolder": "Cùng UUID phiên, được ghi khi phiên làm việc ở thư mục khác",
+    "noteHiddenRecord": "Gỡ phiên này khỏi danh sách ẩn của trình quản lý ({{key}})",
+    "noteCacheRecord": "Gỡ bản tóm tắt đã lưu đệm của {{file}}"
+  },
+  "keep": {
+    "workspace": "thư mục dự án (mã nguồn)",
+    "projectFolder": "chính thư mục dự án của Claude, các phiên khác và memory/",
+    "memory": "bộ nhớ dự án",
+    "desktopFolder": "thư mục phiên Claude Desktop và các phiên khác trong đó"
+  },
+  "export": {
+    "notFound": "Không tìm thấy phiên",
+    "noTranscript": "Phiên này không có bản ghi hội thoại để xuất.",
+    "cancelled": "Đã hủy xuất",
+    "done": "Đã xuất ra {{path}}",
+    "failed": "Xuất thất bại: {{error}}",
+    "many_other": "Đã xuất {{count}} tệp vào {{path}}",
+    "manyWithErrors": "Đã xuất {{count}} tệp vào {{path}}; {{errors}} lỗi.",
+    "chooseFolder": "Chọn thư mục xuất"
+  },
+  "safety": {
+    "typeExactly": "Gõ chính xác {{phrase}} để bật xóa thật.",
+    "notArmed": "Chưa bật xóa thật: {{reason}}",
+    "armed": "ĐÃ BẬT XÓA THẬT trong {{minutes}} phút hoặc một lần xóa, tùy điều kiện nào đến trước.",
+    "noticePackaged": "Đã bỏ qua {{variable}}={{value}}: bản đóng gói luôn khởi động ở Chế độ an toàn.",
+    "noticeNoDevAllow": "Đã bỏ qua {{variable}}={{value}} vì chưa đặt {{allow}}=1.",
+    "noticeDevArmed": "Bản phát triển được bật xóa thật bởi {{variable}}={{value}} ({{allow}}=1)."
+  },
+  "update": {
+    "devOnly": "Chỉ bản cài đặt hoặc bản Portable mới kiểm tra cập nhật.",
+    "updaterMissing": "Không tải được trình cập nhật. Hãy tải phiên bản mới từ GitHub Releases.",
+    "ready": "Bản cập nhật đã sẵn sàng để cài.",
+    "available": "Có bản cập nhật: {{version}}",
+    "availablePortable": "Có bản cập nhật: {{version}}. Hãy tải bản Setup hoặc Portable mới từ GitHub Releases.",
+    "upToDate": "Bạn đang dùng bản mới nhất.",
+    "noRelease": "Chưa có bản phát hành nào trên GitHub.",
+    "offline": "Không kết nối được GitHub. Hãy kiểm tra kết nối mạng.",
+    "cannotSelfUpdate": "Bản này không tự cập nhật được. Hãy tải bản phát hành mới từ GitHub Releases.",
+    "downloading": "Đang tải bản cập nhật…",
+    "noDownloaded": "Chưa có bản cập nhật nào được tải sẵn để cài.",
+    "restarting": "Đang khởi động lại để cài bản cập nhật…",
+    "openedReleases": "Đã mở GitHub Releases."
+  },
+  "problem": {
+    "ambiguousTranscript": "Bản ghi hội thoại {{file}} có trong {{count}} thư mục dự án; không liên kết (không rõ ràng).",
+    "transcriptNotFound": "Không tìm thấy bản ghi hội thoại {{file}} trong ~/.claude/projects.",
+    "sharedTranscript": "Bản ghi hội thoại {{file}} được nhiều tệp siêu dữ liệu tham chiếu; không đưa vào kế hoạch xóa.",
+    "duplicateUuid": "Cùng UUID phiên này cũng có trong một thư mục dự án khác.",
+    "orphanFolder": "Thư mục dữ liệu phiên không có bản ghi hội thoại hay tệp siêu dữ liệu (mồ côi).",
+    "ambiguousOwner": "Nhiều phiên cùng sở hữu UUID này; thư mục không được gắn với phiên nào.",
+    "sharedFolder": "Thư mục {{label}} {{uuid}} được nhiều phiên dùng chung; không đưa vào kế hoạch xóa.",
+    "remote": "Phiên từ xa ({{kind}}): bản ghi hội thoại nằm trên máy từ xa."
+  },
+  "scan": {
+    "projectsRootMissing": "Không tìm thấy thư mục dự án của Claude Code (~/.claude/projects)."
+  }
+}

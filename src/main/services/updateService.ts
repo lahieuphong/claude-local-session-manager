@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import type { ActionResult, UpdateMode, UpdateState, UpdateStatus } from '../../shared/types'
 import { errorMessage, logger } from '../util/logger'
+import { msg } from '../util/messages'
+import type { MessageRef } from '../../shared/messages'
 
 /**
  * The part of electron-updater's AppUpdater this app uses. Injected so the
@@ -55,11 +57,14 @@ export function compareVersions(a: string, b: string): number {
 
 const NO_RELEASE_RE = /No published versions|Unable to find latest version/i
 
-function friendlyError(err: unknown): string {
-  const msg = errorMessage(err)
-  if (NO_RELEASE_RE.test(msg) || /404/.test(msg)) return 'No release has been published on GitHub yet.'
-  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|net::ERR_/i.test(msg)) return 'Could not reach GitHub. Check your internet connection.'
-  return msg.split('\n')[0].slice(0, 300)
+type Message = { message: string; msg?: MessageRef }
+
+function friendlyError(err: unknown): Message {
+  const text = errorMessage(err)
+  if (NO_RELEASE_RE.test(text) || /\b404\b/.test(text)) return msg('update.noRelease')
+  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|net::ERR_/i.test(text)) return msg('update.offline')
+  // Unknown updater error: shown as-is (technical).
+  return { message: text.split('\n')[0].slice(0, 300) }
 }
 
 export interface UpdateServiceOptions {
@@ -85,7 +90,7 @@ export class UpdateService extends EventEmitter {
   private latestVersion?: string
   private progressPercent?: number
   private checkedAt?: number
-  private message?: string
+  private message?: Message
   private busy = false
 
   constructor(private readonly opts: UpdateServiceOptions) {
@@ -93,10 +98,7 @@ export class UpdateService extends EventEmitter {
     const u = opts.updater
     if (opts.mode === 'development' || !u) {
       this.status = 'unsupported'
-      this.message =
-        opts.mode === 'development'
-          ? 'Update checks run only in the installed or portable app.'
-          : 'The updater could not be loaded. Download new versions from GitHub Releases.'
+      this.message = msg(opts.mode === 'development' ? 'update.devOnly' : 'update.updaterMissing')
       return
     }
     u.autoDownload = false // the user decides when to download
@@ -105,7 +107,7 @@ export class UpdateService extends EventEmitter {
     u.allowDowngrade = false
     u.on('download-progress', (info) => this.set({ status: 'downloading', progressPercent: Math.round(info.percent) }))
     u.on('update-downloaded', (info) =>
-      this.set({ status: 'downloaded', latestVersion: info.version, progressPercent: 100, message: 'Update ready to install.' })
+      this.set({ status: 'downloaded', latestVersion: info.version, progressPercent: 100, message: msg('update.ready') })
     )
     u.on('error', (err) => {
       logger.warn(`Updater error: ${errorMessage(err)}`)
@@ -123,7 +125,8 @@ export class UpdateService extends EventEmitter {
       latestVersion: this.latestVersion,
       progressPercent: this.progressPercent,
       checkedAt: this.checkedAt,
-      message: this.message,
+      message: this.message?.message,
+      msg: this.message?.msg,
       canCheck: supported && !['checking', 'downloading'].includes(this.status),
       canDownload: mode === 'installed' && this.status === 'available',
       canInstall: mode === 'installed' && this.status === 'downloaded',
@@ -145,20 +148,17 @@ export class UpdateService extends EventEmitter {
         this.set({
           status: 'available',
           latestVersion: latest,
-          message:
-            this.opts.mode === 'installed'
-              ? `Update available: ${latest}`
-              : `Update available: ${latest}. Download the new Setup or Portable build from GitHub Releases.`
+          message: msg(this.opts.mode === 'installed' ? 'update.available' : 'update.availablePortable', { version: latest })
         })
         logger.info(`Update available: ${latest} (current ${this.opts.currentVersion}, ${trigger} check, ${this.opts.mode})`)
       } else {
-        this.set({ status: 'up-to-date', latestVersion: latest ?? this.opts.currentVersion, message: "You're up to date." })
+        this.set({ status: 'up-to-date', latestVersion: latest ?? this.opts.currentVersion, message: msg('update.upToDate') })
       }
     } catch (err) {
       this.checkedAt = Date.now()
       if (NO_RELEASE_RE.test(errorMessage(err))) {
         // Nothing published yet: there is nothing newer, which is not a failure.
-        this.set({ status: 'up-to-date', latestVersion: undefined, message: 'No release has been published on GitHub yet.' })
+        this.set({ status: 'up-to-date', latestVersion: undefined, message: msg('update.noRelease') })
       } else {
         this.set({ status: 'error', message: friendlyError(err) })
         logger.warn(`Update check failed (${trigger}): ${errorMessage(err)}`)
@@ -172,15 +172,15 @@ export class UpdateService extends EventEmitter {
   async download(): Promise<UpdateState> {
     const u = this.opts.updater
     if (!u || this.opts.mode !== 'installed') {
-      this.set({ message: 'This build cannot update itself. Download the new release from GitHub Releases.' })
+      this.set({ message: msg('update.cannotSelfUpdate') })
       return this.getState()
     }
     if (this.status !== 'available') return this.getState()
-    this.set({ status: 'downloading', progressPercent: 0, message: 'Downloading update…' })
+    this.set({ status: 'downloading', progressPercent: 0, message: msg('update.downloading') })
     try {
       await u.downloadUpdate()
       // 'update-downloaded' sets the final state; guard against a missing event.
-      if ((this.status as UpdateStatus) === 'downloading') this.set({ status: 'downloaded', progressPercent: 100, message: 'Update ready to install.' })
+      if ((this.status as UpdateStatus) === 'downloading') this.set({ status: 'downloaded', progressPercent: 100, message: msg('update.ready') })
     } catch (err) {
       this.set({ status: 'error', message: friendlyError(err) })
       logger.warn(`Update download failed: ${errorMessage(err)}`)
@@ -192,21 +192,21 @@ export class UpdateService extends EventEmitter {
   install(): ActionResult {
     const u = this.opts.updater
     if (!u || this.opts.mode !== 'installed' || this.status !== 'downloaded') {
-      return { ok: false, code: 'NOT_SUPPORTED', message: 'No downloaded update is ready to install.' }
+      return { ok: false, code: 'NOT_SUPPORTED', ...msg('update.noDownloaded') }
     }
     logger.info(`Installing update ${this.latestVersion} (user confirmed)`)
     // Runs the verified NSIS installer silently and relaunches the app. The
     // new process starts in Safe Mode like every launch.
     setImmediate(() => u.quitAndInstall(true, true))
-    return { ok: true, message: 'Restarting to install the update…' }
+    return { ok: true, ...msg('update.restarting') }
   }
 
   async openReleasesPage(): Promise<ActionResult> {
     await this.opts.openExternal(this.opts.releasesUrl)
-    return { ok: true, message: 'Opened GitHub Releases.' }
+    return { ok: true, ...msg('update.openedReleases') }
   }
 
-  private set(patch: Partial<{ status: UpdateStatus; latestVersion: string; progressPercent: number; message: string | undefined }>): void {
+  private set(patch: Partial<{ status: UpdateStatus; latestVersion: string; progressPercent: number; message: Message | undefined }>): void {
     if (patch.status !== undefined) this.status = patch.status
     if (patch.latestVersion !== undefined) this.latestVersion = patch.latestVersion
     if (patch.progressPercent !== undefined) this.progressPercent = patch.progressPercent

@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "Claude Local Session Manager",
+    "nameShort": "Claude Local",
+    "nameSub": "Session Manager",
+    "tagline": "非官方 · 仅限本地",
+    "disclaimer": "非官方本地工具 · 与 Anthropic 无关"
+  },
+  "nav": {
+    "sidebar": "主导航",
+    "sessions": "会话",
+    "projects": "项目",
+    "projectTooltip_other": "{{count}} 个会话 · {{size}}",
+    "noProjects": "未找到项目",
+    "storage": "存储",
+    "settings": "设置"
+  },
+  "status": {
+    "liveSessions_other": "{{count}} 个 Claude Code 会话已打开"
+  },
+  "action": {
+    "refresh": "刷新",
+    "cancel": "取消",
+    "close": "关闭",
+    "closeEsc": "关闭 (Esc)",
+    "dismiss": "关闭通知",
+    "copy": "复制",
+    "copyValue": "复制 {{value}}",
+    "export": "导出",
+    "deletePermanently": "永久删除",
+    "archive": "归档",
+    "restore": "恢复",
+    "hideInManager": "在管理器中隐藏",
+    "showInManager": "在管理器中显示"
+  },
+  "loading": "正在加载…",
+  "toast": {
+    "safetyReadFailed": "无法读取安全模式：{{error}}",
+    "scanFailed": "扫描失败：{{error}}",
+    "refreshFailed": "刷新失败：{{error}}",
+    "processCheckFailed": "进程检查失败：{{error}}",
+    "settingsSaveFailed": "无法保存设置：{{error}}",
+    "firstFailure": "{{title}}：",
+    "copied": "已复制到剪贴板",
+    "copyFailed": "复制失败：{{error}}"
+  }
+}

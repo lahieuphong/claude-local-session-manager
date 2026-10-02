@@ -1,165 +1,249 @@
-import { useState, type ReactElement } from 'react'
-import type { LogEntry, RefreshMode } from '../../../shared/types'
-import { formatDateTime } from '../../../shared/format'
-import { IconCheck, IconX } from '../components/Icons'
+import { useId, useState, type ReactElement, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { LOCALE_LABELS, SUPPORTED_LOCALES, resolveLocale } from '../../../shared/locale'
+import type { LogEntry, MotionPreference, RefreshMode } from '../../../shared/types'
+import { IconCheck, IconChevron, IconX } from '../components/Icons'
 import { DeletionSafetySection } from '../components/SafetyMode'
-import { AboutSection } from '../components/Updates'
-import { clearCache, errText, toast, updateSettings, useAppState } from '../stores/appStore'
+import { AboutSection, UpdatesSection } from '../components/Updates'
+import { useFmt } from '../i18n'
+import { clearCache, errText, setLanguage, setMotion, toast, updateSettings, useAppState } from '../stores/appStore'
 
 const api = (): Window['sessionManager'] => window.sessionManager
 
+const REFRESH_MODES: RefreshMode[] = ['manual', 'watch', 'interval']
+const INTERVALS = [15, 30, 60, 120, 300, 600]
+const MOTIONS: MotionPreference[] = ['system', 'reduced']
+
 export function SettingsPage(): ReactElement {
+  const { t, i18n } = useTranslation()
+  const fmt = useFmt()
   const settings = useAppState((s) => s.settings)
   const snapshot = useAppState((s) => s.snapshot)
   const appInfo = useAppState((s) => s.appInfo)
   const busy = useAppState((s) => s.busy)
   const [logs, setLogs] = useState<LogEntry[] | null>(null)
   const roots = snapshot?.roots
+  const langName = useId()
+  const motionName = useId()
+  const refreshName = useId()
+  const systemLocale = resolveLocale(null, appInfo?.systemLanguages ?? navigator.languages ?? [])
 
   const loadLogs = async (): Promise<void> => {
     try {
       setLogs(await api().getLogs())
     } catch (err) {
-      toast('error', errText(err))
+      toast('error', { text: errText(err) })
     }
   }
 
   return (
     <div className="page settings">
       <header className="page-header">
-        <h1 className="page-title">Settings</h1>
+        <h1 className="page-title">{t('settings:title')}</h1>
       </header>
 
-      <section className="card">
-        <h3 className="section-title">Auto-discovered storage roots</h3>
-        <p className="muted small">
-          Roots are detected from USERPROFILE / APPDATA / LOCALAPPDATA on every scan. They cannot be edited: the app only ever modifies
-          files inside these roots, and only paths the scanner attributed to a session.
-        </p>
-        {roots ? (
-          <dl className="kv roots">
-            <dt>Claude Code home</dt>
-            <dd><code>{roots.claudeHome}</code></dd>
-            <dt>Transcript root</dt>
-            <dd>{roots.projectsRoot ? <code>{roots.projectsRoot}</code> : <span className="warn-text">not found</span>}</dd>
-            <dt>File history</dt>
-            <dd>{roots.fileHistoryRoot ? <code>{roots.fileHistoryRoot}</code> : <span className="muted">not found</span>}</dd>
-            <dt>Session env</dt>
-            <dd>{roots.sessionEnvRoot ? <code>{roots.sessionEnvRoot}</code> : <span className="muted">not found</span>}</dd>
-            <dt>Running sessions</dt>
-            <dd>{roots.liveSessionsDir ? <code>{roots.liveSessionsDir}</code> : <span className="muted">not found</span>}</dd>
-            <dt>Claude metadata roots</dt>
-            <dd>
-              {roots.desktopRoots.length === 0 && <span className="muted">No Claude Desktop claude-code-sessions folder found</span>}
-              {roots.desktopRoots.map((d) => (
-                <div key={d.path} className="root-entry">
-                  <code>{d.path}</code>
-                  <div className="muted small">
-                    {d.source.toUpperCase()} · {d.variant}
-                    {d.packageName ? ` · ${d.packageName}` : ''} · {d.sessionFiles} session file(s) · {d.tombstones} tombstone(s) ·{' '}
-                    {d.archiveIndexes} archive index(es)
-                  </div>
-                </div>
-              ))}
-            </dd>
-          </dl>
-        ) : (
-          <div className="muted">Scan pending…</div>
-        )}
-        {roots && (
-          <details className="issues">
-            <summary>All locations checked ({roots.candidates.length})</summary>
-            <ul className="plain-list small">
-              {roots.candidates.map((c) => (
-                <li key={c.path} className="candidate">
-                  {c.exists ? <IconCheck size={13} className="ok-text" /> : <IconX size={13} className="muted" />}
-                  <code>{c.path}</code>
-                  {c.note && <span className="muted"> — {c.note}</span>}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
-      </section>
+      <SettingsSection title={t('settings:section.general')}>
+        <SettingRow label={t('settings:language.label')} hint={t('settings:language.hint', { language: LOCALE_LABELS[systemLocale].native })} id={langName}>
+          <div className="segmented" role="radiogroup" aria-labelledby={langName}>
+            {SUPPORTED_LOCALES.map((l) => (
+              <label key={l} className={`segment ${i18n.language === l ? 'on' : ''}`} lang={l}>
+                <input type="radio" name={langName} checked={i18n.language === l} onChange={() => void setLanguage(l)} />
+                {LOCALE_LABELS[l].native}
+              </label>
+            ))}
+          </div>
+          {settings?.language && (
+            <button className="link-btn" onClick={() => void setLanguage(null)}>
+              {t('settings:language.useSystem')}
+            </button>
+          )}
+        </SettingRow>
+      </SettingsSection>
 
-      <section className="card">
-        <h3 className="section-title">Refresh</h3>
-        <div className="radio-group">
-          {(
-            [
-              ['manual', 'Manual only', 'Scan on start and when you click Refresh (F5).'],
-              ['watch', 'Watch files', 'Rescan shortly after Claude writes to its storage folders (debounced, few watchers).'],
-              ['interval', 'Interval', 'Rescan on a fixed timer.']
-            ] as Array<[RefreshMode, string, string]>
-          ).map(([mode, label, hint]) => (
-            <label key={mode} className="radio">
-              <input type="radio" name="refresh" checked={settings?.refreshMode === mode} onChange={() => void updateSettings({ refreshMode: mode })} />
-              <span>
-                {label}
-                <span className="muted small"> — {hint}</span>
-              </span>
+      <SettingsSection title={t('settings:section.appearance')}>
+        <SettingRow label={t('settings:motion.label')} hint={t('settings:motion.hint')} id={motionName}>
+          <div className="segmented" role="radiogroup" aria-labelledby={motionName}>
+            {MOTIONS.map((m) => (
+              <label key={m} className={`segment ${(settings?.motion ?? 'system') === m ? 'on' : ''}`}>
+                <input type="radio" name={motionName} checked={(settings?.motion ?? 'system') === m} onChange={() => void setMotion(m)} />
+                {t(`settings:motion.${m}`)}
+              </label>
+            ))}
+          </div>
+        </SettingRow>
+        <SettingRow label={t('settings:rawPaths.label')} hint={t('settings:rawPaths.hint')}>
+          <Switch checked={settings?.showRawPaths ?? false} onChange={(v) => void updateSettings({ showRawPaths: v })} label={t('settings:rawPaths.label')} />
+        </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection title={t('settings:section.discovery')}>
+        <SettingRow label={t('settings:refresh.label')} id={refreshName} stacked>
+          <div className="radio-list" role="radiogroup" aria-labelledby={refreshName}>
+            {REFRESH_MODES.map((mode) => (
+              <label key={mode} className="radio">
+                <input type="radio" name={refreshName} checked={settings?.refreshMode === mode} onChange={() => void updateSettings({ refreshMode: mode })} />
+                <span>
+                  <span className="radio-title">{t(`settings:refresh.${mode}`)}</span>
+                  <span className="radio-hint">{t(`settings:refresh.${mode}Hint`)}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {settings?.refreshMode === 'interval' && (
+            <label className="inline-field">
+              <span>{t('settings:refresh.interval')}</span>
+              <select className="select" value={settings.refreshIntervalSec} onChange={(e) => void updateSettings({ refreshIntervalSec: Number(e.target.value) })}>
+                {INTERVALS.map((s) => (
+                  <option key={s} value={s}>
+                    {s < 60 ? t('settings:refresh.seconds', { count: s }) : t('settings:refresh.minutes', { count: s / 60 })}
+                  </option>
+                ))}
+              </select>
             </label>
-          ))}
-        </div>
-        {settings?.refreshMode === 'interval' && (
-          <label className="inline-field">
-            Interval
-            <select value={settings.refreshIntervalSec} onChange={(e) => void updateSettings({ refreshIntervalSec: Number(e.target.value) })}>
-              {[15, 30, 60, 120, 300, 600].map((s) => (
-                <option key={s} value={s}>
-                  {s < 60 ? `${s} seconds` : `${s / 60} minute${s > 60 ? 's' : ''}`}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </section>
+          )}
+        </SettingRow>
 
-      <section className="card">
-        <h3 className="section-title">Display & developer</h3>
-        <label className="toggle">
-          <input type="checkbox" checked={settings?.showRawPaths ?? false} onChange={(e) => void updateSettings({ showRawPaths: e.target.checked })} />
-          <span>
-            Show raw paths
-            <span className="muted small"> — full absolute paths instead of ~ / %LOCALAPPDATA% shorthands (the delete dialog always shows full paths)</span>
-          </span>
-        </label>
-        <label className="toggle">
-          <input type="checkbox" checked={settings?.debugMode ?? false} onChange={(e) => void updateSettings({ debugMode: e.target.checked })} />
-          <span>
-            Developer / debug mode
-            <span className="muted small"> — verbose logging, normalized session JSON in Details, DevTools (F12)</span>
-          </span>
-        </label>
-        <div className="row-flex gap">
-          <button className="btn small" onClick={() => void clearCache()} disabled={busy}>
-            Clear scan cache
+        <SettingRow label={t('settings:roots.label')} hint={t('settings:roots.hint')} stacked>
+          {roots ? (
+            <dl className="kv roots">
+              <dt>{t('settings:roots.claudeHome')}</dt>
+              <dd>
+                <code className="wrap">{roots.claudeHome}</code>
+              </dd>
+              <dt>{t('settings:roots.transcripts')}</dt>
+              <dd>{roots.projectsRoot ? <code className="wrap">{roots.projectsRoot}</code> : <span className="warn-text">{t('settings:roots.notFound')}</span>}</dd>
+              <dt>{t('settings:roots.fileHistory')}</dt>
+              <dd>{roots.fileHistoryRoot ? <code className="wrap">{roots.fileHistoryRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
+              <dt>{t('settings:roots.sessionEnv')}</dt>
+              <dd>{roots.sessionEnvRoot ? <code className="wrap">{roots.sessionEnvRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
+              <dt>{t('settings:roots.running')}</dt>
+              <dd>{roots.liveSessionsDir ? <code className="wrap">{roots.liveSessionsDir}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
+              <dt>{t('settings:roots.desktop')}</dt>
+              <dd>
+                {roots.desktopRoots.length === 0 && <span className="muted">{t('settings:roots.noDesktop')}</span>}
+                {roots.desktopRoots.map((d) => (
+                  <div key={d.path} className="root-entry">
+                    <code className="wrap">{d.path}</code>
+                    <div className="hint">
+                      {d.source.toUpperCase()} · {d.variant}
+                      {d.packageName ? ` · ${d.packageName}` : ''} ·{' '}
+                      {t('settings:roots.desktopCounts', {
+                        sessions: fmt.count(d.sessionFiles),
+                        tombstones: fmt.count(d.tombstones),
+                        indexes: fmt.count(d.archiveIndexes)
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </dd>
+            </dl>
+          ) : (
+            <div className="hint">{t('settings:roots.pending')}</div>
+          )}
+          {roots && (
+            <details className="disclosure">
+              <summary>
+                <IconChevron size={12} className="chev" />
+                {t('settings:roots.checked', { count: roots.candidates.length })}
+              </summary>
+              <ul className="candidate-list">
+                {roots.candidates.map((c) => (
+                  <li key={c.path} className="candidate">
+                    {c.exists ? <IconCheck size={14} className="ok-text" /> : <IconX size={14} className="muted" />}
+                    <code className="wrap">{c.path}</code>
+                    {c.note && <span className="muted"> — {c.note}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </SettingRow>
+
+        <SettingRow label={t('settings:cache.label')} hint={t('settings:cache.hint')}>
+          <button className="btn" onClick={() => void clearCache()} disabled={busy}>
+            {t('settings:cache.clear')}
           </button>
-          <button className="btn small" onClick={() => void loadLogs()}>
-            Show log
-          </button>
-        </div>
-        {appInfo && (
-          <dl className="kv small">
-            <dt>Cache</dt>
-            <dd><code>{appInfo.cachePath}</code></dd>
-            <dt>Log file</dt>
-            <dd><code>{appInfo.logPath}</code></dd>
-          </dl>
-        )}
-        {logs && (
-          <pre className="code-block log">
-            {logs
-              .slice(-200)
-              .map((l) => `${formatDateTime(l.time)} [${l.level}] ${l.message}`)
-              .join('\n') || '(empty)'}
-          </pre>
-        )}
-      </section>
+        </SettingRow>
+      </SettingsSection>
 
-      <DeletionSafetySection />
+      <SettingsSection title={t('settings:section.deletionSafety')} tone="safety">
+        <DeletionSafetySection />
+      </SettingsSection>
 
-      <AboutSection />
+      <SettingsSection title={t('settings:section.updates')}>
+        <UpdatesSection />
+      </SettingsSection>
+
+      <SettingsSection title={t('settings:section.about')}>
+        <AboutSection />
+        <SettingRow label={t('settings:debug.label')} hint={t('settings:debug.hint')}>
+          <Switch checked={settings?.debugMode ?? false} onChange={(v) => void updateSettings({ debugMode: v })} label={t('settings:debug.label')} />
+        </SettingRow>
+        <SettingRow label={t('settings:logs.label')} stacked>
+          {appInfo && (
+            <dl className="kv compact">
+              <dt>{t('settings:logs.cache')}</dt>
+              <dd>
+                <code className="wrap">{appInfo.cachePath}</code>
+              </dd>
+              <dt>{t('settings:logs.logFile')}</dt>
+              <dd>
+                <code className="wrap">{appInfo.logPath}</code>
+              </dd>
+            </dl>
+          )}
+          <div className="row-actions">
+            <button className="btn" onClick={() => void loadLogs()}>
+              {t('settings:logs.show')}
+            </button>
+          </div>
+          {logs && (
+            <pre className="code-block log">
+              {logs
+                .slice(-200)
+                .map((l) => `${fmt.fullDateTime(l.time)} [${l.level}] ${l.message}`)
+                .join('\n') || t('settings:logs.empty')}
+            </pre>
+          )}
+        </SettingRow>
+      </SettingsSection>
     </div>
+  )
+}
+
+function SettingsSection({ title, tone, children }: { title: string; tone?: 'safety'; children: ReactNode }): ReactElement {
+  const id = useId()
+  return (
+    <section className={`settings-section ${tone ?? ''}`} aria-labelledby={id}>
+      <h2 className="section-label" id={id}>
+        {title}
+      </h2>
+      <div className="settings-card">{children}</div>
+    </section>
+  )
+}
+
+function SettingRow({ label, hint, id, stacked, children }: { label: string; hint?: string; id?: string; stacked?: boolean; children: ReactNode }): ReactElement {
+  return (
+    <div className={`setting-row ${stacked ? 'stacked' : ''}`}>
+      <div className="setting-text">
+        <div className="setting-label" id={id}>
+          {label}
+        </div>
+        {hint && <div className="setting-hint">{hint}</div>}
+      </div>
+      <div className="setting-control">{children}</div>
+    </div>
+  )
+}
+
+function Switch({ checked, onChange, label }: { checked: boolean; onChange(v: boolean): void; label: string }): ReactElement {
+  return (
+    <label className="switch">
+      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} aria-label={label} />
+      <span className="switch-track" aria-hidden="true">
+        <span className="switch-thumb" />
+      </span>
+    </label>
   )
 }

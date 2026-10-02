@@ -1,6 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppSettings, RefreshMode } from '../../shared/types'
+import type { AppSettings, MotionPreference, RefreshMode } from '../../shared/types'
+import { isSupportedLocale } from '../../shared/locale'
 import { writeFileAtomic } from '../util/atomicWrite'
 import { errorMessage, logger } from '../util/logger'
 
@@ -8,11 +9,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   refreshMode: 'watch',
   refreshIntervalSec: 60,
   showRawPaths: false,
-  debugMode: false
+  debugMode: false,
+  language: null,
+  motion: 'system'
 }
 
 const MODES: RefreshMode[] = ['manual', 'watch', 'interval']
 const INTERVALS = [15, 30, 60, 120, 300, 600]
+const MOTIONS: MotionPreference[] = ['system', 'reduced']
 
 /**
  * Validate a settings patch from the renderer. Only known keys with valid
@@ -27,6 +31,8 @@ export function mergeSettings(base: AppSettings, patch: unknown): AppSettings {
   if (typeof p.refreshIntervalSec === 'number' && INTERVALS.includes(p.refreshIntervalSec)) next.refreshIntervalSec = p.refreshIntervalSec
   if (typeof p.showRawPaths === 'boolean') next.showRawPaths = p.showRawPaths
   if (typeof p.debugMode === 'boolean') next.debugMode = p.debugMode
+  if (p.language === null || isSupportedLocale(p.language)) next.language = p.language
+  if (typeof p.motion === 'string' && MOTIONS.includes(p.motion as MotionPreference)) next.motion = p.motion as MotionPreference
   return next
 }
 

@@ -1,0 +1,50 @@
+{
+  "mode": {
+    "safe": "Safe Mode",
+    "safeDryRun": "Safe Mode · dry run",
+    "armed": "Real Delete Armed"
+  },
+  "strip": {
+    "reading": "Reading safety mode…",
+    "safeText": "Dry run — no Claude files can be deleted, archived or restored.",
+    "armedText": "Permanent deletion is enabled for this app session. One delete, 10 minutes or closing the app returns to Safe Mode.",
+    "settingsLink": "Deletion safety"
+  },
+  "claude": {
+    "running": "Claude Desktop is running — archive, restore and delete are disabled",
+    "runningHint": "Quit Claude Desktop (including from the system tray) before modifying session files. Browsing and export still work.",
+    "unknown": "Claude status unknown — modifying actions are disabled",
+    "unknownHint": "Could not verify whether Claude Desktop is running.",
+    "closed": "Claude Desktop closed",
+    "checking": "Checking Claude…",
+    "recheck": "Re-check Claude processes"
+  },
+  "action": {
+    "returnToSafe": "Return to Safe Mode",
+    "enable": "Enable real deletion"
+  },
+  "section": {
+    "safeText": "Dry run is on. No Claude files can be deleted.",
+    "safeHint": "Every app launch starts here. Real deletion can be armed only for the current app session; it is never saved, and it returns to Safe Mode after one delete, after 10 minutes, or when the app closes.",
+    "armedText": "Permanent deletion is enabled for this app session. Closing the app returns to Safe Mode.",
+    "guardsNote": "Arming only switches dry run off. Every delete still needs a valid, unexpired, unchanged plan, exact paths inside approved Claude roots, no workspace or link escape, no running Claude Desktop or live session, and the typed DELETE confirmation.",
+    "hideNote": "Hide in manager never touches Claude files and works in both modes."
+  },
+  "arm": {
+    "title": "Enable real deletion",
+    "warningTitle": "Real deletion permanently removes local Claude session files.",
+    "warningText": "This mode returns to Safe Mode automatically when the app closes, after 10 minutes, or right after one delete.",
+    "requirements": "Requirements",
+    "reqStatusOk": "Claude process status verified",
+    "reqStatusUnknown": "Claude process status unknown",
+    "reqClosedOk": "Claude Desktop is closed",
+    "reqClosedBad": "Claude Desktop must be closed (quit it from the system tray)",
+    "reqTyped": "You typed {{phrase}} exactly",
+    "recheck": "Re-check processes",
+    "typeToConfirm": "Type {{phrase}} to confirm",
+    "confirm": "Arm real deletion"
+  },
+  "toast": {
+    "returned": "Safe Mode restored. No Claude files can be deleted."
+  }
+}

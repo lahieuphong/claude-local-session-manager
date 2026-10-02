@@ -1,0 +1,164 @@
+{
+  "common": {
+    "sessionNotFound": "Session not found. Refresh and try again."
+  },
+  "guard": {
+    "statusUnknown": "Could not verify whether Claude is running ({{error}}). Use \"Refresh process status\" and try again.",
+    "claudeRunning": "Close Claude Desktop before modifying session files.",
+    "sessionInUse": "This session is open in a running Claude Code process (PID {{pid}}). Close it first.",
+    "sessionInUseNamed": "This session is open in a running Claude Code process (PID {{pid}}, \"{{name}}\"). Close it first."
+  },
+  "reveal": {
+    "metadata": {
+      "none": "This session has no metadata file.",
+      "gone": "The metadata file no longer exists: {{path}}",
+      "done": "Revealed metadata file in Explorer."
+    },
+    "transcript": {
+      "none": "This session has no transcript.",
+      "gone": "The transcript no longer exists: {{path}}",
+      "done": "Revealed transcript in Explorer."
+    },
+    "sessionData": {
+      "none": "This session has no session data folder.",
+      "gone": "The session data folder no longer exists: {{path}}",
+      "done": "Revealed session data folder in Explorer."
+    }
+  },
+  "project": {
+    "unknownPath": "Project path is unknown for this session.",
+    "missingFolder": "Project folder does not exist: {{path}}",
+    "opened": "Opened project folder."
+  },
+  "cache": {
+    "cleared": "Cache cleared and sessions rescanned."
+  },
+  "archive": {
+    "verb": {
+      "archive": "archive",
+      "restore": "restore"
+    },
+    "metadataGone": "Metadata file disappeared: {{path}}",
+    "invalidJson": "Cannot {{verb}}: metadata is not valid JSON ({{error}}). File left unchanged.",
+    "changedOnDisk": "Metadata file changed on disk (session ID differs). Refresh and try again.",
+    "dryRun": "DRY RUN: would {{verb}} (set isArchived={{value}}). No files were modified.",
+    "writeFailed": "Could not {{verb}}: {{error}}",
+    "indexUnrecognised": "{{file}} has an unrecognised format and was left unchanged.",
+    "indexNotUpdated": "Archive index not updated: {{error}}",
+    "alreadyArchived": "Session was already archived.",
+    "alreadyActive": "Session was already active.",
+    "archived": "Session archived.",
+    "restored": "Session restored.",
+    "notArchivable": "This Claude Code session has no Claude Desktop metadata, so Claude has no archive flag for it. Use \"Hide in manager\" instead (it only changes this app’s list)."
+  },
+  "hide": {
+    "desktopSession": "This is a Claude Desktop session: use Archive / Restore, which changes Claude's own archive state.",
+    "saveFailed": "Could not save the manager's hidden list: {{error}}",
+    "hidden": "Hidden in manager. Only this app's list changed; Claude's files and archive state are untouched.",
+    "shown": "Shown in manager again."
+  },
+  "bulk": {
+    "verb": {
+      "archived": "Archived",
+      "restored": "Restored",
+      "hidden": "Hidden",
+      "shown": "Shown"
+    },
+    "done_one": "{{verb}} {{count}} session.",
+    "done_other": "{{verb}} {{count}} sessions.",
+    "partial": "{{verb}} {{done}} of {{count}}; {{failed}} skipped or failed."
+  },
+  "delete": {
+    "recentlyWritten": "The transcript was written {{seconds}}s ago and may still be in use. Wait and try again.",
+    "nothingOnDisk": "Nothing on disk to delete for this session.",
+    "unknownPlan": "Unknown delete plan. Open the delete dialog again.",
+    "planExpired": "This delete plan has expired. Open the delete dialog again.",
+    "planTypeMismatch": "Delete plan type mismatch.",
+    "idsMismatch": "The sessions sent do not match the delete plan.",
+    "nothingToDelete": "Nothing to delete.",
+    "confirmationMismatch": "Confirmation text does not match.",
+    "modeName": {
+      "safe": "SAFE MODE (dry run)",
+      "armed": "REAL DELETE ARMED"
+    },
+    "modeChanged": "Safety mode changed since this plan was created ({{from}} → {{to}}). Review the plan again.",
+    "rootsUnavailable": "Claude storage roots are not available.",
+    "sessionBlocked": "{{title}}: {{reason}}",
+    "identityChanged": "{{title}}: the CLI session ID changed since the plan was created (stale plan).",
+    "staleContent": "The delete plan is stale; session files changed since it was created (sizes, file counts or contents changed). Review it again.",
+    "staleTargets": "The delete plan is stale; session files changed since it was created ({{changes}}). Review it again.",
+    "diffAdded": "unexpected new target(s): {{added}}",
+    "diffRemoved": "target(s) gone: {{removed}}",
+    "diffBoth": "unexpected new target(s): {{added}}; target(s) gone: {{removed}}",
+    "refused": "Delete refused, nothing was changed: {{error}}",
+    "dryRunBlocked_one": "DRY RUN: validation passed for {{count}} session, but a real delete would be blocked now: {{reason}}",
+    "dryRunBlocked_other": "DRY RUN: validation passed for {{count}} sessions, but a real delete would be blocked now: {{reason}}",
+    "dryRunPassed_one": "DRY RUN: validation passed; {{count}} session would be deleted. No files were modified.",
+    "dryRunPassed_other": "DRY RUN: validation passed; {{count}} sessions would be deleted. No files were modified.",
+    "done_one": "Permanently deleted {{count}} session, {{size}} freed.",
+    "done_other": "Permanently deleted {{count}} sessions, {{size}} freed.",
+    "incomplete": "Delete incomplete: {{deleted}} of {{count}} session(s) fully deleted; {{failed}} item(s) could not be deleted. See details.",
+    "itemMetadataKept": "Metadata file was not deleted",
+    "itemRecordsKept": "Kept because some session files could not be deleted",
+    "warnSharedTranscript": "Kept: {{path}} is referenced by another session.",
+    "warnLinks": "{{count}} link(s) inside {{path}} are removed as links; their targets are not touched.",
+    "noteArchiveIndex": "Remove \"{{id}}\" from Claude Desktop's archive index",
+    "noteTombstone": "Deletion marker, as written by Claude Desktop",
+    "noteOtherFolder": "Same session UUID, written while the session worked in another folder",
+    "noteHiddenRecord": "Remove this session from the manager's hidden list ({{key}})",
+    "noteCacheRecord": "Remove the cached summary of {{file}}"
+  },
+  "keep": {
+    "workspace": "project workspace (source code)",
+    "projectFolder": "Claude project folder itself, its other sessions and memory/",
+    "memory": "project memory",
+    "desktopFolder": "Claude Desktop session folder and other sessions in it"
+  },
+  "export": {
+    "notFound": "Session not found",
+    "noTranscript": "This session has no transcript to export.",
+    "cancelled": "Export cancelled",
+    "done": "Exported to {{path}}",
+    "failed": "Export failed: {{error}}",
+    "many_one": "Exported {{count}} file to {{path}}",
+    "many_other": "Exported {{count}} files to {{path}}",
+    "manyWithErrors": "Exported {{count}} file(s) to {{path}}; {{errors}} error(s).",
+    "chooseFolder": "Choose export folder"
+  },
+  "safety": {
+    "typeExactly": "Type exactly {{phrase}} to arm real deletion.",
+    "notArmed": "Real deletion was not armed: {{reason}}",
+    "armed": "REAL DELETE ARMED for {{minutes}} minutes or one delete, whichever comes first.",
+    "noticePackaged": "{{variable}}={{value}} was ignored: the packaged app always starts in Safe Mode.",
+    "noticeNoDevAllow": "{{variable}}={{value}} was ignored because {{allow}}=1 is not set.",
+    "noticeDevArmed": "Development run armed by {{variable}}={{value}} ({{allow}}=1)."
+  },
+  "update": {
+    "devOnly": "Update checks run only in the installed or portable app.",
+    "updaterMissing": "The updater could not be loaded. Download new versions from GitHub Releases.",
+    "ready": "Update ready to install.",
+    "available": "Update available: {{version}}",
+    "availablePortable": "Update available: {{version}}. Download the new Setup or Portable build from GitHub Releases.",
+    "upToDate": "You're up to date.",
+    "noRelease": "No release has been published on GitHub yet.",
+    "offline": "Could not reach GitHub. Check your internet connection.",
+    "cannotSelfUpdate": "This build cannot update itself. Download the new release from GitHub Releases.",
+    "downloading": "Downloading update…",
+    "noDownloaded": "No downloaded update is ready to install.",
+    "restarting": "Restarting to install the update…",
+    "openedReleases": "Opened GitHub Releases."
+  },
+  "problem": {
+    "ambiguousTranscript": "Transcript {{file}} exists in {{count}} project folders; not linked (ambiguous).",
+    "transcriptNotFound": "Transcript {{file}} not found under ~/.claude/projects.",
+    "sharedTranscript": "Transcript {{file}} is referenced by several metadata files; it is excluded from deletion.",
+    "duplicateUuid": "The same session UUID also exists in another project folder.",
+    "orphanFolder": "Session data folder without a transcript or metadata file (orphan).",
+    "ambiguousOwner": "Several sessions own this UUID; the folder is not attached to any of them.",
+    "sharedFolder": "{{label}} folder {{uuid}} is shared by several sessions; excluded from deletion.",
+    "remote": "Remote ({{kind}}) session: the transcript is stored on the remote host."
+  },
+  "scan": {
+    "projectsRootMissing": "Claude Code projects folder (~/.claude/projects) was not found."
+  }
+}

@@ -1,108 +1,138 @@
-import type { ReactElement } from 'react'
+import { useId, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { UpdateState } from '../../../shared/types'
-import { formatDateTime } from '../../../shared/format'
+import { useFmt } from '../i18n'
 import { checkForUpdates, downloadUpdate, installUpdate, openReleasesPage, setView, useAppState } from '../stores/appStore'
-import { AppMark, IconDownload, IconExternal, IconRefresh } from './Icons'
+import { AppMark, IconDownload, IconExternal, IconRefresh, IconRestore } from './Icons'
+import { Modal } from './Modal'
 
-const MODE_LABEL: Record<UpdateState['mode'], string> = {
-  installed: 'Installed (Setup)',
-  portable: 'Portable',
-  development: 'Development build'
+function statusKey(u: UpdateState): string {
+  if (u.status === 'unsupported') return u.mode === 'development' ? 'updater:status.unsupportedDev' : 'updater:status.unsupported'
+  return `updater:status.${u.status}`
 }
 
-function statusText(u: UpdateState): string {
-  switch (u.status) {
-    case 'checking':
-      return 'Checking for updates...'
-    case 'up-to-date':
-      return "You're up to date"
-    case 'available':
-      return `Update available: ${u.latestVersion}`
-    case 'downloading':
-      return `Downloading update... ${u.progressPercent ?? 0}%`
-    case 'downloaded':
-      return 'Update ready to install'
-    case 'error':
-      return 'Update failed'
-    case 'unsupported':
-      return u.mode === 'development' ? 'Update checks are disabled in development builds' : 'Automatic update checks are unavailable'
-    default:
-      return 'Not checked yet'
-  }
-}
-
-/** Settings → About: version, disclaimer and update actions. */
-export function AboutSection(): ReactElement {
-  const appInfo = useAppState((s) => s.appInfo)
+/** Settings → Updates. */
+export function UpdatesSection(): ReactElement {
+  const { t } = useTranslation()
+  const fmt = useFmt()
   const u = useAppState((s) => s.updates)
-  return (
-    <section className="card about">
-      <AppMark size={40} />
-      <div className="about-body">
-        <div className="strong">Claude Local Session Manager</div>
-        <div>Version {appInfo?.version ?? '…'}</div>
-        <p className="small">Unofficial local utility · Not affiliated with Anthropic</p>
-        <p className="small muted">
-          Electron {appInfo?.electronVersion} · {appInfo?.platform}
-          {u ? ` · ${MODE_LABEL[u.mode]}` : ''}
-        </p>
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const titleId = useId()
+  if (!u) return <div className="muted">{t('updater:loading')}</div>
 
-        {u && (
-          <div className={`update-box status-${u.status}`}>
-            <div className="update-status">
-              <span className="strong">{statusText(u)}</span>
-              {u.status === 'downloading' && (
-                <span className="bar-track update-progress">
-                  <span className="bar-fill" style={{ width: `${u.progressPercent ?? 0}%` }} />
-                </span>
-              )}
-            </div>
-            {u.message && u.status !== 'checking' && u.message !== "You're up to date." && <div className="small muted">{u.message}</div>}
-            {u.checkedAt && <div className="small muted">Last checked {formatDateTime(u.checkedAt)}</div>}
-            <div className="row-flex gap">
-              <button className="btn small" disabled={!u.canCheck} onClick={() => void checkForUpdates()}>
-                <IconRefresh size={13} className={u.status === 'checking' ? 'spin' : ''} /> Check for updates
-              </button>
-              {u.canDownload && (
-                <button className="btn small" onClick={() => void downloadUpdate()}>
-                  <IconDownload size={13} /> Download update
-                </button>
-              )}
-              {u.canInstall && (
-                <button
-                  className="btn small primary"
-                  onClick={() => {
-                    if (window.confirm('Restart Claude Local Session Manager now to install the update?')) void installUpdate()
-                  }}
-                >
-                  Restart and install
-                </button>
-              )}
-              {u.mode !== 'installed' && u.status === 'available' && (
-                <button className="btn small" onClick={() => void openReleasesPage()}>
-                  <IconExternal size={13} /> Open GitHub Releases
-                </button>
-              )}
-            </div>
-            {u.mode === 'portable' && (
-              <div className="small muted">
-                Portable builds are never replaced automatically. Download the new Setup (recommended) or Portable build from GitHub Releases.
-              </div>
-            )}
-          </div>
+  // The status line already says it; show the main-process detail only when it adds something.
+  const detail = u.message && !['checking', 'up-to-date', 'available', 'downloading', 'downloaded'].includes(u.status) ? fmt.msg(u.msg, u.message) : null
+  const noRelease = u.status === 'up-to-date' && u.msg?.key === 'update.noRelease'
+
+  return (
+    <div className={`update-panel status-${u.status}`}>
+      <div className="update-head">
+        <span className={`update-dot status-${u.status}`} aria-hidden="true" />
+        <span className="update-title" role="status">
+          {noRelease ? t('updater:status.noRelease') : t(statusKey(u), { version: u.latestVersion ?? '', percent: u.progressPercent ?? 0 })}
+        </span>
+        <span className="update-mode">{t(`updater:mode.${u.mode}`)}</span>
+      </div>
+      {u.status === 'downloading' && (
+        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={u.progressPercent ?? 0}>
+          <span className="progress-fill" style={{ width: `${u.progressPercent ?? 0}%` }} />
+        </div>
+      )}
+      {detail && <div className="hint">{detail}</div>}
+      <dl className="kv compact">
+        <dt>{t('updater:current')}</dt>
+        <dd className="mono">{u.currentVersion}</dd>
+        {u.latestVersion && u.latestVersion !== u.currentVersion && (
+          <>
+            <dt>{t('updater:latest')}</dt>
+            <dd className="mono">{u.latestVersion}</dd>
+          </>
+        )}
+        {u.checkedAt && (
+          <>
+            <dt>{t('updater:lastChecked')}</dt>
+            <dd>{fmt.dateTime(u.checkedAt)}</dd>
+          </>
+        )}
+      </dl>
+      <div className="row-actions">
+        <button className="btn" disabled={!u.canCheck} onClick={() => void checkForUpdates()}>
+          <IconRefresh size={14} className={u.status === 'checking' ? 'spin' : ''} /> {t('updater:action.check')}
+        </button>
+        {u.canDownload && (
+          <button className="btn primary" onClick={() => void downloadUpdate()}>
+            <IconDownload size={14} /> {t('updater:action.download')}
+          </button>
+        )}
+        {u.canInstall && (
+          <button className="btn primary" onClick={() => setConfirmOpen(true)}>
+            <IconRestore size={14} /> {t('updater:action.install')}
+          </button>
+        )}
+        {u.mode !== 'installed' && u.status === 'available' && (
+          <button className="btn" onClick={() => void openReleasesPage()}>
+            <IconExternal size={14} /> {t('updater:action.openReleases')}
+          </button>
         )}
       </div>
-    </section>
+      {u.mode === 'portable' && <p className="hint">{t('updater:portableNote')}</p>}
+
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} labelledBy={titleId} size="narrow">
+        <header className="modal-header">
+          <h2 id={titleId}>{t('updater:confirm.title')}</h2>
+        </header>
+        <div className="modal-body">
+          <p>{t('updater:confirm.text', { version: u.latestVersion ?? '' })}</p>
+          <p className="hint">{t('updater:confirm.safeModeNote')}</p>
+        </div>
+        <footer className="modal-footer">
+          <div className="spacer" />
+          <button className="btn quiet" onClick={() => setConfirmOpen(false)} data-autofocus>
+            {t('common:action.cancel')}
+          </button>
+          <button
+            className="btn primary"
+            onClick={() => {
+              setConfirmOpen(false)
+              void installUpdate()
+            }}
+          >
+            {t('updater:action.install')}
+          </button>
+        </footer>
+      </Modal>
+    </div>
+  )
+}
+
+/** Settings → About. */
+export function AboutSection(): ReactElement {
+  const { t } = useTranslation()
+  const appInfo = useAppState((s) => s.appInfo)
+  return (
+    <div className="about">
+      <AppMark size={40} />
+      <div className="about-body">
+        <div className="about-name">{t('common:app.name')}</div>
+        <div className="about-version mono">{t('updater:version', { version: appInfo?.version ?? '…' })}</div>
+        <p className="hint">{t('common:app.disclaimer')}</p>
+        <p className="hint mono">
+          Electron {appInfo?.electronVersion} · {appInfo?.platform}
+        </p>
+      </div>
+    </div>
   )
 }
 
 /** Small sidebar hint when an update is waiting. */
 export function UpdatePill(): ReactElement | null {
+  const { t } = useTranslation()
   const u = useAppState((s) => s.updates)
   if (!u || (u.status !== 'available' && u.status !== 'downloaded')) return null
   return (
-    <button className="update-pill" onClick={() => setView({ kind: 'settings' })} title="Open Settings → About">
-      {u.status === 'downloaded' ? 'Update ready to install' : `Update available: ${u.latestVersion}`}
+    <button className="update-pill" onClick={() => setView({ kind: 'settings' })} title={t('updater:pillHint')}>
+      <span className="update-dot status-available" aria-hidden="true" />
+      {u.status === 'downloaded' ? t('updater:status.downloaded') : t('updater:status.available', { version: u.latestVersion ?? '' })}
     </button>
   )
 }

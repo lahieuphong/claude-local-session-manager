@@ -1,0 +1,50 @@
+{
+  "mode": {
+    "safe": "安全模式",
+    "safeDryRun": "安全模式 · 试运行",
+    "armed": "已启用永久删除"
+  },
+  "strip": {
+    "reading": "正在读取安全模式…",
+    "safeText": "试运行 — 无法删除、归档或恢复任何 Claude 文件。",
+    "armedText": "本次应用会话已启用永久删除。删除一次、10 分钟后或关闭应用都会返回安全模式。",
+    "settingsLink": "删除安全"
+  },
+  "claude": {
+    "running": "Claude Desktop 正在运行 — 已禁用归档、恢复和删除",
+    "runningHint": "修改会话文件前请完全退出 Claude Desktop（包括系统托盘）。浏览和导出仍可使用。",
+    "unknown": "Claude 状态未知 — 已禁用修改操作",
+    "unknownHint": "无法确认 Claude Desktop 是否正在运行。",
+    "closed": "Claude Desktop 已关闭",
+    "checking": "正在检查 Claude…",
+    "recheck": "重新检查 Claude 进程"
+  },
+  "action": {
+    "returnToSafe": "返回安全模式",
+    "enable": "启用永久删除"
+  },
+  "section": {
+    "safeText": "试运行已开启。无法删除任何 Claude 文件。",
+    "safeHint": "每次启动应用都从这里开始。永久删除只能在当前应用会话中启用；它从不保存，并会在删除一次、10 分钟后或关闭应用时返回安全模式。",
+    "armedText": "本次应用会话已启用永久删除。关闭应用会返回安全模式。",
+    "guardsNote": "启用只会关闭试运行。每次删除仍然需要有效、未过期、未变化的计划，位于允许的 Claude 根目录内的确切路径，不涉及工作区、没有链接逃逸，没有运行中的 Claude Desktop 或活动会话，并输入 DELETE 确认。",
+    "hideNote": "“在管理器中隐藏”从不触碰 Claude 文件，两种模式下都可使用。"
+  },
+  "arm": {
+    "title": "启用永久删除",
+    "warningTitle": "永久删除会彻底移除本地的 Claude 会话文件。",
+    "warningText": "关闭应用、10 分钟后或删除一次之后，此模式会自动返回安全模式。",
+    "requirements": "条件",
+    "reqStatusOk": "已确认 Claude 进程状态",
+    "reqStatusUnknown": "Claude 进程状态未知",
+    "reqClosedOk": "Claude Desktop 已关闭",
+    "reqClosedBad": "必须关闭 Claude Desktop（从系统托盘退出）",
+    "reqTyped": "已准确输入 {{phrase}}",
+    "recheck": "重新检查进程",
+    "typeToConfirm": "输入 {{phrase}} 以确认",
+    "confirm": "启用永久删除"
+  },
+  "toast": {
+    "returned": "已返回安全模式。无法删除任何 Claude 文件。"
+  }
+}

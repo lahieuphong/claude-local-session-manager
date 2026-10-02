@@ -1,7 +1,9 @@
 import { EventEmitter } from 'node:events'
-import { isArmConfirmationValid } from '../../shared/confirm'
+import { ARM_CONFIRMATION_PHRASE, isArmConfirmationValid } from '../../shared/confirm'
 import type { ArmResult, ProcessStatus, SafetyModeReason, SafetyModeState } from '../../shared/types'
 import { globalGuard } from './processService'
+import { msg } from '../util/messages'
+import type { MessageRef } from '../../shared/messages'
 
 /** Real-delete mode returns to Safe Mode on its own after this long. */
 export const ARM_DURATION_MS = 10 * 60_000
@@ -14,6 +16,12 @@ export interface InitialMode {
   dryRun: boolean
   reason: Extract<SafetyModeReason, 'startup' | 'env-dev'>
   notice?: string
+  noticeMsg?: MessageRef
+}
+
+function notice(key: string, params: Record<string, string>): { notice: string; noticeMsg: MessageRef } {
+  const m = msg(key, params)
+  return { notice: m.message, noticeMsg: m.msg }
 }
 
 const FALSY = /^(0|false|no|off)$/i
@@ -30,20 +38,16 @@ export function resolveInitialMode(opts: { isPackaged: boolean; env: Record<stri
   const wantsReal = raw !== undefined && FALSY.test(raw)
   if (!wantsReal) return { dryRun: true, reason: 'startup' }
   if (opts.isPackaged) {
-    return {
-      dryRun: true,
-      reason: 'startup',
-      notice: `${DRY_RUN_ENV}=${raw} was ignored: the packaged app always starts in Safe Mode.`
-    }
+    return { dryRun: true, reason: 'startup', ...notice('safety.noticePackaged', { variable: DRY_RUN_ENV, value: raw }) }
   }
   if (opts.env[DEV_ALLOW_ENV_ARM]?.trim() !== '1') {
     return {
       dryRun: true,
       reason: 'startup',
-      notice: `${DRY_RUN_ENV}=${raw} was ignored because ${DEV_ALLOW_ENV_ARM}=1 is not set.`
+      ...notice('safety.noticeNoDevAllow', { variable: DRY_RUN_ENV, value: raw, allow: DEV_ALLOW_ENV_ARM })
     }
   }
-  return { dryRun: false, reason: 'env-dev', notice: `Development run armed by ${DRY_RUN_ENV}=${raw} (${DEV_ALLOW_ENV_ARM}=1).` }
+  return { dryRun: false, reason: 'env-dev', ...notice('safety.noticeDevArmed', { variable: DRY_RUN_ENV, value: raw, allow: DEV_ALLOW_ENV_ARM }) }
 }
 
 export interface SafetyModeOptions {
@@ -73,7 +77,14 @@ export class SafetyModeController extends EventEmitter {
     this.armDurationMs = opts.armDurationMs ?? ARM_DURATION_MS
     this.now = opts.now ?? Date.now
     const t = this.now()
-    this.state = { dryRun: true, reason: 'startup', changedAt: t, armDurationMs: this.armDurationMs, notice: opts.initial.notice }
+    this.state = {
+      dryRun: true,
+      reason: 'startup',
+      changedAt: t,
+      armDurationMs: this.armDurationMs,
+      notice: opts.initial.notice,
+      noticeMsg: opts.initial.noticeMsg
+    }
     if (!opts.initial.dryRun) this.setArmed(opts.initial.reason)
   }
 
@@ -91,17 +102,13 @@ export class SafetyModeController extends EventEmitter {
   /** Arm real deletion: exact "ENABLE DELETE" and no process condition that blocks mutations. */
   async arm(confirmation: unknown): Promise<ArmResult> {
     if (!isArmConfirmationValid(confirmation)) {
-      return { ok: false, code: 'INVALID_INPUT', message: 'Type exactly ENABLE DELETE to arm real deletion.', state: this.getState() }
+      return { ok: false, code: 'INVALID_INPUT', ...msg('safety.typeExactly', { phrase: ARM_CONFIRMATION_PHRASE }), state: this.getState() }
     }
     const status = await this.opts.processes.getStatus(true)
     const guard = globalGuard(status)
-    if (guard) return { ok: false, code: guard.code, message: `Real deletion was not armed: ${guard.message}`, state: this.getState() }
+    if (guard) return { ok: false, code: guard.code, ...msg('safety.notArmed', { reason: guard.msg }), state: this.getState() }
     this.setArmed('armed-in-ui')
-    return {
-      ok: true,
-      message: `REAL DELETE ARMED for ${Math.round(this.armDurationMs / 60_000)} minutes or one delete, whichever comes first.`,
-      state: this.getState()
-    }
+    return { ok: true, ...msg('safety.armed', { minutes: Math.round(this.armDurationMs / 60_000) }), state: this.getState() }
   }
 
   /** Return to Safe Mode immediately (no restart needed). */
@@ -121,7 +128,16 @@ export class SafetyModeController extends EventEmitter {
 
   private setArmed(reason: SafetyModeState['reason']): void {
     const t = this.now()
-    this.state = { dryRun: false, reason, changedAt: t, armedAt: t, expiresAt: t + this.armDurationMs, armDurationMs: this.armDurationMs, notice: this.state.notice }
+    this.state = {
+      dryRun: false,
+      reason,
+      changedAt: t,
+      armedAt: t,
+      expiresAt: t + this.armDurationMs,
+      armDurationMs: this.armDurationMs,
+      notice: this.state.notice,
+      noticeMsg: this.state.noticeMsg
+    }
     if (this.timer) clearTimeout(this.timer)
     this.timer = setTimeout(() => this.expireIfDue(true), this.armDurationMs)
     this.timer.unref?.()

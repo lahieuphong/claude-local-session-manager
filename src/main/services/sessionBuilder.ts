@@ -3,6 +3,7 @@ import path from 'node:path'
 import type { ClaudeSession, LiveCliSession, LiveState, ProjectSource, SessionStatus } from '../../shared/types'
 import { resolveDisplayTitle } from '../../shared/titles'
 import { pathKey } from '../util/fsx'
+import { refsFor, trackedText as problem } from '../util/messages'
 import {
   transcriptIdsOf,
   type DesktopMetadataRecord,
@@ -169,18 +170,18 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
         if (matches.length === 1) chosen = matches[0]
       }
       if (candidates.length > 1 && !chosen) {
-        problems.push(`Transcript ${id}.jsonl exists in ${candidates.length} project folders; not linked (ambiguous).`)
+        problems.push(problem('problem.ambiguousTranscript', { file: `${id}.jsonl`, count: candidates.length }))
       }
       if (!chosen) {
         if (id === primaryId && !rec.remoteKind && candidates.length === 0) {
-          problems.push(`Transcript ${id}.jsonl not found under ~/.claude/projects.`)
+          problems.push(problem('problem.transcriptNotFound', { file: `${id}.jsonl` }))
         }
         continue
       }
       used.add(chosen)
       if ((claims.get(id) ?? 0) > 1) {
         record.sharedTranscripts.push(chosen)
-        problems.push(`Transcript ${id}.jsonl is referenced by several metadata files; it is excluded from deletion.`)
+        problems.push(problem('problem.sharedTranscript', { file: `${id}.jsonl` }))
         if (id === primaryId) record.transcript = chosen
         continue
       }
@@ -201,7 +202,7 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
     if (used.has(t)) continue
     used.add(t)
     const problems: string[] = []
-    if ((byUuid.get(t.uuid)?.length ?? 0) > 1) problems.push('The same session UUID also exists in another project folder.')
+    if ((byUuid.get(t.uuid)?.length ?? 0) > 1) problems.push(problem('problem.duplicateUuid'))
     if (t.parseError) problems.push(t.parseError)
     records.push(
       newRecord({
@@ -250,8 +251,8 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
   // 4. Orphan session folders ---------------------------------------------
   for (const d of dataDirs) {
     if (usedDataDirs.has(d)) continue
-    const problems = ['Session data folder without a transcript or metadata file (orphan).']
-    if (owners.get(d.uuid) === null) problems.push('Several sessions own this UUID; the folder is not attached to any of them.')
+    const problems = [problem('problem.orphanFolder')]
+    if (owners.get(d.uuid) === null) problems.push(problem('problem.ambiguousOwner'))
     records.push(newRecord({ dataDir: d, guardUuids: [d.uuid], managerKey: managerKeyForFolder(d.dirPath), problems }))
   }
 
@@ -262,7 +263,7 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
       if (owner) assign(owner, entry)
       else if (owner === null) {
         for (const r of records) {
-          if (r.ownedUuids.includes(uuid)) r.session.problems.push(`${label} folder ${uuid} is shared by several sessions; excluded from deletion.`)
+          if (r.ownedUuids.includes(uuid)) r.session.problems.push(problem('problem.sharedFolder', { label, uuid }))
         }
       }
     }
@@ -307,7 +308,7 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
   if (meta) status = t ? (meta.isArchived ? 'archived' : 'active') : 'metadata-only'
   else if (t) status = 'transcript-only'
   else status = 'orphan'
-  if (meta?.remoteKind && !t) problems.push(`Remote (${meta.remoteKind.toUpperCase()}) session: the transcript is stored on the remote host.`)
+  if (meta?.remoteKind && !t) problems.push(problem('problem.remote', { kind: meta.remoteKind.toUpperCase() }))
 
   const customTitle = s?.customTitle ?? r.dataDir?.customTitle
   const title = resolveDisplayTitle({
@@ -388,7 +389,8 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
     live: live
       ? { pid: live.pid, state: liveStateOf(live.status), status: live.status, name: live.name, entrypoint: live.entrypoint }
       : undefined,
-    problems
+    problems,
+    problemMsgs: refsFor(problems)
   }
 }
 

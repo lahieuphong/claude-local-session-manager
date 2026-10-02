@@ -1,0 +1,71 @@
+{
+  "title": "Settings",
+  "section": {
+    "general": "General",
+    "appearance": "Appearance",
+    "discovery": "Session discovery",
+    "deletionSafety": "Deletion safety",
+    "updates": "Updates",
+    "about": "About"
+  },
+  "language": {
+    "label": "Language",
+    "hint": "First launch follows Windows ({{language}}). Your choice is saved and applies immediately.",
+    "useSystem": "Use system language"
+  },
+  "motion": {
+    "label": "Motion",
+    "hint": "“Reduce motion” turns off transitions in this app. “Follow system” respects the Windows animation setting.",
+    "system": "Follow system",
+    "reduced": "Reduce motion"
+  },
+  "rawPaths": {
+    "label": "Show raw paths",
+    "hint": "Full absolute paths instead of ~ and %LOCALAPPDATA% shorthands. The delete dialog always shows full paths."
+  },
+  "refresh": {
+    "label": "Refresh",
+    "manual": "Manual only",
+    "manualHint": "Scan on start and when you click Refresh (F5).",
+    "watch": "Watch files",
+    "watchHint": "Rescan shortly after Claude writes to its storage folders (debounced, few watchers).",
+    "interval": "Interval",
+    "intervalHint": "Rescan on a fixed timer.",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes"
+  },
+  "roots": {
+    "label": "Storage roots",
+    "hint": "Detected from USERPROFILE, APPDATA and LOCALAPPDATA on every scan. They cannot be edited: the app only modifies files inside these roots, and only paths the scanner attributed to a session.",
+    "claudeHome": "Claude Code home",
+    "transcripts": "Transcript root",
+    "fileHistory": "File history",
+    "sessionEnv": "Session env",
+    "running": "Running sessions",
+    "desktop": "Claude Desktop metadata",
+    "notFound": "not found",
+    "noDesktop": "No Claude Desktop claude-code-sessions folder found",
+    "desktopCounts": "{{sessions}} session files · {{tombstones}} tombstones · {{indexes}} archive indexes",
+    "pending": "Scan pending…",
+    "checked_one": "All locations checked ({{count}})",
+    "checked_other": "All locations checked ({{count}})"
+  },
+  "cache": {
+    "label": "Scan cache",
+    "hint": "Speeds up rescans. Clearing it never touches Claude files.",
+    "clear": "Clear scan cache"
+  },
+  "debug": {
+    "label": "Developer / debug mode",
+    "hint": "Verbose logging, the normalized session JSON in details, and DevTools (F12)."
+  },
+  "logs": {
+    "label": "Diagnostics",
+    "cache": "Cache",
+    "logFile": "Log file",
+    "show": "Show log",
+    "empty": "(empty)"
+  }
+}

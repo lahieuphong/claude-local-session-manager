@@ -1,0 +1,50 @@
+{
+  "mode": {
+    "safe": "Chế độ an toàn",
+    "safeDryRun": "Chế độ an toàn · chạy thử",
+    "armed": "Đã bật xóa thật"
+  },
+  "strip": {
+    "reading": "Đang đọc chế độ an toàn…",
+    "safeText": "Chạy thử — không tệp nào của Claude có thể bị xóa, lưu trữ hay khôi phục.",
+    "armedText": "Đã cho phép xóa vĩnh viễn trong lần mở ứng dụng này. Sau một lần xóa, sau 10 phút hoặc khi đóng ứng dụng sẽ quay về Chế độ an toàn.",
+    "settingsLink": "An toàn khi xóa"
+  },
+  "claude": {
+    "running": "Claude Desktop đang chạy — đã tắt lưu trữ, khôi phục và xóa",
+    "runningHint": "Thoát hẳn Claude Desktop (kể cả ở khay hệ thống) trước khi thay đổi tệp phiên. Vẫn xem và xuất được.",
+    "unknown": "Không rõ trạng thái Claude — đã tắt các thao tác thay đổi",
+    "unknownHint": "Không kiểm tra được Claude Desktop có đang chạy hay không.",
+    "closed": "Claude Desktop đã đóng",
+    "checking": "Đang kiểm tra Claude…",
+    "recheck": "Kiểm tra lại tiến trình Claude"
+  },
+  "action": {
+    "returnToSafe": "Quay về Chế độ an toàn",
+    "enable": "Bật xóa thật"
+  },
+  "section": {
+    "safeText": "Đang chạy thử. Không tệp nào của Claude có thể bị xóa.",
+    "safeHint": "Mỗi lần mở ứng dụng đều bắt đầu ở đây. Xóa thật chỉ được bật cho lần mở hiện tại; không bao giờ được lưu lại, và tự quay về Chế độ an toàn sau một lần xóa, sau 10 phút hoặc khi đóng ứng dụng.",
+    "armedText": "Đã cho phép xóa vĩnh viễn trong lần mở ứng dụng này. Đóng ứng dụng sẽ quay về Chế độ an toàn.",
+    "guardsNote": "Bật xóa thật chỉ tắt chế độ chạy thử. Mỗi lần xóa vẫn cần kế hoạch hợp lệ, còn hạn, không thay đổi; đường dẫn chính xác trong các thư mục Claude được phép; không đụng thư mục dự án hay thoát ra qua liên kết; Claude Desktop và các phiên đang chạy phải đóng; và phải gõ xác nhận DELETE.",
+    "hideNote": "Ẩn trong trình quản lý không bao giờ đụng tới tệp của Claude và dùng được ở cả hai chế độ."
+  },
+  "arm": {
+    "title": "Bật xóa thật",
+    "warningTitle": "Xóa thật sẽ xóa vĩnh viễn các tệp phiên Claude trên máy.",
+    "warningText": "Chế độ này tự quay về Chế độ an toàn khi đóng ứng dụng, sau 10 phút, hoặc ngay sau một lần xóa.",
+    "requirements": "Điều kiện",
+    "reqStatusOk": "Đã xác minh trạng thái tiến trình Claude",
+    "reqStatusUnknown": "Chưa rõ trạng thái tiến trình Claude",
+    "reqClosedOk": "Claude Desktop đã đóng",
+    "reqClosedBad": "Claude Desktop phải được đóng (thoát ở khay hệ thống)",
+    "reqTyped": "Bạn đã gõ chính xác {{phrase}}",
+    "recheck": "Kiểm tra lại tiến trình",
+    "typeToConfirm": "Gõ {{phrase}} để xác nhận",
+    "confirm": "Bật xóa thật"
+  },
+  "toast": {
+    "returned": "Đã quay về Chế độ an toàn. Không tệp nào của Claude có thể bị xóa."
+  }
+}

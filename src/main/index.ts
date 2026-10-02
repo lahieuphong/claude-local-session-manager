@@ -14,10 +14,13 @@ import { ProcessService } from './services/processService'
 import { resolveInitialMode, SafetyModeController } from './services/safetyMode'
 import type { AppUpdater } from 'electron-updater'
 import { detectUpdateMode, UpdateService, type UpdaterLike } from './services/updateService'
+import { devFakeUpdater } from './services/devFakeUpdater'
 import { SessionRepository } from './services/sessionRepository'
 import { SettingsService } from './services/settingsService'
 import { WatchService } from './services/watchService'
 import { errorMessage, logger } from './util/logger'
+import { localText } from './util/messages'
+import { resolveLocale } from '../shared/locale'
 
 app.setName(APP_NAME)
 // Separate app data (and single-instance lock) for test/verification runs.
@@ -62,7 +65,8 @@ async function start(): Promise<void> {
     userDataPath: userData,
     cachePath,
     logPath,
-    electronVersion: process.versions.electron
+    electronVersion: process.versions.electron,
+    systemLanguages: systemLanguages()
   }
   logger.info(`${APP_NAME} ${appInfo.version} starting (dryRun=${initialMode.dryRun}, packaged=${app.isPackaged})`)
   if (initialMode.notice) logger.warn(initialMode.notice)
@@ -102,16 +106,21 @@ async function start(): Promise<void> {
       return r.canceled || !r.filePath ? null : r.filePath
     },
     chooseDirectory: async () => {
-      const opts = { title: 'Choose export folder', properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'> }
+      const title = localText(resolveLocale(settings.get().language, appInfo.systemLanguages), 'export.chooseFolder')
+      const opts = { title, properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'> }
       const r = mainWindow ? await dialog.showOpenDialog(mainWindow, opts) : await dialog.showOpenDialog(opts)
       return r.canceled || !r.filePaths[0] ? null : r.filePaths[0]
     }
   })
 
   // Updates (GitHub Releases). electron-updater is loaded only in packaged builds.
-  const updateMode = detectUpdateMode({ isPackaged: app.isPackaged, execPath: process.execPath, productName: APP_NAME, env: process.env })
-  let updater: UpdaterLike | null = null
-  if (updateMode !== 'development') {
+  // Development only: a fake updater to review the update UI (ignored by packaged builds).
+  const fakeUpdater = devFakeUpdater({ isPackaged: app.isPackaged, env: process.env })
+  const updateMode = fakeUpdater
+    ? 'installed'
+    : detectUpdateMode({ isPackaged: app.isPackaged, execPath: process.execPath, productName: APP_NAME, env: process.env })
+  let updater: UpdaterLike | null = fakeUpdater
+  if (updateMode !== 'development' && !fakeUpdater) {
     try {
       // electron-updater exposes autoUpdater through a getter, which a dynamic
       // import from this CommonJS bundle places under `default`.
@@ -186,6 +195,17 @@ async function start(): Promise<void> {
   })
 }
 
+/** OS language preferences (first-run UI language), with the Chromium locale as a fallback. */
+function systemLanguages(): string[] {
+  try {
+    const list = app.getPreferredSystemLanguages()
+    if (list.length) return list
+  } catch {
+    /* older platforms */
+  }
+  return [app.getLocale()]
+}
+
 function rendererUrl(): string | undefined {
   return !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 }
@@ -217,7 +237,7 @@ function createWindow(settings: SettingsService): void {
     minHeight: 620,
     show: false,
     title: APP_NAME,
-    backgroundColor: '#0d0f12',
+    backgroundColor: '#0b0c0c',
     autoHideMenuBar: true,
     icon: app.isPackaged ? undefined : path.join(app.getAppPath(), 'build', 'icon.png'),
     webPreferences: {

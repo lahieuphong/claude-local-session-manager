@@ -38,6 +38,50 @@ export or permanently delete sessions.
   - Safe Mode (DRY RUN) on every launch; real deletion is armed in the app for one delete / 10 minutes
 - A parsed-transcript cache, so restarts and rescans are fast even with 100 MB+ transcripts.
 - Optional auto refresh (file watching or an interval), plus manual **Refresh** (F5).
+- UI in **English, Tiếng Việt and 简体中文** (see [UI languages](#ui-languages)).
+- Keyboard: <kbd>Ctrl</kbd>+<kbd>K</kbd>, <kbd>Ctrl</kbd>+<kbd>F</kbd> or <kbd>/</kbd> focus search
+  (<kbd>Esc</kbd> clears it), <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>Home</kbd>/<kbd>End</kbd> move through
+  the list, <kbd>F5</kbd> rescans, <kbd>Esc</kbd> closes dialogs.
+
+## UI languages
+
+The interface is available in **English**, **Tiếng Việt** and **简体中文**
+(Simplified Chinese).
+
+- **First launch** follows the Windows display language: `vi-*` → Tiếng Việt;
+  `zh-CN`, `zh-SG`, `zh-Hans*` → 简体中文; anything else → English
+  (Traditional Chinese falls back to English until it is added).
+- **Settings → General → Language** switches immediately, without a restart.
+  The choice is saved in `%APPDATA%\Claude Local Session Manager\settings.json`
+  and kept across restarts and updates. "Use system language" clears it.
+- **Settings → Appearance → Motion**: "Follow system" respects the Windows
+  animation setting (`prefers-reduced-motion`); "Reduce motion" turns
+  transitions off in the app.
+- Never translated: file paths, session/plan IDs, model IDs, branch names,
+  raw metadata, the typed confirmation phrases (`DELETE`, `DELETE <n>`,
+  `ENABLE DELETE`), and session titles/prompts (user content).
+- Logs and the text copied with **Copy delete plan** stay in English, so a
+  plan can be reviewed independently of the UI language.
+- The UI language never affects deletion safety: the app still starts in
+  **Safe Mode** on every launch, and **Real Delete Armed** is never saved.
+
+Translations live in `src/shared/locales/<language>/<namespace>.json`
+(`common`, `sessions`, `inspector`, `deletion`, `safety`, `settings`,
+`storage`, `updater`, `messages`). English is the source. `yarn i18n:check`
+(also part of `yarn test`) fails if any language misses a key, adds one,
+changes a `{{placeholder}}`, lacks a plural form, or drifts from the safety
+glossary (Safe Mode / Real Delete Armed / Delete permanently / Hide in
+manager / Transcript only). To add a language (for example `zh-TW`): add it to
+`SUPPORTED_LOCALES` in `src/shared/locale.ts`, copy `locales/en/`, translate
+it, and register it in `src/shared/locales/index.ts`.
+
+**Typography.** The app uses system font stacks only and bundles no font
+files: `"SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+"Segoe UI Variable", "Segoe UI", sans-serif` for the UI (Segoe UI Variable on
+Windows), `"SFMono-Regular", "SF Mono", "Cascadia Code", "Cascadia Mono",
+Consolas, monospace` for technical values only (paths, IDs, models), and
+Microsoft YaHei UI / PingFang SC for Simplified Chinese. Apple's SF fonts
+are used only if they are already installed on the machine.
 
 ## Installation
 
@@ -132,10 +176,15 @@ Requirements: Windows 10/11 x64 (macOS/Linux discovery paths exist but are
 untested), Node.js 24 (CI uses 24), Yarn 1.x classic (the project uses
 `yarn.lock`; there is no npm lockfile).
 
+To review the update UI without a real release, a development run can use a
+fake updater (no network, nothing is installed; packaged builds ignore it):
+`$env:CLAUDE_SESSION_MANAGER_DEV_FAKE_UPDATE = "9.9.9"; yarn dev`.
+
 ```bash
 yarn install
 yarn dev        # development app (always starts in Safe Mode / DRY RUN)
 yarn test       # automated tests (fixtures in temp folders only)
+yarn i18n:check # translation completeness (en / vi / zh-CN)
 yarn typecheck  # TypeScript, main + renderer
 yarn build      # production bundles into out/
 yarn dist       # clean dist/, build, then Setup + Portable into dist/ (never publishes)
@@ -383,6 +432,9 @@ Without a backup the data cannot be recovered.
 ```
 src/
   shared/            types, IPC contract, title/confirmation/format helpers
+    locale.ts        supported UI languages + OS language detection
+    locales/         translations: <language>/<namespace>.json
+    messages.ts      main-process message keys (translated in the UI)
   main/              Electron main process (all filesystem access)
     index.ts         window, security hardening, service wiring
     ipc/             typed IPC handlers (validate IDs, never accept paths)
@@ -404,9 +456,11 @@ src/
       watchService.ts      throttled fs.watch / interval refresh
   preload/           contextBridge API (named session-ID operations only)
   renderer/          React UI (sidebar, list, details, delete modal, pages)
+    src/i18n/        i18next setup, locale-aware formatting (Intl)
+    src/styles/      design tokens (colors, type, spacing, motion)
 tests/               Vitest safety tests (temp fixture trees only)
 fixtures/            sample metadata + transcripts (incl. Vietnamese text)
-scripts/             icon generator
+scripts/             icon generator, release helpers, i18n-check.mjs
 ```
 
 Security model:

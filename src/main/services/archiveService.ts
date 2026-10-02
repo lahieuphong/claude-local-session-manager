@@ -4,6 +4,8 @@ import type { ActionResult, BulkActionResult } from '../../shared/types'
 import { validateTarget, PathRejectedError, type AllowedRoots } from '../security/pathValidator'
 import { writeFileAtomic } from '../util/atomicWrite'
 import { errorMessage, logger } from '../util/logger'
+import { msg, msgText, ref } from '../util/messages'
+import type { MessageRef } from '../../shared/messages'
 import type { ManagerHiddenStore } from './managerHiddenStore'
 import {
   ARCHIVE_INDEX_FILE,
@@ -17,6 +19,11 @@ import type { SessionRepository } from './sessionRepository'
 
 export interface ArchiveFileResult extends ActionResult {
   warnings: string[]
+}
+
+function warn(warnings: string[], notes: MessageRef[], key: string, params: Record<string, string>): void {
+  warnings.push(msgText(key, params))
+  notes.push(ref(key, params))
 }
 
 /**
@@ -35,7 +42,8 @@ export async function setDesktopArchived(
   dryRun: boolean
 ): Promise<ArchiveFileResult> {
   const warnings: string[] = []
-  const verb = archived ? 'archive' : 'restore'
+  const notes: MessageRef[] = []
+  const verb = ref(archived ? 'archive.verb.archive' : 'archive.verb.restore')
   let target
   try {
     target = await validateTarget(rec.filePath, 'metadata', roots)
@@ -43,7 +51,7 @@ export async function setDesktopArchived(
     return { ok: false, code: 'PATH_REJECTED', message: errorMessage(err), warnings }
   }
   if (!target.exists) {
-    return { ok: false, code: 'NOT_FOUND', message: `Metadata file disappeared: ${rec.filePath}`, warnings }
+    return { ok: false, code: 'NOT_FOUND', ...msg('archive.metadataGone', { path: rec.filePath }), warnings }
   }
 
   let obj: Record<string, unknown>
@@ -52,16 +60,16 @@ export async function setDesktopArchived(
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not a JSON object')
     obj = parsed as Record<string, unknown>
   } catch (err) {
-    return { ok: false, code: 'IO_ERROR', message: `Cannot ${verb}: metadata is not valid JSON (${errorMessage(err)}). File left unchanged.`, warnings }
+    return { ok: false, code: 'IO_ERROR', ...msg('archive.invalidJson', { verb, error: errorMessage(err) }), warnings }
   }
   if (obj.sessionId !== undefined && obj.sessionId !== rec.sessionId) {
-    return { ok: false, code: 'CHANGED_ON_DISK', message: 'Metadata file changed on disk (session ID differs). Refresh and try again.', warnings }
+    return { ok: false, code: 'CHANGED_ON_DISK', ...msg('archive.changedOnDisk'), warnings }
   }
 
   const already = (obj.isArchived === true) === archived
   if (dryRun) {
     logger.info(`[DRY RUN] would set isArchived=${archived} in ${target.path}`)
-    return { ok: true, dryRun: true, message: `DRY RUN: would ${verb} (set isArchived=${archived}). No files were modified.`, warnings }
+    return { ok: true, dryRun: true, ...msg('archive.dryRun', { verb, value: String(archived) }), warnings }
   }
 
   if (!already) {
@@ -71,7 +79,7 @@ export async function setDesktopArchived(
       const check = JSON.parse(stripBom(await readFile(target.path, 'utf8'))) as Record<string, unknown>
       if ((check.isArchived === true) !== archived) throw new Error('verification failed after write')
     } catch (err) {
-      return { ok: false, code: 'IO_ERROR', message: `Could not ${verb}: ${errorMessage(err)}`, warnings }
+      return { ok: false, code: 'IO_ERROR', ...msg('archive.writeFailed', { verb, error: errorMessage(err) }), warnings }
     }
     logger.info(`Set isArchived=${archived} in ${target.path}`)
   }
@@ -83,7 +91,7 @@ export async function setDesktopArchived(
     if (idx.exists) {
       const ids = parseArchiveIndex(await readFile(idx.path, 'utf8'))
       if (!ids) {
-        warnings.push(`${ARCHIVE_INDEX_FILE} has an unrecognised format and was left unchanged.`)
+        warn(warnings, notes, 'archive.indexUnrecognised', { file: ARCHIVE_INDEX_FILE })
       } else {
         const set = new Set(ids)
         const had = set.has(rec.sessionId)
@@ -93,17 +101,21 @@ export async function setDesktopArchived(
       }
     }
   } catch (err) {
-    const msg = err instanceof PathRejectedError ? err.message : errorMessage(err)
-    warnings.push(`Archive index not updated: ${msg}`)
+    const reason = err instanceof PathRejectedError ? err.message : errorMessage(err)
+    warn(warnings, notes, 'archive.indexNotUpdated', { error: reason })
   }
 
-  const message = already ? `Session was already ${archived ? 'archived' : 'active'}.` : archived ? 'Session archived.' : 'Session restored.'
-  return { ok: true, message: warnings.length ? `${message} ${warnings.join(' ')}` : message, warnings }
+  const done = msg(already ? (archived ? 'archive.alreadyArchived' : 'archive.alreadyActive') : archived ? 'archive.archived' : 'archive.restored')
+  return {
+    ok: true,
+    message: warnings.length ? `${done.message} ${warnings.join(' ')}` : done.message,
+    msg: done.msg,
+    notes: notes.length ? notes : undefined,
+    warnings
+  }
 }
 
-export const NOT_ARCHIVABLE_MESSAGE =
-  'This Claude Code session has no Claude Desktop metadata, so Claude has no archive flag for it. ' +
-  'Use "Hide in manager" instead (it only changes this app’s list).'
+export const NOT_ARCHIVABLE_MESSAGE = msgText('archive.notArchivable')
 
 /**
  * Two deliberately separate operations:
@@ -127,8 +139,8 @@ export class ArchiveService {
   async setArchived(id: string, archived: boolean, opts: { rescan?: boolean } = {}): Promise<ActionResult> {
     const record = this.repo.getRecord(id)
     const roots = this.repo.getAllowedRoots()
-    if (!record || !roots) return { ok: false, code: 'NOT_FOUND', message: 'Session not found. Refresh and try again.' }
-    if (!record.metadata) return { ok: false, code: 'NOT_SUPPORTED', message: NOT_ARCHIVABLE_MESSAGE }
+    if (!record || !roots) return { ok: false, code: 'NOT_FOUND', ...msg('common.sessionNotFound') }
+    if (!record.metadata) return { ok: false, code: 'NOT_SUPPORTED', ...msg('archive.notArchivable') }
 
     const status = await this.processes.getStatus(true)
     const guard = globalGuard(status) ?? sessionGuard(status, record.guardUuids)
@@ -140,40 +152,29 @@ export class ArchiveService {
 
   async setHidden(id: string, hidden: boolean, opts: { rescan?: boolean } = {}): Promise<ActionResult> {
     const record = this.repo.getRecord(id)
-    if (!record) return { ok: false, code: 'NOT_FOUND', message: 'Session not found. Refresh and try again.' }
-    if (!record.managerKey) {
-      return {
-        ok: false,
-        code: 'NOT_SUPPORTED',
-        message: "This is a Claude Desktop session: use Archive / Restore, which changes Claude's own archive state."
-      }
-    }
+    if (!record) return { ok: false, code: 'NOT_FOUND', ...msg('common.sessionNotFound') }
+    if (!record.managerKey) return { ok: false, code: 'NOT_SUPPORTED', ...msg('hide.desktopSession') }
     try {
       await this.hidden.set(record.managerKey, hidden)
     } catch (err) {
-      return { ok: false, code: 'IO_ERROR', message: `Could not save the manager's hidden list: ${errorMessage(err)}` }
+      return { ok: false, code: 'IO_ERROR', ...msg('hide.saveFailed', { error: errorMessage(err) }) }
     }
     if (opts.rescan !== false) await this.repo.scan(hidden ? 'hide' : 'unhide')
-    return {
-      ok: true,
-      message: hidden
-        ? "Hidden in manager. Only this app's list changed; Claude's files and archive state are untouched."
-        : 'Shown in manager again.'
-    }
+    return { ok: true, ...msg(hidden ? 'hide.hidden' : 'hide.shown') }
   }
 
   async bulk(ids: string[], archived: boolean): Promise<BulkActionResult> {
-    return this.runBulk(ids, (id) => this.setArchived(id, archived, { rescan: false }), archived ? 'Archived' : 'Restored', (r) => r.ok && !r.dryRun)
+    return this.runBulk(ids, (id) => this.setArchived(id, archived, { rescan: false }), archived ? 'archived' : 'restored', (r) => r.ok && !r.dryRun)
   }
 
   async bulkHidden(ids: string[], hidden: boolean): Promise<BulkActionResult> {
-    return this.runBulk(ids, (id) => this.setHidden(id, hidden, { rescan: false }), hidden ? 'Hidden' : 'Shown', (r) => r.ok)
+    return this.runBulk(ids, (id) => this.setHidden(id, hidden, { rescan: false }), hidden ? 'hidden' : 'shown', (r) => r.ok)
   }
 
   private async runBulk(
     ids: string[],
     op: (id: string) => Promise<ActionResult>,
-    verb: string,
+    verb: 'archived' | 'restored' | 'hidden' | 'shown',
     changed: (r: ActionResult) => boolean
   ): Promise<BulkActionResult> {
     const results: BulkActionResult['results'] = []
@@ -181,14 +182,14 @@ export class ArchiveService {
       const title = this.repo.getRecord(id)?.session.displayTitle ?? id
       results.push({ id, title, ...(await op(id)) })
     }
-    if (results.some(changed)) await this.repo.scan(`bulk-${verb.toLowerCase()}`)
+    if (results.some(changed)) await this.repo.scan(`bulk-${verb}`)
     const failed = results.filter((r) => !r.ok)
+    const v = ref(`bulk.verb.${verb}`)
     return {
       ok: failed.length === 0,
-      message:
-        failed.length === 0
-          ? `${verb} ${results.length} session(s).`
-          : `${verb} ${results.length - failed.length} of ${results.length}; ${failed.length} skipped or failed.`,
+      ...(failed.length === 0
+        ? msg('bulk.done', { verb: v, count: results.length })
+        : msg('bulk.partial', { verb: v, done: results.length - failed.length, count: results.length, failed: failed.length })),
       results
     }
   }

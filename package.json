@@ -20,6 +20,7 @@
     "typecheck": "yarn typecheck:node && yarn typecheck:web",
     "test": "vitest run",
     "test:watch": "vitest",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "icon": "node scripts/generate-icon.mjs",
     "build": "electron-vite build",
     "clean": "node scripts/clean.mjs dist release out",
@@ -43,8 +44,10 @@
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "i18next": "^26.4.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.15",
     "typescript": "~5.9.3",
     "vite": "^7.3.6",
     "vitest": "^5.0.3"

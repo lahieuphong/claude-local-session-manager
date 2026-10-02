@@ -1,0 +1,92 @@
+{
+  "title": {
+    "single": "Xóa vĩnh viễn phiên",
+    "bulk_other": "Xóa vĩnh viễn {{count}} phiên",
+    "dryRunResult": "Kết quả chạy thử",
+    "result": "Kết quả xóa"
+  },
+  "planId": "Kế hoạch {{id}}…",
+  "summary": "{{sessions}} · {{files}} · {{folders}} · {{size}}",
+  "sessionSummary": "{{files}} · {{folders}} · {{size}} ({{bytes}} byte)",
+  "count": {
+    "sessions_other": "{{count}} phiên",
+    "files_other": "{{count}} tệp",
+    "folders_other": "{{count}} thư mục"
+  },
+  "building": "Đang lập kế hoạch xóa…",
+  "wouldBeBlocked": "Nếu xóa thật lúc này sẽ bị chặn:",
+  "recheck": "Kiểm tra lại",
+  "blockedSessions_other": "{{count}} phiên không thể xóa và không nằm trong kế hoạch này:",
+  "danger": {
+    "title": "Thao tác này xóa vĩnh viễn các tệp cục bộ liệt kê bên dưới.",
+    "text": "Tệp không được chuyển vào Thùng rác và không thể khôi phục nếu bạn không có bản sao lưu. Chỉ đúng các đường dẫn này bị tác động, và chỉ khi mọi bước kiểm tra vẫn đạt lúc thực hiện."
+  },
+  "mode": {
+    "safeText": "Chỉ kiểm tra: toàn bộ các bước kiểm tra được chạy và kế hoạch được ghi nhật ký, nhưng không tệp nào của Claude bị thay đổi. Muốn xóa thật, hãy bật xóa thật trong Cài đặt → An toàn khi xóa.",
+    "armedText": "Các tệp bên dưới sẽ bị xóa vĩnh viễn. Ứng dụng tự quay về Chế độ an toàn ngay sau lần xóa này."
+  },
+  "meta": {
+    "planId": "ID kế hoạch",
+    "hash": "Mã băm nội dung",
+    "created": "Tạo lúc",
+    "expires": "Hết hạn"
+  },
+  "confirm": {
+    "type": "Gõ {{phrase}} để xác nhận",
+    "typeEither": "Gõ {{a}} hoặc {{b}} để xác nhận"
+  },
+  "nothing": "Không có gì trong lựa chọn này có thể xóa.",
+  "copyHint": "Sao chép nguyên văn kế hoạch (tiếng Anh) để tự kiểm tra",
+  "copied": {
+    "plan": "Đã sao chép kế hoạch xóa",
+    "result": "Đã sao chép kết quả xóa"
+  },
+  "action": {
+    "copyPlan": "Sao chép kế hoạch xóa",
+    "copyResult": "Sao chép kết quả",
+    "runDryRun": "Chạy kiểm tra thử",
+    "validating": "Đang kiểm tra…",
+    "deleting": "Đang xóa…"
+  },
+  "itemAction": {
+    "delete-file": "xóa tệp",
+    "delete-directory": "xóa thư mục · {{files}}, {{folders}}",
+    "create-file": "tạo tệp",
+    "update-file": "cập nhật tệp",
+    "remove-record": "gỡ bản ghi"
+  },
+  "kind": {
+    "metadata": "Siêu dữ liệu",
+    "transcript": "Bản ghi hội thoại",
+    "session-data": "Dữ liệu phiên",
+    "subagent-log": "Nhật ký tác tử phụ",
+    "file-history": "Lịch sử tệp",
+    "session-env": "Môi trường phiên",
+    "tombstone": "Dấu xóa",
+    "archive-index": "Chỉ mục lưu trữ",
+    "manager-record": "Bản ghi trình quản lý"
+  },
+  "group": {
+    "willDelete": "Sẽ xóa",
+    "willChange": "Sẽ thay đổi · sổ sách của Claude Desktop",
+    "managerRecords": "Bản ghi của trình quản lý · chỉ ứng dụng này",
+    "willNotDelete": "Không xóa"
+  },
+  "outcome": {
+    "deleted": "đã xóa",
+    "created": "đã tạo",
+    "updated": "đã cập nhật",
+    "missing": "đã không còn",
+    "failed": "thất bại",
+    "skipped": "bỏ qua",
+    "dry-run": "đạt kiểm tra (chạy thử)"
+  },
+  "sessionOutcome": {
+    "deleted": "Đã xóa",
+    "partial": "Một phần",
+    "failed": "Thất bại",
+    "skipped": "Bỏ qua",
+    "dry-run": "Chạy thử"
+  },
+  "dryRunExplain": "Mọi mục tiêu đều đạt kiểm tra (nằm trong thư mục được phép, đúng cấu trúc, đường dẫn chuẩn, không thoát ra qua liên kết, không phải thư mục dự án) và đã được ghi nhật ký. Không có gì bị xóa."
+}

@@ -74,7 +74,11 @@ describe('process status and guards', () => {
 
   it('blocks everything while Claude Desktop runs or when the status is unknown', () => {
     const running = buildProcessStatus([{ pid: 9, name: 'claude.exe', executablePath: DESKTOP_EXE }], [])
-    expect(globalGuard(running)).toEqual({ code: 'CLAUDE_RUNNING', message: 'Close Claude Desktop before modifying session files.' })
+    expect(globalGuard(running)).toEqual({
+      code: 'CLAUDE_RUNNING',
+      message: 'Close Claude Desktop before modifying session files.',
+      msg: { key: 'guard.claudeRunning' }
+    })
     const unknown = buildProcessStatus([], [], 'Process query failed: timeout')
     expect(globalGuard(unknown)?.code).toBe('CLAUDE_RUNNING')
   })

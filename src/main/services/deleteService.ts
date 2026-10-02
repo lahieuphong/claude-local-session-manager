@@ -24,6 +24,8 @@ import {
 import { writeFileAtomic } from '../util/atomicWrite'
 import { SAFE_ID_RE, lstatOrNull, pathKey } from '../util/fsx'
 import { errorMessage, logger } from '../util/logger'
+import { msg, msgText, ref } from '../util/messages'
+import type { MessageParams, MessageRef } from '../../shared/messages'
 import type { ScanCache } from './cacheService'
 import { formatPlanReport, formatResultReport } from './deleteReport'
 import type { ManagerHiddenStore } from './managerHiddenStore'
@@ -55,9 +57,21 @@ interface PlanContext {
  * only from the scanner registry; nothing is globbed or guessed, and the
  * source workspace is never part of it.
  */
-export function buildPlanItems(record: SessionRecord, ctx?: PlanContext): { items: DeletePlanItem[]; warnings: string[] } {
+export function buildPlanItems(
+  record: SessionRecord,
+  ctx?: PlanContext
+): { items: DeletePlanItem[]; warnings: string[]; warningMsgs: MessageRef[] } {
   const items: DeletePlanItem[] = []
   const warnings: string[] = []
+  const warningMsgs: MessageRef[] = []
+  const warn = (key: string, params: MessageParams): void => {
+    warnings.push(msgText(key, params))
+    warningMsgs.push(ref(key, params))
+  }
+  const note = (key: string, params?: MessageParams): { note: string; noteMsg: MessageRef } => ({
+    note: msgText(key, params),
+    noteMsg: ref(key, params)
+  })
   const meta = record.metadata
 
   if (meta) {
@@ -69,7 +83,7 @@ export function buildPlanItems(record: SessionRecord, ctx?: PlanContext): { item
         kind: 'archive-index',
         action: 'update-file',
         path: idx.path,
-        note: `Remove "${meta.sessionId}" from Claude Desktop's archive index`
+        ...note('delete.noteArchiveIndex', { id: meta.sessionId })
       })
     }
 
@@ -84,7 +98,7 @@ export function buildPlanItems(record: SessionRecord, ctx?: PlanContext): { item
         kind: 'tombstone',
         action: 'create-file',
         path: path.join(meta.storageDir, TOMBSTONE_PREFIX + id),
-        note: 'Deletion marker, as written by Claude Desktop'
+        ...note('delete.noteTombstone')
       })
     }
   }
@@ -95,7 +109,7 @@ export function buildPlanItems(record: SessionRecord, ctx?: PlanContext): { item
   for (const t of [...new Set(transcripts)]) {
     items.push({ kind: 'transcript', action: 'delete-file', path: t.filePath, sizeBytes: t.size, fileCount: 1, dirCount: 0 })
   }
-  for (const t of record.sharedTranscripts) warnings.push(`Kept: ${t.filePath} is referenced by another session.`)
+  for (const t of record.sharedTranscripts) warn('delete.warnSharedTranscript', { path: t.filePath })
   for (const log of record.legacySubagentLogs) {
     items.push({ kind: 'subagent-log', action: 'delete-file', path: log.filePath, sizeBytes: log.size, fileCount: 1, dirCount: 0 })
   }
@@ -108,9 +122,9 @@ export function buildPlanItems(record: SessionRecord, ctx?: PlanContext): { item
       sizeBytes: d.bytes,
       fileCount: d.files,
       dirCount: d.dirs + 1,
-      note: d === record.dataDir ? undefined : 'Same session UUID, written while the session worked in another folder'
+      ...(d === record.dataDir ? {} : note('delete.noteOtherFolder'))
     })
-    if (d.links) warnings.push(`${d.links} link(s) inside ${d.dirPath} are removed as links; their targets are not touched.`)
+    if (d.links) warn('delete.warnLinks', { count: d.links, path: d.dirPath })
   }
   for (const [kind, dir] of [
     ['file-history', record.fileHistoryDir],
@@ -128,7 +142,7 @@ export function buildPlanItems(record: SessionRecord, ctx?: PlanContext): { item
         action: 'remove-record',
         recordType: 'hidden-list',
         path: ctx.hidden.filePath ?? '(manager hidden list, in memory)',
-        note: `Remove this session from the manager's hidden list (${record.managerKey})`
+        ...note('delete.noteHiddenRecord', { key: record.managerKey })
       })
     }
     for (const file of [...transcripts.map((t) => t.filePath), ...record.legacySubagentLogs.map((l) => l.filePath)]) {
@@ -138,27 +152,27 @@ export function buildPlanItems(record: SessionRecord, ctx?: PlanContext): { item
         action: 'remove-record',
         recordType: 'scan-cache',
         path: ctx.cache.filePath ?? '(manager scan cache, in memory)',
-        note: `Remove the cached summary of ${path.basename(file)}`
+        ...note('delete.noteCacheRecord', { file: path.basename(file) })
       })
     }
   }
-  return { items, warnings }
+  return { items, warnings, warningMsgs }
 }
 
 /** Paths shown under WILL NOT DELETE for a session. */
-export function keptPaths(record: SessionRecord): Array<{ path: string; reason: string }> {
-  const out: Array<{ path: string; reason: string }> = []
+export function keptPaths(record: SessionRecord): Array<{ path: string; reason: string; reasonMsg: MessageRef }> {
+  const out: Array<{ path: string; reason: string; reasonMsg: MessageRef }> = []
   const seen = new Set<string>()
-  const add = (p: string | undefined, reason: string): void => {
+  const add = (p: string | undefined, key: string): void => {
     if (!p || seen.has(pathKey(p))) return
     seen.add(pathKey(p))
-    out.push({ path: p, reason })
+    out.push({ path: p, reason: msgText(key), reasonMsg: ref(key) })
   }
-  for (const w of record.workspacePaths) add(w, 'project workspace (source code)')
+  for (const w of record.workspacePaths) add(w, 'keep.workspace')
   const storage = record.transcript?.projectDir ?? record.dataDir?.projectDir
-  add(storage, 'Claude project folder itself, its other sessions and memory/')
-  if (storage) add(path.join(storage, 'memory'), 'project memory')
-  if (record.metadata) add(record.metadata.storageDir, 'Claude Desktop session folder and other sessions in it')
+  add(storage, 'keep.projectFolder')
+  if (storage) add(path.join(storage, 'memory'), 'keep.memory')
+  if (record.metadata) add(record.metadata.storageDir, 'keep.desktopFolder')
   return out
 }
 
@@ -172,15 +186,15 @@ function contentHashOf(sessions: SessionDeletePlan[]): string {
   return createHash('sha256').update(JSON.stringify(data)).digest('hex')
 }
 
-function diffTargets(before: string[], after: string[]): string {
+/** Why a plan is stale: which targets appeared or disappeared, or only their contents changed. */
+function staleMessage(before: string[], after: string[]): { message: string; msg: MessageRef } {
   const a = new Set(before)
   const b = new Set(after)
-  const added = [...b].filter((x) => !a.has(x))
-  const removed = [...a].filter((x) => !b.has(x))
-  const parts: string[] = []
-  if (added.length) parts.push(`unexpected new target(s): ${added.join(', ')}`)
-  if (removed.length) parts.push(`target(s) gone: ${removed.join(', ')}`)
-  return parts.length ? ` (${parts.join('; ')})` : ' (sizes, file counts or contents changed)'
+  const added = [...b].filter((x) => !a.has(x)).join(', ')
+  const removed = [...a].filter((x) => !b.has(x)).join(', ')
+  if (!added && !removed) return msg('delete.staleContent')
+  const changes = added && removed ? ref('delete.diffBoth', { added, removed }) : added ? ref('delete.diffAdded', { added }) : ref('delete.diffRemoved', { removed })
+  return msg('delete.staleTargets', { changes })
 }
 
 interface StoredPlan {
@@ -252,12 +266,13 @@ export class DeleteService {
           totalDirs: 0,
           willNotDelete: [],
           warnings: [],
-          blockedReason: 'Session not found. Refresh and try again.',
+          blockedReason: msgText('common.sessionNotFound'),
+          blockedMsg: ref('common.sessionNotFound'),
           blockedCode: 'NOT_FOUND'
         })
         continue
       }
-      const { items, warnings } = buildPlanItems(record, ctx)
+      const { items, warnings, warningMsgs } = buildPlanItems(record, ctx)
       const s = record.session
       const plan: SessionDeletePlan = {
         sessionId: id,
@@ -272,28 +287,32 @@ export class DeleteService {
         totalFiles: items.reduce((n, i) => n + (i.action.startsWith('delete') ? i.fileCount ?? 0 : 0), 0),
         totalDirs: items.reduce((n, i) => n + (i.action === 'delete-directory' ? i.dirCount ?? 1 : 0), 0),
         willNotDelete: keptPaths(record),
-        warnings
+        warnings,
+        warningMsgs
       }
-      const block = (code: ActionErrorCode, reason: string): void => {
-        blocked.push({ ...plan, blockedReason: reason, blockedCode: code })
+      const block = (code: ActionErrorCode, reason: string, reasonMsg?: MessageRef): void => {
+        blocked.push({ ...plan, blockedReason: reason, blockedMsg: reasonMsg, blockedCode: code })
       }
       const guard = sessionGuard(status, record.guardUuids)
       if (guard) {
-        block(guard.code, guard.message)
+        block(guard.code, guard.message, guard.msg)
         continue
       }
       const ageMs = record.transcript ? Date.now() - record.transcript.mtimeMs : Infinity
       if (ageMs < this.recentWriteMs) {
-        block('RECENTLY_WRITTEN', `The transcript was written ${Math.round(ageMs / 1000)}s ago and may still be in use. Wait and try again.`)
+        const m = msg('delete.recentlyWritten', { seconds: Math.round(ageMs / 1000) })
+        block('RECENTLY_WRITTEN', m.message, m.msg)
         continue
       }
       if (!items.some((i) => i.action.startsWith('delete'))) {
-        block('NOT_FOUND', 'Nothing on disk to delete for this session.')
+        const m = msg('delete.nothingOnDisk')
+        block('NOT_FOUND', m.message, m.msg)
         continue
       }
       try {
         for (const i of items) if (i.kind !== 'manager-record') assertNotProtected(i.path, protectedPaths)
       } catch (err) {
+        // Path validator text is technical (exact paths); shown as-is.
         block('PROTECTED_PATH', errorMessage(err))
         continue
       }
@@ -334,6 +353,7 @@ export class DeleteService {
       sessions: ok,
       blocked,
       globalBlockedReason: global?.message,
+      globalBlockedMsg: global?.msg,
       globalBlockedCode: global?.code,
       totalBytes: ok.reduce((n, s) => n + s.totalBytes, 0),
       totalItems: ok.reduce((n, s) => n + s.items.length, 0),
@@ -351,63 +371,64 @@ export class DeleteService {
   async execute(ids: string[], confirmation: unknown, planId: unknown, bulk: boolean): Promise<DeleteResult> {
     // The mode is read once; the whole operation runs in that mode.
     const dryRun = this.isDryRun()
-    const fail = (code: ActionErrorCode, message: string): DeleteResult => ({
+    const fail = (code: ActionErrorCode, m: { message: string; msg?: MessageRef }): DeleteResult => ({
       ok: false,
       partial: false,
       dryRun,
       code,
-      message,
+      message: m.message,
+      msg: m.msg,
       planId: typeof planId === 'string' ? planId : undefined,
       sessions: []
     })
     const stored = typeof planId === 'string' ? this.plans.get(planId) : undefined
-    if (!stored) return fail('INVALID_INPUT', 'Unknown delete plan. Open the delete dialog again.')
+    if (!stored) return fail('INVALID_INPUT', msg('delete.unknownPlan'))
     if (Date.now() > stored.expiresAt) {
       this.plans.delete(stored.planId)
-      return fail('STALE_PLAN', 'This delete plan has expired. Open the delete dialog again.')
+      return fail('STALE_PLAN', msg('delete.planExpired'))
     }
-    if (stored.bulk !== bulk) return fail('INVALID_INPUT', 'Delete plan type mismatch.')
+    if (stored.bulk !== bulk) return fail('INVALID_INPUT', msg('delete.planTypeMismatch'))
     const sameIds = stored.ids.length === new Set(ids).size && stored.ids.every((id) => ids.includes(id))
-    if (!sameIds) return fail('INVALID_INPUT', 'The sessions sent do not match the delete plan.')
-    if (stored.ids.length === 0) return fail('INVALID_INPUT', 'Nothing to delete.')
+    if (!sameIds) return fail('INVALID_INPUT', msg('delete.idsMismatch'))
+    if (stored.ids.length === 0) return fail('INVALID_INPUT', msg('delete.nothingToDelete'))
     if (!isConfirmationValid(confirmation, confirmationPhrases(stored.ids.length, bulk))) {
-      return fail('INVALID_INPUT', 'Confirmation text does not match.')
+      return fail('INVALID_INPUT', msg('delete.confirmationMismatch'))
     }
     if (stored.dryRun !== dryRun) {
       this.plans.delete(stored.planId)
-      const name = (d: boolean): string => (d ? 'SAFE MODE (dry run)' : 'REAL DELETE ARMED')
-      return fail('STALE_PLAN', `Safety mode changed since this plan was created (${name(stored.dryRun)} → ${name(dryRun)}). Review the plan again.`)
+      const name = (d: boolean): MessageRef => ref(d ? 'delete.modeName.safe' : 'delete.modeName.armed')
+      return fail('STALE_PLAN', msg('delete.modeChanged', { from: name(stored.dryRun), to: name(dryRun) }))
     }
     this.plans.delete(stored.planId) // single use
 
     // 1. Process safety.
     const status = await this.processes.getStatus(true)
     const global = globalGuard(status)
-    if (global && !dryRun) return fail(global.code, global.message)
+    if (global && !dryRun) return fail(global.code, global)
 
     // 2. Re-scan and rebuild the plan from scratch.
     await this.repo.scan('pre-delete')
     const roots = this.repo.getAllowedRoots()
-    if (!roots) return fail('IO_ERROR', 'Claude storage roots are not available.')
+    if (!roots) return fail('IO_ERROR', msg('delete.rootsUnavailable'))
     const fresh = this.sessionPlans(stored.ids, status)
     if (fresh.blocked.length) {
       const b = fresh.blocked[0]
       const code = b.blockedCode === 'NOT_FOUND' ? 'STALE_PLAN' : b.blockedCode ?? 'STALE_PLAN'
-      return fail(code, `${b.displayTitle}: ${b.blockedReason}`)
+      return fail(code, msg('delete.sessionBlocked', { title: b.displayTitle, reason: b.blockedMsg ?? b.blockedReason ?? '' }))
     }
 
     // 3. Identity: the same Claude session IDs as when the plan was shown.
     for (const s of fresh.ok) {
       const before = stored.identities.get(s.sessionId)
       if (!before || before.cli !== s.cliSessionId || before.desktop !== s.desktopSessionId) {
-        return fail('STALE_PLAN', `${s.displayTitle}: the CLI session ID changed since the plan was created (stale plan).`)
+        return fail('STALE_PLAN', msg('delete.identityChanged', { title: s.displayTitle }))
       }
     }
 
     // 4. Content: exactly the targets the user reviewed — nothing new, nothing changed.
     if (contentHashOf(fresh.ok) !== stored.contentHash) {
       const after = fresh.ok.flatMap((s) => s.items.map((i) => i.path))
-      return fail('STALE_PLAN', `The delete plan is stale; session files changed since it was created${diffTargets(stored.targets, after)}. Review it again.`)
+      return fail('STALE_PLAN', staleMessage(stored.targets, after))
     }
 
     // 5. Validate every target before touching anything.
@@ -421,7 +442,7 @@ export class DeleteService {
         } catch (err) {
           const code: ActionErrorCode = err instanceof PathRejectedError ? 'PATH_REJECTED' : 'IO_ERROR'
           logger.error(`Delete refused (${s.sessionId}): ${errorMessage(err)}`)
-          return fail(code, `Delete refused, nothing was changed: ${errorMessage(err)}`)
+          return fail(code, msg('delete.refused', { error: errorMessage(err) }))
         }
       }
     }
@@ -440,10 +461,11 @@ export class DeleteService {
         dryRun: true,
         planId: stored.planId,
         wouldBeBlocked: global?.message,
+        wouldBeBlockedMsg: global?.msg,
         code: global?.code,
-        message: global
-          ? `DRY RUN: validation passed for ${sessions.length} session(s), but a real delete would be blocked now: ${global.message}`
-          : `DRY RUN: validation passed; ${sessions.length} session(s) would be deleted. No files were modified.`,
+        ...(global
+          ? msg('delete.dryRunBlocked', { count: sessions.length, reason: global.msg })
+          : msg('delete.dryRunPassed', { count: sessions.length })),
         sessions
       }
       result.reportText = formatResultReport(result, fresh.ok)
@@ -463,18 +485,19 @@ export class DeleteService {
       (n, r) => n + r.items.filter((i) => i.outcome === 'deleted').reduce((m, i) => m + (i.sizeBytes ?? 0), 0),
       0
     )
-    let message: string
-    if (problems.length === 0) message = `Permanently deleted ${deleted.length} session(s), ${formatBytes(freed)} freed.`
-    else {
-      const failedItems = problems.reduce((n, r) => n + r.items.filter((i) => i.outcome === 'failed').length, 0)
-      message = `Delete incomplete: ${deleted.length} of ${results.length} session(s) fully deleted; ${failedItems} item(s) could not be deleted. See details.`
-    }
+    const failedItems = problems.reduce((n, r) => n + r.items.filter((i) => i.outcome === 'failed').length, 0)
+    const summary =
+      problems.length === 0
+        ? msg('delete.done', { count: deleted.length, size: formatBytes(freed) })
+        : msg('delete.incomplete', { deleted: deleted.length, count: results.length, failed: failedItems })
+    const message = summary.message
     const result: DeleteResult = {
       ok: problems.length === 0,
       partial: problems.some((r) => r.outcome === 'partial') || (problems.length > 0 && deleted.length > 0),
       dryRun: false,
       planId: stored.planId,
       message,
+      msg: summary.msg,
       sessions: results
     }
     result.reportText = formatResultReport(result, fresh.ok)
@@ -505,7 +528,7 @@ export class DeleteService {
           }
           if (item.kind === 'metadata') metadataGone = true
         } else if (!metadataGone) {
-          results.push({ ...item, outcome: 'skipped', error: 'Metadata file was not deleted' })
+          results.push({ ...item, outcome: 'skipped', error: msgText('delete.itemMetadataKept'), errorMsg: ref('delete.itemMetadataKept') })
         } else if (item.action === 'update-file') {
           if (!target.exists) {
             results.push({ ...item, outcome: 'missing' })
@@ -531,7 +554,7 @@ export class DeleteService {
     // Manager records: drop them only once the session's Claude files are gone.
     for (const item of plan.items.filter((i) => i.kind === 'manager-record')) {
       if (claudeFailed) {
-        results.push({ ...item, outcome: 'skipped', error: 'Kept because some session files could not be deleted' })
+        results.push({ ...item, outcome: 'skipped', error: msgText('delete.itemRecordsKept'), errorMsg: ref('delete.itemRecordsKept') })
         continue
       }
       try {

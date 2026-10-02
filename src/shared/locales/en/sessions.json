@@ -1,0 +1,107 @@
+{
+  "status": {
+    "active": "Active",
+    "archived": "Archived",
+    "transcript-only": "Transcript only",
+    "metadata-only": "Metadata only",
+    "orphan": "Orphan"
+  },
+  "live": {
+    "state": {
+      "running": "Running",
+      "idle": "Idle",
+      "in-use": "In use"
+    },
+    "hint": {
+      "running": "A Claude Code process is working in this session right now (PID {{pid}}). Deletion is blocked.",
+      "idle": "Open (idle) in a running Claude Code process (PID {{pid}}). Deletion is blocked.",
+      "in-use": "Attached to a running Claude Code process (PID {{pid}}). Deletion is blocked."
+    }
+  },
+  "badge": {
+    "hidden": "Hidden",
+    "hiddenHint": "Hidden in this manager only; Claude's own state is unchanged",
+    "issues_one": "{{count}} issue",
+    "issues_other": "{{count}} issues",
+    "issuesHint": "See Problems in the details panel"
+  },
+  "filter": {
+    "all": "All sessions",
+    "active": "Active",
+    "archived": "Archived (Claude)",
+    "hidden": "Hidden in manager",
+    "transcript-only": "Transcript only",
+    "problems": "Metadata only / Problems"
+  },
+  "title": {
+    "all": "All sessions",
+    "active": "Active sessions",
+    "archived": "Archived in Claude",
+    "hidden": "Hidden in manager",
+    "transcript-only": "Transcript-only sessions",
+    "problems": "Metadata only / Problems"
+  },
+  "unknownProject": "Unknown project",
+  "unknownWorkspacePath": "Workspace path unknown",
+  "untitled": "Untitled",
+  "count": "{{shown}} of {{total}}",
+  "refreshHint": "Rescan Claude storage (F5)",
+  "scanning": "Scanning…",
+  "search": {
+    "placeholder": "Search title, prompt, project, path or session ID",
+    "label": "Search sessions",
+    "clear": "Clear search"
+  },
+  "sort": {
+    "label": "Sort",
+    "updated-desc": "Recently updated",
+    "updated-asc": "Oldest first",
+    "title": "Title A–Z",
+    "size-desc": "Largest first",
+    "size-asc": "Smallest first"
+  },
+  "group": {
+    "label": "Group",
+    "date": "Group by date",
+    "project": "Group by project",
+    "none": "No grouping"
+  },
+  "bulk": {
+    "label": "Bulk actions",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "archive": "Archive ({{count}})",
+    "archiveHint": "Set Claude Desktop's isArchived flag",
+    "restore": "Restore ({{count}})",
+    "hide": "Hide in manager ({{count}})",
+    "hideHint": "Hide in this manager only; Claude's files and archive state are not modified",
+    "show": "Show in manager ({{count}})",
+    "exportHint": "Copy raw JSONL + session info JSON into a folder you choose",
+    "clear": "Clear selection"
+  },
+  "selectAllVisible": "Select all visible sessions",
+  "column": {
+    "session": "Session",
+    "updated": "Updated",
+    "size": "Size"
+  },
+  "empty": {
+    "noMatchTitle": "No sessions match “{{query}}”",
+    "noMatchHint": "Search looks at titles, prompts, project names, paths and session IDs.",
+    "viewTitle": "No sessions in this view",
+    "viewHint": "Try another filter in the sidebar."
+  },
+  "loading": "Scanning Claude storage…",
+  "loadFailed": "Could not load sessions",
+  "dateGroup": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "last7": "Previous 7 days",
+    "last30": "Previous 30 days",
+    "older": "Older",
+    "unknown": "Unknown date"
+  },
+  "row": {
+    "select": "Select “{{title}}”"
+  }
+}

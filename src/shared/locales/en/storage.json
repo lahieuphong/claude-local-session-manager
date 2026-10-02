@@ -1,0 +1,42 @@
+{
+  "title": "Storage",
+  "lastScan": "Last scan {{time}}",
+  "loading": "Loading storage statistics…",
+  "loadFailed": "Could not load storage statistics",
+  "stat": {
+    "totalDisk": "Total disk usage",
+    "sessions": "Sessions",
+    "active": "Active",
+    "archived": "Archived (Claude)",
+    "hidden": "Hidden in manager",
+    "transcriptOnly": "Transcript only",
+    "metadataOrphan": "Metadata only / orphan"
+  },
+  "section": {
+    "breakdown": "Disk usage breakdown",
+    "topProjects": "Top projects by disk usage",
+    "largestSessions": "Largest sessions",
+    "lastScan": "Last scan"
+  },
+  "part": {
+    "transcripts": "Transcripts",
+    "sessionData": "Session data (subagents, tool results)",
+    "other": "File history, env, metadata"
+  },
+  "sessionsCount_one": "{{count}} session",
+  "sessionsCount_other": "{{count}} sessions",
+  "noProjects": "No projects.",
+  "scan": {
+    "transcripts": "Transcripts",
+    "parsed": "Parsed",
+    "incremental": "Incremental",
+    "fromCache": "From cache",
+    "subagentExcluded": "Subagent logs excluded",
+    "metadataFiles": "Metadata files",
+    "tombstones": "Tombstones",
+    "duration": "Duration",
+    "ms": "{{value}} ms",
+    "issues_one": "{{count}} scan issue",
+    "issues_other": "{{count}} scan issues"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "app": {
+    "name": "Claude Local Session Manager",
+    "nameShort": "Claude Local",
+    "nameSub": "Session Manager",
+    "tagline": "Unofficial · local only",
+    "disclaimer": "Unofficial local utility · Not affiliated with Anthropic"
+  },
+  "nav": {
+    "sidebar": "Main navigation",
+    "sessions": "Sessions",
+    "projects": "Projects",
+    "projectTooltip_one": "{{count}} session · {{size}}",
+    "projectTooltip_other": "{{count}} sessions · {{size}}",
+    "noProjects": "No projects found",
+    "storage": "Storage",
+    "settings": "Settings"
+  },
+  "status": {
+    "liveSessions_one": "{{count}} Claude Code session open",
+    "liveSessions_other": "{{count}} Claude Code sessions open"
+  },
+  "action": {
+    "refresh": "Refresh",
+    "cancel": "Cancel",
+    "close": "Close",
+    "closeEsc": "Close (Esc)",
+    "dismiss": "Dismiss",
+    "copy": "Copy",
+    "copyValue": "Copy {{value}}",
+    "export": "Export",
+    "deletePermanently": "Delete permanently",
+    "archive": "Archive",
+    "restore": "Restore",
+    "hideInManager": "Hide in manager",
+    "showInManager": "Show in manager"
+  },
+  "loading": "Loading…",
+  "toast": {
+    "safetyReadFailed": "Cannot read safety mode: {{error}}",
+    "scanFailed": "Scan failed: {{error}}",
+    "refreshFailed": "Refresh failed: {{error}}",
+    "processCheckFailed": "Process check failed: {{error}}",
+    "settingsSaveFailed": "Could not save settings: {{error}}",
+    "firstFailure": "{{title}}:",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Copy failed: {{error}}"
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "status": {
+    "active": "活动",
+    "archived": "已归档",
+    "transcript-only": "仅有会话记录",
+    "metadata-only": "仅有元数据",
+    "orphan": "孤立"
+  },
+  "live": {
+    "state": {
+      "running": "运行中",
+      "idle": "空闲",
+      "in-use": "使用中"
+    },
+    "hint": {
+      "running": "一个 Claude Code 进程正在此会话中工作（PID {{pid}}）。无法删除。",
+      "idle": "已在运行中的 Claude Code 进程里打开（空闲，PID {{pid}}）。无法删除。",
+      "in-use": "已关联到运行中的 Claude Code 进程（PID {{pid}}）。无法删除。"
+    }
+  },
+  "badge": {
+    "hidden": "已隐藏",
+    "hiddenHint": "仅在本管理器中隐藏；Claude 自身状态不变",
+    "issues_other": "{{count}} 个问题",
+    "issuesHint": "请查看详情面板中的“问题”"
+  },
+  "filter": {
+    "all": "全部会话",
+    "active": "活动",
+    "archived": "已归档 (Claude)",
+    "hidden": "在管理器中隐藏",
+    "transcript-only": "仅有会话记录",
+    "problems": "仅有元数据 / 问题"
+  },
+  "title": {
+    "all": "全部会话",
+    "active": "活动会话",
+    "archived": "在 Claude 中已归档",
+    "hidden": "在管理器中隐藏",
+    "transcript-only": "仅有会话记录的会话",
+    "problems": "仅有元数据 / 问题"
+  },
+  "unknownProject": "未知项目",
+  "unknownWorkspacePath": "工作区路径未知",
+  "untitled": "无标题",
+  "count": "{{shown}} / {{total}}",
+  "refreshHint": "重新扫描 Claude 存储 (F5)",
+  "scanning": "正在扫描…",
+  "search": {
+    "placeholder": "搜索标题、提示词、项目、路径或会话 ID",
+    "label": "搜索会话",
+    "clear": "清除搜索"
+  },
+  "sort": {
+    "label": "排序",
+    "updated-desc": "最近更新",
+    "updated-asc": "最早优先",
+    "title": "标题 A–Z",
+    "size-desc": "最大优先",
+    "size-asc": "最小优先"
+  },
+  "group": {
+    "label": "分组",
+    "date": "按日期分组",
+    "project": "按项目分组",
+    "none": "不分组"
+  },
+  "bulk": {
+    "label": "批量操作",
+    "selected_other": "已选择 {{count}} 个",
+    "archive": "归档 ({{count}})",
+    "archiveHint": "设置 Claude Desktop 的 isArchived 标志",
+    "restore": "恢复 ({{count}})",
+    "hide": "在管理器中隐藏 ({{count}})",
+    "hideHint": "仅在本管理器中隐藏；不会修改 Claude 的文件和归档状态",
+    "show": "在管理器中显示 ({{count}})",
+    "exportHint": "将原始 JSONL 和会话信息 JSON 复制到你选择的文件夹",
+    "clear": "取消选择"
+  },
+  "selectAllVisible": "选择所有可见会话",
+  "column": {
+    "session": "会话",
+    "updated": "更新时间",
+    "size": "大小"
+  },
+  "empty": {
+    "noMatchTitle": "没有与“{{query}}”匹配的会话",
+    "noMatchHint": "搜索范围包括标题、提示词、项目名称、路径和会话 ID。",
+    "viewTitle": "此视图中没有会话",
+    "viewHint": "请在侧边栏中尝试其他筛选条件。"
+  },
+  "loading": "正在扫描 Claude 存储…",
+  "loadFailed": "无法加载会话",
+  "dateGroup": {
+    "today": "今天",
+    "yesterday": "昨天",
+    "last7": "过去 7 天",
+    "last30": "过去 30 天",
+    "older": "更早",
+    "unknown": "日期未知"
+  },
+  "row": {
+    "select": "选择“{{title}}”"
+  }
+}

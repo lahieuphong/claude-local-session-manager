@@ -1,0 +1,68 @@
+{
+  "title": "设置",
+  "section": {
+    "general": "常规",
+    "appearance": "外观",
+    "discovery": "会话发现",
+    "deletionSafety": "删除安全",
+    "updates": "更新",
+    "about": "关于"
+  },
+  "language": {
+    "label": "语言",
+    "hint": "首次启动时跟随 Windows（{{language}}）。你的选择会被保存并立即生效。",
+    "useSystem": "使用系统语言"
+  },
+  "motion": {
+    "label": "动画",
+    "hint": "“减少动画”会关闭本应用中的过渡效果。“跟随系统”会遵循 Windows 的动画设置。",
+    "system": "跟随系统",
+    "reduced": "减少动画"
+  },
+  "rawPaths": {
+    "label": "显示完整路径",
+    "hint": "显示完整的绝对路径，而不是 ~ 和 %LOCALAPPDATA% 简写。删除对话框始终显示完整路径。"
+  },
+  "refresh": {
+    "label": "刷新",
+    "manual": "仅手动",
+    "manualHint": "在启动时以及点击“刷新”(F5) 时扫描。",
+    "watch": "监视文件",
+    "watchHint": "Claude 写入其存储文件夹后很快重新扫描（已防抖，监视器很少）。",
+    "interval": "定时",
+    "intervalHint": "按固定间隔重新扫描。",
+    "seconds_other": "{{count}} 秒",
+    "minutes_other": "{{count}} 分钟"
+  },
+  "roots": {
+    "label": "存储根目录",
+    "hint": "每次扫描时根据 USERPROFILE、APPDATA 和 LOCALAPPDATA 检测，无法编辑：应用只会修改这些根目录内的文件，并且只修改扫描器归属到某个会话的路径。",
+    "claudeHome": "Claude Code 主目录",
+    "transcripts": "会话记录根目录",
+    "fileHistory": "文件历史",
+    "sessionEnv": "会话环境",
+    "running": "运行中的会话",
+    "desktop": "Claude Desktop 元数据",
+    "notFound": "未找到",
+    "noDesktop": "未找到 Claude Desktop 的 claude-code-sessions 文件夹",
+    "desktopCounts": "{{sessions}} 个会话文件 · {{tombstones}} 个删除标记 · {{indexes}} 个归档索引",
+    "pending": "等待扫描…",
+    "checked_other": "已检查的全部位置（{{count}}）"
+  },
+  "cache": {
+    "label": "扫描缓存",
+    "hint": "加快重新扫描。清除缓存不会触碰 Claude 文件。",
+    "clear": "清除扫描缓存"
+  },
+  "debug": {
+    "label": "开发者 / 调试模式",
+    "hint": "详细日志、在详情中显示规范化的会话 JSON，以及 DevTools (F12)。"
+  },
+  "logs": {
+    "label": "诊断",
+    "cache": "缓存",
+    "logFile": "日志文件",
+    "show": "显示日志",
+    "empty": "（空）"
+  }
+}

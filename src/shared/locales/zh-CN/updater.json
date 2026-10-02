@@ -1,0 +1,40 @@
+{
+  "loading": "正在读取更新状态…",
+  "version": "版本 {{version}}",
+  "current": "当前版本",
+  "latest": "最新版本",
+  "lastChecked": "上次检查",
+  "status": {
+    "idle": "尚未检查",
+    "checking": "正在检查更新…",
+    "up-to-date": "已是最新版本",
+    "available": "有可用更新：{{version}}",
+    "downloading": "正在下载更新… {{percent}}%",
+    "downloaded": "更新已准备好安装",
+    "error": "检查更新失败",
+    "unsupported": "无法自动检查更新",
+    "unsupportedDev": "开发版本已禁用更新检查",
+    "noRelease": "GitHub 上尚未发布任何版本"
+  },
+  "mode": {
+    "installed": "安装版 (Setup)",
+    "portable": "便携版 (Portable)",
+    "development": "开发版本"
+  },
+  "action": {
+    "check": "检查更新",
+    "download": "下载更新",
+    "install": "重启并安装",
+    "openReleases": "打开 GitHub Releases"
+  },
+  "portableNote": "便携版永远不会被自动替换。请从 GitHub Releases 下载新的 Setup（推荐）或便携版。",
+  "confirm": {
+    "title": "安装更新？",
+    "text": "Claude Local Session Manager 将关闭并重启以安装版本 {{version}}。",
+    "safeModeNote": "新版本会像每次启动一样以安全模式启动。"
+  },
+  "pillHint": "打开 设置 → 更新",
+  "toast": {
+    "failed": "更新：{{error}}"
+  }
+}

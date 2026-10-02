@@ -1,16 +1,12 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, useId, useState, type ReactElement, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ARM_CONFIRMATION_PHRASE, isArmConfirmationValid } from '../../../shared/confirm'
 import type { SafetyModeState } from '../../../shared/types'
-import {
-  armRealDelete,
-  openArmModal,
-  refreshProcess,
-  refreshSafetyMode,
-  returnToSafeMode,
-  setView,
-  useAppState
-} from '../stores/appStore'
-import { IconAlert, IconCheck, IconInfo, IconRefresh, IconX } from './Icons'
+import { useFmt } from '../i18n'
+import { armRealDelete, openArmModal, refreshProcess, refreshSafetyMode, returnToSafeMode, useAppState } from '../stores/appStore'
+import { IconAlert, IconCheck, IconRefresh, IconShield, IconShieldAlert, IconX } from './Icons'
+import { Modal } from './Modal'
+import { tCode } from './RichText'
 
 /** mm:ss until the armed mode expires; ticks every second while armed. */
 export function useArmCountdown(state: SafetyModeState | null): string | null {
@@ -32,117 +28,76 @@ export function useArmCountdown(state: SafetyModeState | null): string | null {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-/** Persistent banner: blue SAFE MODE / red REAL DELETE ARMED. */
-export function SafetyBanner(): ReactElement | null {
+/** Settings → Deletion safety. */
+export function DeletionSafetySection(): ReactElement {
+  const { t } = useTranslation()
+  const fmt = useFmt()
   const safety = useAppState((s) => s.safety)
   const remaining = useArmCountdown(safety)
-  if (!safety) return null
-  if (safety.dryRun) {
-    return (
-      <div className="banner info">
-        <IconInfo size={15} />
-        <span>
-          <strong>DRY RUN</strong> · Safe Mode — dry-run enabled. No Claude files can be deleted, archived or restored.
-        </span>
-        <div className="spacer" />
-        <button className="btn small" onClick={() => setView({ kind: 'settings' })}>
-          Deletion safety…
-        </button>
-      </div>
-    )
-  }
+  const armed = !!safety && !safety.dryRun
   return (
-    <div className="banner danger" role="alert">
-      <IconAlert size={15} />
-      <span>
-        <strong>REAL DELETE ARMED{remaining ? ` · ${remaining} remaining` : ''}</strong> — Permanent deletion is enabled for this app
-        session. Closing the app will return to Safe Mode. One delete returns to Safe Mode automatically.
-      </span>
-      <div className="spacer" />
-      <button className="btn small" onClick={() => void returnToSafeMode()}>
-        Return to Safe Mode
-      </button>
+    <div className={`safety-panel ${armed ? 'armed' : ''}`}>
+      {!safety ? (
+        <div className="muted">{t('safety:strip.reading')}</div>
+      ) : armed ? (
+        <>
+          <div className="safety-status">
+            <span className="mode-chip armed">
+              <IconShieldAlert size={14} />
+              {t('safety:mode.armed')}
+              {remaining && <span className="mode-timer">{remaining}</span>}
+            </span>
+            <span>{t('safety:section.armedText')}</span>
+          </div>
+          <div className="row-actions">
+            <button className="btn" onClick={() => void returnToSafeMode()}>
+              {t('safety:action.returnToSafe')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="safety-status">
+            <span className="mode-chip safe">
+              <IconShield size={14} />
+              {t('safety:mode.safe')}
+            </span>
+            <span>{t('safety:section.safeText')}</span>
+          </div>
+          <p className="hint">{t('safety:section.safeHint')}</p>
+          <div className="row-actions">
+            <button className="btn danger" onClick={() => openArmModal(true)}>
+              {t('safety:action.enable')}
+            </button>
+          </div>
+        </>
+      )}
+      {safety?.notice && <div className="notice subtle small">{fmt.msg(safety.noticeMsg, safety.notice)}</div>}
+      <ul className="fine-print">
+        <li>{t('safety:section.guardsNote')}</li>
+        <li>{t('safety:section.hideNote')}</li>
+      </ul>
     </div>
   )
 }
 
-export function SafetyPill(): ReactElement | null {
-  const safety = useAppState((s) => s.safety)
-  const remaining = useArmCountdown(safety)
-  if (!safety) return null
-  return safety.dryRun ? (
-    <div className="dry-pill">DRY RUN</div>
-  ) : (
-    <div className="armed-pill">REAL DELETE ARMED{remaining ? ` · ${remaining}` : ''}</div>
-  )
-}
-
-/** Settings → Deletion Safety. */
-export function DeletionSafetySection(): ReactElement {
-  const safety = useAppState((s) => s.safety)
-  const remaining = useArmCountdown(safety)
-  return (
-    <section className={`card safety-card ${safety && !safety.dryRun ? 'armed' : ''}`}>
-      <h3 className="section-title">Deletion Safety</h3>
-      {!safety ? (
-        <div className="muted">Reading safety mode…</div>
-      ) : safety.dryRun ? (
-        <>
-          <div className="safety-status safe">
-            <span className="safety-label">SAFE MODE</span>
-            <span>Dry-run enabled. No Claude files can be deleted.</span>
-          </div>
-          <p className="small muted">
-            Every app launch starts here. Real deletion can be armed only for the current app session; it is never saved anywhere and
-            returns to Safe Mode after one delete, after 10 minutes, or when the app closes.
-          </p>
-          <button className="btn danger" onClick={() => openArmModal(true)}>
-            Enable real deletion
-          </button>
-        </>
-      ) : (
-        <>
-          <div className="safety-status armed">
-            <span className="safety-label">REAL DELETE ARMED</span>
-            <span>
-              Permanent deletion is enabled for this app session{remaining ? ` · ${remaining} remaining` : ''}. Closing the app will return
-              to Safe Mode.
-            </span>
-          </div>
-          <button className="btn" onClick={() => void returnToSafeMode()}>
-            Return to Safe Mode
-          </button>
-        </>
-      )}
-      {safety?.notice && <div className="notice subtle small">{safety.notice}</div>}
-      <ul className="plain-list small muted">
-        <li>Arming changes only dry-run on/off. Every delete still needs a valid, unexpired, unchanged plan, exact paths inside approved Claude roots, no workspace or link escape, no running Claude Desktop or live session, and the typed DELETE confirmation.</li>
-        <li>Hide in manager never touches Claude files and works in both modes.</li>
-      </ul>
-    </section>
-  )
-}
-
-/** "Enable real deletion" confirmation modal. */
+/** "Enable real deletion" confirmation dialog. */
 export function ArmModal(): ReactElement | null {
+  const { t } = useTranslation()
   const open = useAppState((s) => s.armModalOpen)
   const process = useAppState((s) => s.process)
   const checking = useAppState((s) => s.processChecking)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const titleId = useId()
+  const descId = useId()
 
   useEffect(() => {
     if (!open) return
     setText('')
     void refreshProcess(true)
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') openArmModal(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  if (!open) return null
   const desktopClosed = !!process && !process.error && !process.desktopRunning
   const statusKnown = !!process && !process.error
   const valid = isArmConfirmationValid(text)
@@ -158,65 +113,64 @@ export function ArmModal(): ReactElement | null {
     }
   }
 
-  const Req = ({ ok, label }: { ok: boolean; label: string }): ReactElement => (
-    <li className={ok ? 'ok-text' : 'danger-text'}>
-      {ok ? <IconCheck size={13} /> : <IconX size={13} />} {label}
+  const Req = ({ ok, label }: { ok: boolean; label: ReactNode }): ReactElement => (
+    <li className={ok ? 'req ok' : 'req bad'}>
+      {ok ? <IconCheck size={14} /> : <IconX size={14} />}
+      <span>{label}</span>
     </li>
   )
 
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && openArmModal(false)}>
-      <div className="modal narrow" role="dialog" aria-modal="true" aria-label="Enable real deletion">
-        <header className="modal-header">
-          <IconAlert size={18} className="danger-text" />
-          <h2>Enable real deletion</h2>
-          <div className="spacer" />
-          <button className="icon-btn" onClick={() => openArmModal(false)} title="Close (Esc)">
-            <IconX size={16} />
-          </button>
-        </header>
-        <div className="modal-body">
-          <div className="danger-box">
-            <IconAlert size={18} />
-            <div>
-              <strong>Real deletion permanently removes local Claude session files.</strong>
-              <div className="small">
-                This mode automatically resets to Safe Mode when the application closes, after 10 minutes, or right after one delete.
-              </div>
-            </div>
+    <Modal open={open} onClose={() => openArmModal(false)} locked={busy} labelledBy={titleId} describedBy={descId} size="narrow" tone="danger">
+      <header className="modal-header">
+        <IconAlert size={18} className="danger-text" />
+        <h2 id={titleId}>{t('safety:arm.title')}</h2>
+        <div className="spacer" />
+        <button className="icon-btn" onClick={() => openArmModal(false)} disabled={busy} aria-label={t('common:action.closeEsc')} title={t('common:action.closeEsc')}>
+          <IconX size={16} />
+        </button>
+      </header>
+      <div className="modal-body">
+        <div className="danger-box" id={descId}>
+          <IconAlert size={18} />
+          <div>
+            <strong>{t('safety:arm.warningTitle')}</strong>
+            <div className="small">{t('safety:arm.warningText')}</div>
           </div>
-          <div className="plan-group-label">Requirements</div>
-          <ul className="req-list small">
-            <Req ok={statusKnown} label={statusKnown ? 'Claude process status verified' : 'Claude process status unknown'} />
-            <Req ok={desktopClosed} label={desktopClosed ? 'Claude Desktop is closed' : 'Claude Desktop must be closed (quit it from the system tray)'} />
-            <Req ok={valid} label={`You typed ${ARM_CONFIRMATION_PHRASE} exactly`} />
-          </ul>
-          <button className="btn small" onClick={() => void refreshProcess(true)} disabled={checking}>
-            <IconRefresh size={13} className={checking ? 'spin' : ''} /> Re-check processes
-          </button>
-          <label className="confirm-label">
-            Type <code>{ARM_CONFIRMATION_PHRASE}</code> to confirm
-            <input
-              className={`confirm-input ${text && !valid ? 'invalid' : ''}`}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void submit()}
-              autoFocus
-              spellCheck={false}
-              placeholder={ARM_CONFIRMATION_PHRASE}
-            />
-          </label>
         </div>
-        <footer className="modal-footer">
-          <div className="spacer" />
-          <button className="btn ghost" onClick={() => openArmModal(false)}>
-            Cancel
-          </button>
-          <button className="btn danger solid" disabled={!canArm} onClick={() => void submit()}>
-            Arm real deletion
-          </button>
-        </footer>
+        <div className="section-label">{t('safety:arm.requirements')}</div>
+        <ul className="req-list">
+          <Req ok={statusKnown} label={t(statusKnown ? 'safety:arm.reqStatusOk' : 'safety:arm.reqStatusUnknown')} />
+          <Req ok={desktopClosed} label={t(desktopClosed ? 'safety:arm.reqClosedOk' : 'safety:arm.reqClosedBad')} />
+          <Req ok={valid} label={tCode(t, 'safety:arm.reqTyped', { phrase: ARM_CONFIRMATION_PHRASE })} />
+        </ul>
+        <button className="btn small quiet" onClick={() => void refreshProcess(true)} disabled={checking}>
+          <IconRefresh size={14} className={checking ? 'spin' : ''} /> {t('safety:arm.recheck')}
+        </button>
+        <label className="confirm-label">
+          <span>{tCode(t, 'safety:arm.typeToConfirm', { phrase: ARM_CONFIRMATION_PHRASE })}</span>
+          <input
+            className={`confirm-input mono ${text && !valid ? 'invalid' : ''}`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void submit()}
+            data-autofocus
+            spellCheck={false}
+            autoComplete="off"
+            placeholder={ARM_CONFIRMATION_PHRASE}
+            aria-invalid={!!text && !valid}
+          />
+        </label>
       </div>
-    </div>
+      <footer className="modal-footer">
+        <div className="spacer" />
+        <button className="btn quiet" onClick={() => openArmModal(false)} disabled={busy}>
+          {t('common:action.cancel')}
+        </button>
+        <button className="btn danger solid" disabled={!canArm} onClick={() => void submit()}>
+          {t('safety:arm.confirm')}
+        </button>
+      </footer>
+    </Modal>
   )
 }

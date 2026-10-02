@@ -94,32 +94,38 @@ export function sortSessions(list: ClaudeSession[], sort: SortKey): ClaudeSessio
   }
 }
 
+/** Date groups are keys; the UI translates them. */
+export type DateBucket = 'today' | 'yesterday' | 'last7' | 'last30' | 'older' | 'unknown'
+
 export interface SessionGroup {
+  /** Date bucket (groupBy 'date'), projectKey (groupBy 'project') or 'all'. */
   key: string
+  kind: GroupBy
+  /** Project name for project groups; empty otherwise. */
   label: string
   sessions: ClaudeSession[]
 }
 
-function dateBucket(ms: number | undefined, now: Date): string {
-  if (!ms) return 'Unknown date'
+export function dateBucket(ms: number | undefined, now: Date): DateBucket {
+  if (!ms) return 'unknown'
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   const day = 86_400_000
-  if (ms >= startOfToday) return 'Today'
-  if (ms >= startOfToday - day) return 'Yesterday'
-  if (ms >= startOfToday - 7 * day) return 'Previous 7 days'
-  if (ms >= startOfToday - 30 * day) return 'Previous 30 days'
-  return 'Older'
+  if (ms >= startOfToday) return 'today'
+  if (ms >= startOfToday - day) return 'yesterday'
+  if (ms >= startOfToday - 7 * day) return 'last7'
+  if (ms >= startOfToday - 30 * day) return 'last30'
+  return 'older'
 }
 
 export function groupSessions(list: ClaudeSession[], groupBy: GroupBy, now = new Date()): SessionGroup[] {
-  if (groupBy === 'none') return [{ key: 'all', label: '', sessions: list }]
+  if (groupBy === 'none') return [{ key: 'all', kind: 'none', label: '', sessions: list }]
   const groups = new Map<string, SessionGroup>()
   for (const s of list) {
     const key = groupBy === 'date' ? dateBucket(s.updatedAt, now) : s.projectKey
-    const label = groupBy === 'date' ? key : s.projectName
+    const label = groupBy === 'date' ? '' : s.projectName
     let g = groups.get(key)
     if (!g) {
-      g = { key, label, sessions: [] }
+      g = { key, kind: groupBy, label, sessions: [] }
       groups.set(key, g)
     }
     g.sessions.push(s)

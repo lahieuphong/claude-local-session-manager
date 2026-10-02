@@ -1,0 +1,134 @@
+{
+  "label": "Session details",
+  "actions": "Session actions",
+  "empty": {
+    "title": "No session selected",
+    "hint": "Select a session to see its details, files and actions. Use the checkboxes for bulk actions."
+  },
+  "block": {
+    "live": "Attached to a live Claude Code process ({{state}}, PID {{pid}}{{name}}). Close that session before deleting.",
+    "liveArchive": "Attached to a live Claude Code process ({{state}}, PID {{pid}}{{name}}). Close that session before archiving or deleting.",
+    "unknown": "Claude process status is unknown. Refresh the process status first.",
+    "desktop": "Close Claude Desktop before modifying session files."
+  },
+  "action": {
+    "restoreHint": "Clear Claude Desktop's isArchived flag",
+    "archiveHint": "Set Claude Desktop's isArchived flag",
+    "hideHint": "Hide in this manager only. Claude's files and archive state are not modified.",
+    "openProject": "Open project",
+    "openProjectHint": "Open the workspace folder in Explorer"
+  },
+  "note": {
+    "transcriptOnly": "Transcript only: this Claude Code session has no Claude Desktop metadata, so Claude has no archive state for it. Hide in manager only changes this app's own list. Claude's files are not modified and the session still appears in Claude.",
+    "orphan": "Orphan session folder: there is no transcript or Claude Desktop metadata. Hide in manager only changes this app's own list. Claude's files are not modified.",
+    "armed": "Real Delete Armed — Delete permanently will really remove this session's files."
+  },
+  "section": {
+    "problems": "Problems",
+    "overview": "Overview",
+    "project": "Project",
+    "session": "Session",
+    "storage": "Storage",
+    "files": "Files",
+    "activity": "Activity",
+    "rawMetadata": "Raw metadata",
+    "debug": "Debug: normalized session object"
+  },
+  "field": {
+    "displayTitle": "Display title",
+    "titleSource": "Title source",
+    "rawTitle": "Raw metadata title",
+    "customTitle": "Custom title",
+    "aiTitle": "AI title",
+    "created": "Created",
+    "updated": "Updated",
+    "process": "Claude Code process",
+    "project": "Project",
+    "projectPath": "Project path",
+    "projectSource": "Project source",
+    "storageFolder": "Claude storage folder",
+    "cliSessionId": "CLI session ID",
+    "desktopSessionId": "Desktop session ID",
+    "priorIds": "Prior CLI IDs",
+    "internalId": "Manager ID",
+    "model": "Model",
+    "claudeCode": "Claude Code",
+    "gitBranch": "Git branch",
+    "totalSize": "Total"
+  },
+  "hint": {
+    "rawTitle": "The exact title field in the Claude Desktop metadata file",
+    "projectPath": "Canonical workspace (real cwd). Never part of a delete plan.",
+    "storageFolder": "Encoded folder under ~/.claude/projects (storage locator only)",
+    "internalId": "Internal ID assigned by this app",
+    "messages": "Prompts = meaningful user prompts. Assistant messages = distinct model responses (one per step; one prompt usually produces many, because every tool-use step is a separate response). Tool calls = tool_use blocks. Records = non-empty JSONL lines."
+  },
+  "value": {
+    "unknown": "unknown"
+  },
+  "titleSource": {
+    "metadata": "Claude Desktop metadata title",
+    "custom-title": "Custom title (/rename)",
+    "ai-title": "AI-generated title",
+    "summary": "Transcript summary",
+    "first-prompt": "First user prompt",
+    "last-prompt": "Last prompt",
+    "untitled": "No title available"
+  },
+  "projectSource": {
+    "metadata-cwd": "Claude Desktop metadata cwd",
+    "transcript-cwd": "Transcript cwd",
+    "owner-session": "Owning session",
+    "folder-records": "Records inside the session folder",
+    "decoded-folder-name": "Claude storage folder name, matched to a real folder",
+    "unresolved": "Unresolved"
+  },
+  "size": {
+    "transcript": "Transcript",
+    "sessionData": "Session data",
+    "metadata": "Metadata",
+    "other": "Other (history, env, logs)"
+  },
+  "file": {
+    "metadata": "Metadata",
+    "transcript": "Transcript",
+    "sessionData": "Session data",
+    "sessionDataOther": "Session data (other folder, same UUID)",
+    "priorTranscript": "Prior transcript",
+    "subagentLog": "Subagent log",
+    "fileHistory": "File history",
+    "sessionEnv": "Session env",
+    "copyPath": "Copy full path",
+    "copyPathOf": "Copy full path of {{label}}",
+    "reveal": "Reveal in Explorer",
+    "revealOf": "Reveal {{label}} in Explorer",
+    "notPresent": "not present"
+  },
+  "metric": {
+    "prompts": "Prompts",
+    "assistant": "Assistant messages",
+    "tools": "Tool calls",
+    "records": "Records"
+  },
+  "preview": {
+    "first": "First user message",
+    "last": "Last user message"
+  },
+  "raw": {
+    "none": "No Claude Desktop metadata file — this is a Claude Code transcript-only session.",
+    "tombstones": "Tombstones present:"
+  },
+  "rawTitle": {
+    "noFile": "(no metadata file)",
+    "missing": "(field missing)",
+    "empty": "(empty string)",
+    "whitespace": "(whitespace only)",
+    "invalid": "(invalid type: {{type}})"
+  },
+  "export": {
+    "jsonl": "Raw transcript (.jsonl)",
+    "info": "Session info (.json)",
+    "markdown": "Readable conversation (.md)",
+    "note": "Exports are copies; originals are never modified."
+  }
+}

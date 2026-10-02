@@ -7,6 +7,7 @@ import { formatDateTime } from '../../shared/format'
 import { isInsideClaudeStorage, type AllowedRoots } from '../security/pathValidator'
 import { pathKey } from '../util/fsx'
 import { errorMessage, logger } from '../util/logger'
+import { msg } from '../util/messages'
 import type { SessionRecord } from './sessionBuilder'
 import type { SessionRepository } from './sessionRepository'
 import { extractUserText, readJsonlLines } from './transcriptParser'
@@ -145,24 +146,24 @@ export class ExportService {
 
   async exportOne(id: string, format: ExportFormat): Promise<ExportResult> {
     const record = this.repo.getRecord(id)
-    if (!record) return { ok: false, message: 'Session not found', files: [], errors: [] }
+    if (!record) return { ok: false, ...msg('export.notFound'), files: [], errors: [] }
     if (format !== 'info' && !record.transcript) {
-      return { ok: false, message: 'This session has no transcript to export.', files: [], errors: [] }
+      return { ok: false, ...msg('export.noTranscript'), files: [], errors: [] }
     }
     const name = safeFileName(record.session.displayTitle, record.session.cliSessionId ?? id) + EXPORT_EXTENSIONS[format]
     const dest = await this.dialogs.chooseFile(name, format)
-    if (!dest) return { ok: false, cancelled: true, message: 'Export cancelled', files: [], errors: [] }
+    if (!dest) return { ok: false, cancelled: true, ...msg('export.cancelled'), files: [], errors: [] }
     try {
       await this.writeExport(record, format, dest)
-      return { ok: true, message: `Exported to ${dest}`, files: [dest], errors: [] }
+      return { ok: true, ...msg('export.done', { path: dest }), files: [dest], errors: [] }
     } catch (err) {
-      return { ok: false, message: `Export failed: ${errorMessage(err)}`, files: [], errors: [errorMessage(err)] }
+      return { ok: false, ...msg('export.failed', { error: errorMessage(err) }), files: [], errors: [errorMessage(err)] }
     }
   }
 
   async exportMany(ids: string[], formats: ExportFormat[]): Promise<ExportResult> {
     const dir = await this.dialogs.chooseDirectory()
-    if (!dir) return { ok: false, cancelled: true, message: 'Export cancelled', files: [], errors: [] }
+    if (!dir) return { ok: false, cancelled: true, ...msg('export.cancelled'), files: [], errors: [] }
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const target = path.join(dir, `claude-sessions-export-${stamp}`)
     const files: string[] = []
@@ -171,7 +172,7 @@ export class ExportService {
       if (isInsideClaudeStorage(target, this.roots())) throw new Error('Refusing to export into Claude storage folders')
       await mkdir(target, { recursive: true })
     } catch (err) {
-      return { ok: false, message: `Export failed: ${errorMessage(err)}`, files, errors: [errorMessage(err)] }
+      return { ok: false, ...msg('export.failed', { error: errorMessage(err) }), files, errors: [errorMessage(err)] }
     }
     for (const id of ids) {
       const record = this.repo.getRecord(id)
@@ -193,7 +194,9 @@ export class ExportService {
     }
     return {
       ok: errors.length === 0,
-      message: errors.length ? `Exported ${files.length} file(s) to ${target}; ${errors.length} error(s).` : `Exported ${files.length} file(s) to ${target}`,
+      ...(errors.length
+        ? msg('export.manyWithErrors', { count: files.length, path: target, errors: errors.length })
+        : msg('export.many', { count: files.length, path: target })),
       files,
       errors
     }

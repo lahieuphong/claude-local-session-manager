@@ -1,0 +1,92 @@
+{
+  "title": {
+    "single": "永久删除会话",
+    "bulk_other": "永久删除 {{count}} 个会话",
+    "dryRunResult": "试运行结果",
+    "result": "删除结果"
+  },
+  "planId": "计划 {{id}}…",
+  "summary": "{{sessions}} · {{files}} · {{folders}} · {{size}}",
+  "sessionSummary": "{{files}} · {{folders}} · {{size}}（{{bytes}} 字节）",
+  "count": {
+    "sessions_other": "{{count}} 个会话",
+    "files_other": "{{count}} 个文件",
+    "folders_other": "{{count}} 个文件夹"
+  },
+  "building": "正在生成删除计划…",
+  "wouldBeBlocked": "如果现在真正删除，将被阻止：",
+  "recheck": "重新检查",
+  "blockedSessions_other": "{{count}} 个会话无法删除，未包含在此计划中：",
+  "danger": {
+    "title": "此操作将永久删除下面列出的本地文件。",
+    "text": "这些文件不会移到回收站，如果没有你自己的备份将无法恢复。只会处理这些确切的路径，并且只有在执行时所有检查仍然通过才会进行。"
+  },
+  "mode": {
+    "safeText": "仅验证：完整运行所有检查并记录确切的计划，但不会修改任何 Claude 文件。如需真正删除，请在“设置 → 删除安全”中启用永久删除。",
+    "armedText": "下面的文件将被永久删除。此次删除后，应用会立即返回安全模式。"
+  },
+  "meta": {
+    "planId": "计划 ID",
+    "hash": "内容哈希",
+    "created": "创建时间",
+    "expires": "过期时间"
+  },
+  "confirm": {
+    "type": "输入 {{phrase}} 以确认",
+    "typeEither": "输入 {{a}} 或 {{b}} 以确认"
+  },
+  "nothing": "所选内容中没有可删除的项目。",
+  "copyHint": "以纯文本（英文）复制确切的计划，便于独立审核",
+  "copied": {
+    "plan": "已复制删除计划",
+    "result": "已复制删除结果"
+  },
+  "action": {
+    "copyPlan": "复制删除计划",
+    "copyResult": "复制结果",
+    "runDryRun": "运行试运行验证",
+    "validating": "正在验证…",
+    "deleting": "正在删除…"
+  },
+  "itemAction": {
+    "delete-file": "删除文件",
+    "delete-directory": "删除文件夹 · {{files}}，{{folders}}",
+    "create-file": "创建文件",
+    "update-file": "更新文件",
+    "remove-record": "移除记录"
+  },
+  "kind": {
+    "metadata": "元数据",
+    "transcript": "会话记录",
+    "session-data": "会话数据",
+    "subagent-log": "子代理日志",
+    "file-history": "文件历史",
+    "session-env": "会话环境",
+    "tombstone": "删除标记",
+    "archive-index": "归档索引",
+    "manager-record": "管理器记录"
+  },
+  "group": {
+    "willDelete": "将删除",
+    "willChange": "将修改 · Claude Desktop 记录",
+    "managerRecords": "管理器记录 · 仅本应用",
+    "willNotDelete": "不会删除"
+  },
+  "outcome": {
+    "deleted": "已删除",
+    "created": "已创建",
+    "updated": "已更新",
+    "missing": "已不存在",
+    "failed": "失败",
+    "skipped": "已跳过",
+    "dry-run": "已验证（试运行）"
+  },
+  "sessionOutcome": {
+    "deleted": "已删除",
+    "partial": "部分完成",
+    "failed": "失败",
+    "skipped": "已跳过",
+    "dry-run": "试运行"
+  },
+  "dryRunExplain": "所有目标都通过了验证（位于允许的根目录、结构正确、规范路径、没有通过链接逃逸、不是工作区）并已记录。没有删除任何内容。"
+}

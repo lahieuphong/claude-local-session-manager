@@ -1,0 +1,40 @@
+{
+  "title": "存储",
+  "lastScan": "上次扫描 {{time}}",
+  "loading": "正在加载存储统计…",
+  "loadFailed": "无法加载存储统计",
+  "stat": {
+    "totalDisk": "磁盘总用量",
+    "sessions": "会话",
+    "active": "活动",
+    "archived": "已归档 (Claude)",
+    "hidden": "在管理器中隐藏",
+    "transcriptOnly": "仅有会话记录",
+    "metadataOrphan": "仅有元数据 / 孤立"
+  },
+  "section": {
+    "breakdown": "磁盘用量明细",
+    "topProjects": "按磁盘用量排列的项目",
+    "largestSessions": "最大的会话",
+    "lastScan": "上次扫描"
+  },
+  "part": {
+    "transcripts": "会话记录",
+    "sessionData": "会话数据（子代理、工具结果）",
+    "other": "文件历史、环境、元数据"
+  },
+  "sessionsCount_other": "{{count}} 个会话",
+  "noProjects": "没有项目。",
+  "scan": {
+    "transcripts": "会话记录",
+    "parsed": "已解析",
+    "incremental": "增量解析",
+    "fromCache": "来自缓存",
+    "subagentExcluded": "已排除的子代理日志",
+    "metadataFiles": "元数据文件",
+    "tombstones": "删除标记",
+    "duration": "耗时",
+    "ms": "{{value}} 毫秒",
+    "issues_other": "{{count}} 个扫描问题"
+  }
+}

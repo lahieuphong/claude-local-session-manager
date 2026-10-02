@@ -1,0 +1,105 @@
+{
+  "status": {
+    "active": "Đang hoạt động",
+    "archived": "Đã lưu trữ",
+    "transcript-only": "Chỉ có bản ghi hội thoại",
+    "metadata-only": "Chỉ có siêu dữ liệu",
+    "orphan": "Mồ côi"
+  },
+  "live": {
+    "state": {
+      "running": "Đang chạy",
+      "idle": "Đang chờ",
+      "in-use": "Đang dùng"
+    },
+    "hint": {
+      "running": "Một tiến trình Claude Code đang làm việc trong phiên này (PID {{pid}}). Không thể xóa.",
+      "idle": "Đang mở (chờ) trong một tiến trình Claude Code (PID {{pid}}). Không thể xóa.",
+      "in-use": "Đang gắn với một tiến trình Claude Code (PID {{pid}}). Không thể xóa."
+    }
+  },
+  "badge": {
+    "hidden": "Đã ẩn",
+    "hiddenHint": "Chỉ ẩn trong trình quản lý này; trạng thái của Claude không đổi",
+    "issues_other": "{{count}} vấn đề",
+    "issuesHint": "Xem mục Vấn đề trong khung chi tiết"
+  },
+  "filter": {
+    "all": "Tất cả phiên",
+    "active": "Đang hoạt động",
+    "archived": "Đã lưu trữ (Claude)",
+    "hidden": "Ẩn trong trình quản lý",
+    "transcript-only": "Chỉ có bản ghi hội thoại",
+    "problems": "Chỉ có siêu dữ liệu / Vấn đề"
+  },
+  "title": {
+    "all": "Tất cả phiên",
+    "active": "Phiên đang hoạt động",
+    "archived": "Đã lưu trữ trong Claude",
+    "hidden": "Ẩn trong trình quản lý",
+    "transcript-only": "Phiên chỉ có bản ghi hội thoại",
+    "problems": "Chỉ có siêu dữ liệu / Vấn đề"
+  },
+  "unknownProject": "Dự án không xác định",
+  "unknownWorkspacePath": "Không rõ đường dẫn thư mục dự án",
+  "untitled": "Chưa có tiêu đề",
+  "count": "{{shown}} / {{total}}",
+  "refreshHint": "Quét lại dữ liệu Claude (F5)",
+  "scanning": "Đang quét…",
+  "search": {
+    "placeholder": "Tìm theo tiêu đề, câu lệnh, dự án, đường dẫn hoặc ID phiên",
+    "label": "Tìm phiên",
+    "clear": "Xóa nội dung tìm"
+  },
+  "sort": {
+    "label": "Sắp xếp",
+    "updated-desc": "Mới cập nhật",
+    "updated-asc": "Cũ nhất trước",
+    "title": "Tiêu đề A–Z",
+    "size-desc": "Lớn nhất trước",
+    "size-asc": "Nhỏ nhất trước"
+  },
+  "group": {
+    "label": "Nhóm",
+    "date": "Nhóm theo ngày",
+    "project": "Nhóm theo dự án",
+    "none": "Không nhóm"
+  },
+  "bulk": {
+    "label": "Thao tác hàng loạt",
+    "selected_other": "Đã chọn {{count}}",
+    "archive": "Lưu trữ ({{count}})",
+    "archiveHint": "Bật cờ isArchived của Claude Desktop",
+    "restore": "Khôi phục ({{count}})",
+    "hide": "Ẩn trong trình quản lý ({{count}})",
+    "hideHint": "Chỉ ẩn trong trình quản lý này; không thay đổi tệp hay trạng thái lưu trữ của Claude",
+    "show": "Hiện lại ({{count}})",
+    "exportHint": "Sao chép JSONL gốc + tệp JSON thông tin phiên vào thư mục bạn chọn",
+    "clear": "Bỏ chọn"
+  },
+  "selectAllVisible": "Chọn tất cả phiên đang hiển thị",
+  "column": {
+    "session": "Phiên",
+    "updated": "Cập nhật",
+    "size": "Dung lượng"
+  },
+  "empty": {
+    "noMatchTitle": "Không có phiên nào khớp “{{query}}”",
+    "noMatchHint": "Tìm kiếm xét tiêu đề, câu lệnh, tên dự án, đường dẫn và ID phiên.",
+    "viewTitle": "Không có phiên nào ở mục này",
+    "viewHint": "Thử chọn bộ lọc khác ở thanh bên."
+  },
+  "loading": "Đang quét dữ liệu Claude…",
+  "loadFailed": "Không tải được danh sách phiên",
+  "dateGroup": {
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "last7": "7 ngày trước",
+    "last30": "30 ngày trước",
+    "older": "Cũ hơn",
+    "unknown": "Không rõ ngày"
+  },
+  "row": {
+    "select": "Chọn “{{title}}”"
+  }
+}

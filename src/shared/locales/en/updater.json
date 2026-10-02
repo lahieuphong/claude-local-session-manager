@@ -1,0 +1,40 @@
+{
+  "loading": "Reading update status…",
+  "version": "Version {{version}}",
+  "current": "Current version",
+  "latest": "Latest version",
+  "lastChecked": "Last checked",
+  "status": {
+    "idle": "Not checked yet",
+    "checking": "Checking for updates…",
+    "up-to-date": "You're up to date",
+    "available": "Update available: {{version}}",
+    "downloading": "Downloading update… {{percent}}%",
+    "downloaded": "Update ready to install",
+    "error": "Update check failed",
+    "unsupported": "Automatic update checks are unavailable",
+    "unsupportedDev": "Update checks are disabled in development builds",
+    "noRelease": "No release has been published on GitHub yet"
+  },
+  "mode": {
+    "installed": "Installed (Setup)",
+    "portable": "Portable",
+    "development": "Development build"
+  },
+  "action": {
+    "check": "Check for updates",
+    "download": "Download update",
+    "install": "Restart and install",
+    "openReleases": "Open GitHub Releases"
+  },
+  "portableNote": "Portable builds are never replaced automatically. Download the new Setup (recommended) or Portable build from GitHub Releases.",
+  "confirm": {
+    "title": "Install the update?",
+    "text": "Claude Local Session Manager will close and restart to install version {{version}}.",
+    "safeModeNote": "The new version starts in Safe Mode, like every launch."
+  },
+  "pillHint": "Open Settings → Updates",
+  "toast": {
+    "failed": "Update: {{error}}"
+  }
+}

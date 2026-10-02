@@ -1,0 +1,134 @@
+{
+  "label": "Chi tiết phiên",
+  "actions": "Thao tác với phiên",
+  "empty": {
+    "title": "Chưa chọn phiên nào",
+    "hint": "Chọn một phiên để xem chi tiết, tệp và thao tác. Dùng ô đánh dấu để thao tác hàng loạt."
+  },
+  "block": {
+    "live": "Đang gắn với một tiến trình Claude Code ({{state}}, PID {{pid}}{{name}}). Hãy đóng phiên đó trước khi xóa.",
+    "liveArchive": "Đang gắn với một tiến trình Claude Code ({{state}}, PID {{pid}}{{name}}). Hãy đóng phiên đó trước khi lưu trữ hoặc xóa.",
+    "unknown": "Chưa xác định được trạng thái tiến trình Claude. Hãy kiểm tra lại tiến trình trước.",
+    "desktop": "Hãy đóng Claude Desktop trước khi thay đổi tệp phiên."
+  },
+  "action": {
+    "restoreHint": "Bỏ cờ isArchived của Claude Desktop",
+    "archiveHint": "Bật cờ isArchived của Claude Desktop",
+    "hideHint": "Chỉ ẩn trong trình quản lý này. Không thay đổi tệp hay trạng thái lưu trữ của Claude.",
+    "openProject": "Mở dự án",
+    "openProjectHint": "Mở thư mục dự án trong Explorer"
+  },
+  "note": {
+    "transcriptOnly": "Chỉ có bản ghi hội thoại: phiên Claude Code này không có siêu dữ liệu Claude Desktop nên Claude không có trạng thái lưu trữ cho nó. Ẩn trong trình quản lý chỉ thay đổi danh sách của ứng dụng này; tệp của Claude không bị thay đổi và phiên vẫn hiện trong Claude.",
+    "orphan": "Thư mục phiên mồ côi: không có bản ghi hội thoại hay siêu dữ liệu Claude Desktop. Ẩn trong trình quản lý chỉ thay đổi danh sách của ứng dụng này; tệp của Claude không bị thay đổi.",
+    "armed": "Đã bật xóa thật — Xóa vĩnh viễn sẽ xóa thật các tệp của phiên này."
+  },
+  "section": {
+    "problems": "Vấn đề",
+    "overview": "Tổng quan",
+    "project": "Dự án",
+    "session": "Phiên",
+    "storage": "Dung lượng",
+    "files": "Tệp",
+    "activity": "Hoạt động",
+    "rawMetadata": "Siêu dữ liệu gốc",
+    "debug": "Gỡ lỗi: đối tượng phiên đã chuẩn hóa"
+  },
+  "field": {
+    "displayTitle": "Tiêu đề hiển thị",
+    "titleSource": "Nguồn tiêu đề",
+    "rawTitle": "Tiêu đề trong siêu dữ liệu",
+    "customTitle": "Tiêu đề tự đặt",
+    "aiTitle": "Tiêu đề do AI tạo",
+    "created": "Tạo lúc",
+    "updated": "Cập nhật lúc",
+    "process": "Tiến trình Claude Code",
+    "project": "Dự án",
+    "projectPath": "Đường dẫn dự án",
+    "projectSource": "Nguồn dự án",
+    "storageFolder": "Thư mục lưu của Claude",
+    "cliSessionId": "ID phiên CLI",
+    "desktopSessionId": "ID phiên Desktop",
+    "priorIds": "ID CLI trước đó",
+    "internalId": "ID trong trình quản lý",
+    "model": "Mô hình",
+    "claudeCode": "Claude Code",
+    "gitBranch": "Nhánh Git",
+    "totalSize": "Tổng"
+  },
+  "hint": {
+    "rawTitle": "Giá trị chính xác của trường title trong tệp siêu dữ liệu Claude Desktop",
+    "projectPath": "Thư mục dự án thật (cwd). Không bao giờ nằm trong kế hoạch xóa.",
+    "storageFolder": "Thư mục mã hóa trong ~/.claude/projects (chỉ dùng để định vị dữ liệu)",
+    "internalId": "ID nội bộ do ứng dụng này gán",
+    "messages": "Câu lệnh = câu hỏi thật của người dùng. Tin nhắn trợ lý = các phản hồi riêng biệt của mô hình (mỗi bước một phản hồi; một câu lệnh thường tạo nhiều phản hồi vì mỗi lần gọi công cụ là một phản hồi riêng). Lệnh gọi công cụ = các khối tool_use. Bản ghi = các dòng JSONL không rỗng."
+  },
+  "value": {
+    "unknown": "không rõ"
+  },
+  "titleSource": {
+    "metadata": "Tiêu đề trong siêu dữ liệu Claude Desktop",
+    "custom-title": "Tiêu đề tự đặt (/rename)",
+    "ai-title": "Tiêu đề do AI tạo",
+    "summary": "Tóm tắt trong bản ghi hội thoại",
+    "first-prompt": "Câu lệnh đầu tiên",
+    "last-prompt": "Câu lệnh gần nhất",
+    "untitled": "Không có tiêu đề"
+  },
+  "projectSource": {
+    "metadata-cwd": "cwd trong siêu dữ liệu Claude Desktop",
+    "transcript-cwd": "cwd trong bản ghi hội thoại",
+    "owner-session": "Phiên sở hữu",
+    "folder-records": "Bản ghi trong thư mục phiên",
+    "decoded-folder-name": "Tên thư mục lưu của Claude, khớp với thư mục thật",
+    "unresolved": "Chưa xác định"
+  },
+  "size": {
+    "transcript": "Bản ghi hội thoại",
+    "sessionData": "Dữ liệu phiên",
+    "metadata": "Siêu dữ liệu",
+    "other": "Khác (lịch sử, môi trường, nhật ký)"
+  },
+  "file": {
+    "metadata": "Siêu dữ liệu",
+    "transcript": "Bản ghi hội thoại",
+    "sessionData": "Dữ liệu phiên",
+    "sessionDataOther": "Dữ liệu phiên (thư mục khác, cùng UUID)",
+    "priorTranscript": "Bản ghi hội thoại trước đó",
+    "subagentLog": "Nhật ký tác tử phụ",
+    "fileHistory": "Lịch sử tệp",
+    "sessionEnv": "Môi trường phiên",
+    "copyPath": "Sao chép đường dẫn đầy đủ",
+    "copyPathOf": "Sao chép đường dẫn đầy đủ của {{label}}",
+    "reveal": "Mở trong Explorer",
+    "revealOf": "Mở {{label}} trong Explorer",
+    "notPresent": "không có"
+  },
+  "metric": {
+    "prompts": "Câu lệnh",
+    "assistant": "Tin nhắn trợ lý",
+    "tools": "Lệnh gọi công cụ",
+    "records": "Bản ghi"
+  },
+  "preview": {
+    "first": "Tin nhắn đầu tiên của người dùng",
+    "last": "Tin nhắn gần nhất của người dùng"
+  },
+  "raw": {
+    "none": "Không có tệp siêu dữ liệu Claude Desktop — đây là phiên Claude Code chỉ có bản ghi hội thoại.",
+    "tombstones": "Có dấu xóa (tombstone):"
+  },
+  "rawTitle": {
+    "noFile": "(không có tệp siêu dữ liệu)",
+    "missing": "(thiếu trường)",
+    "empty": "(chuỗi rỗng)",
+    "whitespace": "(chỉ có khoảng trắng)",
+    "invalid": "(kiểu không hợp lệ: {{type}})"
+  },
+  "export": {
+    "jsonl": "Bản ghi hội thoại gốc (.jsonl)",
+    "info": "Thông tin phiên (.json)",
+    "markdown": "Hội thoại dễ đọc (.md)",
+    "note": "Tệp xuất là bản sao; tệp gốc không bao giờ bị thay đổi."
+  }
+}

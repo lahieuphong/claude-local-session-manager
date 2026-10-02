@@ -1,0 +1,40 @@
+{
+  "loading": "Đang đọc trạng thái cập nhật…",
+  "version": "Phiên bản {{version}}",
+  "current": "Phiên bản hiện tại",
+  "latest": "Phiên bản mới nhất",
+  "lastChecked": "Kiểm tra lần cuối",
+  "status": {
+    "idle": "Chưa kiểm tra",
+    "checking": "Đang kiểm tra cập nhật…",
+    "up-to-date": "Bạn đang dùng bản mới nhất",
+    "available": "Có bản cập nhật: {{version}}",
+    "downloading": "Đang tải bản cập nhật… {{percent}}%",
+    "downloaded": "Bản cập nhật đã sẵn sàng để cài",
+    "error": "Kiểm tra cập nhật thất bại",
+    "unsupported": "Không thể tự động kiểm tra cập nhật",
+    "unsupportedDev": "Bản phát triển không kiểm tra cập nhật",
+    "noRelease": "Chưa có bản phát hành nào trên GitHub"
+  },
+  "mode": {
+    "installed": "Bản cài đặt (Setup)",
+    "portable": "Bản chạy trực tiếp (Portable)",
+    "development": "Bản phát triển"
+  },
+  "action": {
+    "check": "Kiểm tra cập nhật",
+    "download": "Tải bản cập nhật",
+    "install": "Khởi động lại và cài đặt",
+    "openReleases": "Mở GitHub Releases"
+  },
+  "portableNote": "Bản Portable không bao giờ được tự động thay thế. Hãy tải bản Setup (khuyên dùng) hoặc bản Portable mới từ GitHub Releases.",
+  "confirm": {
+    "title": "Cài đặt bản cập nhật?",
+    "text": "Claude Local Session Manager sẽ đóng và khởi động lại để cài phiên bản {{version}}.",
+    "safeModeNote": "Phiên bản mới khởi động ở Chế độ an toàn như mọi lần mở."
+  },
+  "pillHint": "Mở Cài đặt → Cập nhật",
+  "toast": {
+    "failed": "Cập nhật: {{error}}"
+  }
+}

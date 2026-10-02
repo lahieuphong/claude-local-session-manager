@@ -1,10 +1,10 @@
 import { useEffect, type ReactElement } from 'react'
-import { Banners } from './components/Banners'
 import { DeleteModal } from './components/DeleteModal'
 import { DetailsPanel } from './components/DetailsPanel'
 import { ArmModal } from './components/SafetyMode'
 import { SessionList } from './components/SessionList'
 import { Sidebar } from './components/Sidebar'
+import { StatusStrip } from './components/StatusStrip'
 import { Toasts } from './components/Toasts'
 import { SettingsPage } from './pages/SettingsPage'
 import { StoragePage } from './pages/StoragePage'
@@ -14,7 +14,6 @@ const PROCESS_POLL_MS = 15_000
 
 export default function App(): ReactElement {
   const view = useAppState((s) => s.view)
-  const deleteRequest = useAppState((s) => s.deleteRequest)
 
   useEffect(() => {
     void init()
@@ -26,7 +25,7 @@ export default function App(): ReactElement {
     <div className="app">
       <Sidebar />
       <main className="main">
-        <Banners />
+        <StatusStrip />
         {view.kind === 'sessions' ? (
           <div className="sessions-layout">
             <SessionList />
@@ -38,7 +37,7 @@ export default function App(): ReactElement {
           <SettingsPage />
         )}
       </main>
-      {deleteRequest && <DeleteModal />}
+      <DeleteModal />
       <ArmModal />
       <Toasts />
     </div>

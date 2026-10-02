@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "Claude Local Session Manager",
+    "nameShort": "Claude Local",
+    "nameSub": "Session Manager",
+    "tagline": "Không chính thức · chỉ cục bộ",
+    "disclaimer": "Tiện ích cục bộ không chính thức · Không liên kết với Anthropic"
+  },
+  "nav": {
+    "sidebar": "Điều hướng chính",
+    "sessions": "Phiên",
+    "projects": "Dự án",
+    "projectTooltip_other": "{{count}} phiên · {{size}}",
+    "noProjects": "Không tìm thấy dự án nào",
+    "storage": "Dung lượng",
+    "settings": "Cài đặt"
+  },
+  "status": {
+    "liveSessions_other": "{{count}} phiên Claude Code đang mở"
+  },
+  "action": {
+    "refresh": "Làm mới",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "closeEsc": "Đóng (Esc)",
+    "dismiss": "Ẩn thông báo",
+    "copy": "Sao chép",
+    "copyValue": "Sao chép {{value}}",
+    "export": "Xuất",
+    "deletePermanently": "Xóa vĩnh viễn",
+    "archive": "Lưu trữ",
+    "restore": "Khôi phục",
+    "hideInManager": "Ẩn trong trình quản lý",
+    "showInManager": "Hiện lại trong trình quản lý"
+  },
+  "loading": "Đang tải…",
+  "toast": {
+    "safetyReadFailed": "Không đọc được chế độ an toàn: {{error}}",
+    "scanFailed": "Quét thất bại: {{error}}",
+    "refreshFailed": "Làm mới thất bại: {{error}}",
+    "processCheckFailed": "Kiểm tra tiến trình thất bại: {{error}}",
+    "settingsSaveFailed": "Không lưu được cài đặt: {{error}}",
+    "firstFailure": "{{title}}:",
+    "copied": "Đã sao chép",
+    "copyFailed": "Sao chép thất bại: {{error}}"
+  }
+}

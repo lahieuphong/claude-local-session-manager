@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events'
 import { readFile } from 'node:fs/promises'
 import type { DesktopRootInfo, ScanIssue, ScanSnapshot, SessionDetails } from '../../shared/types'
 import { errorMessage, logger } from '../util/logger'
+import { msg } from '../util/messages'
 import type { AllowedRoots } from '../security/pathValidator'
 import type { ScanCache } from './cacheService'
 import { discoverRoots, toAllowedRoots, toStorageRoots, type DiscoveredRoots, type DiscoveryEnv } from './claudeDiscovery'
@@ -119,7 +120,7 @@ export class SessionRepository extends EventEmitter {
 
     for (const d of desktop) issues.push(...d.issues)
     if (projects) issues.push(...projects.issues)
-    if (!roots.projectsRoot) issues.push({ message: 'Claude Code projects folder (~/.claude/projects) was not found.' })
+    if (!roots.projectsRoot) issues.push(msg('scan.projectsRootMissing'))
 
     const decodedProjectDirs = await this.resolveFolderNames(projects, desktop)
     const { sessions, records } = buildSessions({

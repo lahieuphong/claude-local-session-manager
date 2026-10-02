@@ -1,0 +1,134 @@
+{
+  "label": "会话详情",
+  "actions": "会话操作",
+  "empty": {
+    "title": "未选择会话",
+    "hint": "选择一个会话以查看详情、文件和操作。使用复选框进行批量操作。"
+  },
+  "block": {
+    "live": "已关联到运行中的 Claude Code 进程（{{state}}，PID {{pid}}{{name}}）。请先关闭该会话再删除。",
+    "liveArchive": "已关联到运行中的 Claude Code 进程（{{state}}，PID {{pid}}{{name}}）。请先关闭该会话再归档或删除。",
+    "unknown": "Claude 进程状态未知。请先刷新进程状态。",
+    "desktop": "修改会话文件前请先关闭 Claude Desktop。"
+  },
+  "action": {
+    "restoreHint": "清除 Claude Desktop 的 isArchived 标志",
+    "archiveHint": "设置 Claude Desktop 的 isArchived 标志",
+    "hideHint": "仅在本管理器中隐藏。不会修改 Claude 的文件和归档状态。",
+    "openProject": "打开项目",
+    "openProjectHint": "在资源管理器中打开工作区文件夹"
+  },
+  "note": {
+    "transcriptOnly": "仅有会话记录：此 Claude Code 会话没有 Claude Desktop 元数据，因此 Claude 没有它的归档状态。“在管理器中隐藏”只会更改本应用自己的列表，不会修改 Claude 的文件，该会话仍会在 Claude 中显示。",
+    "orphan": "孤立的会话文件夹：既没有会话记录也没有 Claude Desktop 元数据。“在管理器中隐藏”只会更改本应用自己的列表，不会修改 Claude 的文件。",
+    "armed": "已启用永久删除 — “永久删除”将真正删除此会话的文件。"
+  },
+  "section": {
+    "problems": "问题",
+    "overview": "概览",
+    "project": "项目",
+    "session": "会话",
+    "storage": "存储",
+    "files": "文件",
+    "activity": "活动",
+    "rawMetadata": "原始元数据",
+    "debug": "调试：规范化的会话对象"
+  },
+  "field": {
+    "displayTitle": "显示标题",
+    "titleSource": "标题来源",
+    "rawTitle": "元数据中的标题",
+    "customTitle": "自定义标题",
+    "aiTitle": "AI 标题",
+    "created": "创建时间",
+    "updated": "更新时间",
+    "process": "Claude Code 进程",
+    "project": "项目",
+    "projectPath": "项目路径",
+    "projectSource": "项目来源",
+    "storageFolder": "Claude 存储文件夹",
+    "cliSessionId": "CLI 会话 ID",
+    "desktopSessionId": "Desktop 会话 ID",
+    "priorIds": "之前的 CLI ID",
+    "internalId": "管理器 ID",
+    "model": "模型",
+    "claudeCode": "Claude Code",
+    "gitBranch": "Git 分支",
+    "totalSize": "总计"
+  },
+  "hint": {
+    "rawTitle": "Claude Desktop 元数据文件中 title 字段的原始值",
+    "projectPath": "实际工作区（真实 cwd）。永远不会进入删除计划。",
+    "storageFolder": "~/.claude/projects 下的编码文件夹（仅用于定位存储）",
+    "internalId": "本应用分配的内部 ID",
+    "messages": "提示词 = 有意义的用户提问。助手消息 = 不同的模型响应（每一步一个；一个提示词通常会产生多个，因为每次工具调用都是单独的响应）。工具调用 = tool_use 块。记录 = 非空的 JSONL 行。"
+  },
+  "value": {
+    "unknown": "未知"
+  },
+  "titleSource": {
+    "metadata": "Claude Desktop 元数据标题",
+    "custom-title": "自定义标题 (/rename)",
+    "ai-title": "AI 生成的标题",
+    "summary": "会话记录摘要",
+    "first-prompt": "第一条提示词",
+    "last-prompt": "最后一条提示词",
+    "untitled": "没有可用标题"
+  },
+  "projectSource": {
+    "metadata-cwd": "Claude Desktop 元数据中的 cwd",
+    "transcript-cwd": "会话记录中的 cwd",
+    "owner-session": "所属会话",
+    "folder-records": "会话文件夹内的记录",
+    "decoded-folder-name": "Claude 存储文件夹名称，已匹配到真实文件夹",
+    "unresolved": "无法确定"
+  },
+  "size": {
+    "transcript": "会话记录",
+    "sessionData": "会话数据",
+    "metadata": "元数据",
+    "other": "其他（历史、环境、日志）"
+  },
+  "file": {
+    "metadata": "元数据",
+    "transcript": "会话记录",
+    "sessionData": "会话数据",
+    "sessionDataOther": "会话数据（其他文件夹，相同 UUID）",
+    "priorTranscript": "之前的会话记录",
+    "subagentLog": "子代理日志",
+    "fileHistory": "文件历史",
+    "sessionEnv": "会话环境",
+    "copyPath": "复制完整路径",
+    "copyPathOf": "复制 {{label}} 的完整路径",
+    "reveal": "在资源管理器中显示",
+    "revealOf": "在资源管理器中显示 {{label}}",
+    "notPresent": "不存在"
+  },
+  "metric": {
+    "prompts": "提示词",
+    "assistant": "助手消息",
+    "tools": "工具调用",
+    "records": "记录"
+  },
+  "preview": {
+    "first": "第一条用户消息",
+    "last": "最后一条用户消息"
+  },
+  "raw": {
+    "none": "没有 Claude Desktop 元数据文件 — 这是仅有会话记录的 Claude Code 会话。",
+    "tombstones": "存在删除标记 (tombstone)："
+  },
+  "rawTitle": {
+    "noFile": "（没有元数据文件）",
+    "missing": "（缺少字段）",
+    "empty": "（空字符串）",
+    "whitespace": "（只有空白）",
+    "invalid": "（无效类型：{{type}}）"
+  },
+  "export": {
+    "jsonl": "原始会话记录 (.jsonl)",
+    "info": "会话信息 (.json)",
+    "markdown": "可读对话 (.md)",
+    "note": "导出的是副本；原始文件不会被修改。"
+  }
+}

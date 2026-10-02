@@ -1,0 +1,159 @@
+{
+  "common": {
+    "sessionNotFound": "未找到会话。请刷新后重试。"
+  },
+  "guard": {
+    "statusUnknown": "无法确认 Claude 是否正在运行（{{error}}）。请刷新进程状态后重试。",
+    "claudeRunning": "修改会话文件前请先关闭 Claude Desktop。",
+    "sessionInUse": "此会话已在运行中的 Claude Code 进程里打开（PID {{pid}}）。请先关闭它。",
+    "sessionInUseNamed": "此会话已在运行中的 Claude Code 进程里打开（PID {{pid}}，“{{name}}”）。请先关闭它。"
+  },
+  "reveal": {
+    "metadata": {
+      "none": "此会话没有元数据文件。",
+      "gone": "元数据文件已不存在：{{path}}",
+      "done": "已在资源管理器中显示元数据文件。"
+    },
+    "transcript": {
+      "none": "此会话没有会话记录。",
+      "gone": "会话记录已不存在：{{path}}",
+      "done": "已在资源管理器中显示会话记录。"
+    },
+    "sessionData": {
+      "none": "此会话没有会话数据文件夹。",
+      "gone": "会话数据文件夹已不存在：{{path}}",
+      "done": "已在资源管理器中显示会话数据文件夹。"
+    }
+  },
+  "project": {
+    "unknownPath": "此会话的项目路径未知。",
+    "missingFolder": "项目文件夹不存在：{{path}}",
+    "opened": "已打开项目文件夹。"
+  },
+  "cache": {
+    "cleared": "已清除缓存并重新扫描会话。"
+  },
+  "archive": {
+    "verb": {
+      "archive": "归档",
+      "restore": "恢复"
+    },
+    "metadataGone": "元数据文件已消失：{{path}}",
+    "invalidJson": "无法{{verb}}：元数据不是有效的 JSON（{{error}}）。文件保持不变。",
+    "changedOnDisk": "元数据文件在磁盘上已更改（会话 ID 不同）。请刷新后重试。",
+    "dryRun": "试运行：将{{verb}}（设置 isArchived={{value}}）。未修改任何文件。",
+    "writeFailed": "无法{{verb}}：{{error}}",
+    "indexUnrecognised": "{{file}} 的格式无法识别，已保持不变。",
+    "indexNotUpdated": "未更新归档索引：{{error}}",
+    "alreadyArchived": "会话已经是归档状态。",
+    "alreadyActive": "会话已经是活动状态。",
+    "archived": "会话已归档。",
+    "restored": "会话已恢复。",
+    "notArchivable": "此 Claude Code 会话没有 Claude Desktop 元数据，因此 Claude 没有它的归档标志。请改用“在管理器中隐藏”（只会更改本应用的列表）。"
+  },
+  "hide": {
+    "desktopSession": "这是 Claude Desktop 会话：请使用“归档 / 恢复”，它会更改 Claude 自身的归档状态。",
+    "saveFailed": "无法保存管理器的隐藏列表：{{error}}",
+    "hidden": "已在管理器中隐藏。只更改了本应用的列表；Claude 的文件和归档状态保持不变。",
+    "shown": "已在管理器中重新显示。"
+  },
+  "bulk": {
+    "verb": {
+      "archived": "已归档",
+      "restored": "已恢复",
+      "hidden": "已隐藏",
+      "shown": "已显示"
+    },
+    "done_other": "{{verb}} {{count}} 个会话。",
+    "partial": "{{verb}} {{done}}/{{count}} 个会话；{{failed}} 个被跳过或失败。"
+  },
+  "delete": {
+    "recentlyWritten": "会话记录在 {{seconds}} 秒前刚被写入，可能仍在使用中。请稍后重试。",
+    "nothingOnDisk": "磁盘上没有此会话可删除的内容。",
+    "unknownPlan": "未知的删除计划。请重新打开删除对话框。",
+    "planExpired": "此删除计划已过期。请重新打开删除对话框。",
+    "planTypeMismatch": "删除计划类型不匹配。",
+    "idsMismatch": "发送的会话与删除计划不匹配。",
+    "nothingToDelete": "没有可删除的内容。",
+    "confirmationMismatch": "确认文本不匹配。",
+    "modeName": {
+      "safe": "安全模式（试运行）",
+      "armed": "已启用永久删除"
+    },
+    "modeChanged": "自创建此计划以来安全模式已更改（{{from}} → {{to}}）。请重新查看计划。",
+    "rootsUnavailable": "无法获取 Claude 存储根目录。",
+    "sessionBlocked": "{{title}}：{{reason}}",
+    "identityChanged": "{{title}}：自创建计划以来 CLI 会话 ID 已更改（计划已过时）。",
+    "staleContent": "删除计划已过时；自创建以来会话文件已更改（大小、文件数或内容发生变化）。请重新查看。",
+    "staleTargets": "删除计划已过时；自创建以来会话文件已更改（{{changes}}）。请重新查看。",
+    "diffAdded": "出现意外的新目标：{{added}}",
+    "diffRemoved": "目标已消失：{{removed}}",
+    "diffBoth": "出现意外的新目标：{{added}}；目标已消失：{{removed}}",
+    "refused": "已拒绝删除，未做任何更改：{{error}}",
+    "dryRunBlocked_other": "试运行：{{count}} 个会话通过验证，但如果现在真正删除将被阻止：{{reason}}",
+    "dryRunPassed_other": "试运行：验证通过；将删除 {{count}} 个会话。未修改任何文件。",
+    "done_other": "已永久删除 {{count}} 个会话，释放 {{size}}。",
+    "incomplete": "删除未完成：{{deleted}}/{{count}} 个会话已完全删除；{{failed}} 个项目无法删除。请查看详情。",
+    "itemMetadataKept": "元数据文件未被删除",
+    "itemRecordsKept": "由于部分会话文件无法删除而保留",
+    "warnSharedTranscript": "保留：{{path}} 被另一个会话引用。",
+    "warnLinks": "{{path}} 中的 {{count}} 个链接只会作为链接移除；其目标不受影响。",
+    "noteArchiveIndex": "从 Claude Desktop 的归档索引中移除“{{id}}”",
+    "noteTombstone": "删除标记，与 Claude Desktop 写入的方式相同",
+    "noteOtherFolder": "相同的会话 UUID，在会话于另一个文件夹中工作时写入",
+    "noteHiddenRecord": "从管理器的隐藏列表中移除此会话（{{key}}）",
+    "noteCacheRecord": "移除 {{file}} 的缓存摘要"
+  },
+  "keep": {
+    "workspace": "项目工作区（源代码）",
+    "projectFolder": "Claude 项目文件夹本身、其中的其他会话和 memory/",
+    "memory": "项目记忆",
+    "desktopFolder": "Claude Desktop 会话文件夹及其中的其他会话"
+  },
+  "export": {
+    "notFound": "未找到会话",
+    "noTranscript": "此会话没有可导出的会话记录。",
+    "cancelled": "已取消导出",
+    "done": "已导出到 {{path}}",
+    "failed": "导出失败：{{error}}",
+    "many_other": "已导出 {{count}} 个文件到 {{path}}",
+    "manyWithErrors": "已导出 {{count}} 个文件到 {{path}}；{{errors}} 个错误。",
+    "chooseFolder": "选择导出文件夹"
+  },
+  "safety": {
+    "typeExactly": "请准确输入 {{phrase}} 以启用永久删除。",
+    "notArmed": "未启用永久删除：{{reason}}",
+    "armed": "已启用永久删除，持续 {{minutes}} 分钟或一次删除，以先到者为准。",
+    "noticePackaged": "已忽略 {{variable}}={{value}}：打包版应用始终以安全模式启动。",
+    "noticeNoDevAllow": "已忽略 {{variable}}={{value}}，因为未设置 {{allow}}=1。",
+    "noticeDevArmed": "开发运行已通过 {{variable}}={{value}}（{{allow}}=1）启用永久删除。"
+  },
+  "update": {
+    "devOnly": "只有安装版或便携版应用才会检查更新。",
+    "updaterMissing": "无法加载更新程序。请从 GitHub Releases 下载新版本。",
+    "ready": "更新已准备好安装。",
+    "available": "有可用更新：{{version}}",
+    "availablePortable": "有可用更新：{{version}}。请从 GitHub Releases 下载新的 Setup 或便携版。",
+    "upToDate": "已是最新版本。",
+    "noRelease": "GitHub 上尚未发布任何版本。",
+    "offline": "无法连接 GitHub。请检查网络连接。",
+    "cannotSelfUpdate": "此版本无法自行更新。请从 GitHub Releases 下载新版本。",
+    "downloading": "正在下载更新…",
+    "noDownloaded": "没有已下载并可安装的更新。",
+    "restarting": "正在重启以安装更新…",
+    "openedReleases": "已打开 GitHub Releases。"
+  },
+  "problem": {
+    "ambiguousTranscript": "会话记录 {{file}} 存在于 {{count}} 个项目文件夹中；未关联（不明确）。",
+    "transcriptNotFound": "在 ~/.claude/projects 下未找到会话记录 {{file}}。",
+    "sharedTranscript": "会话记录 {{file}} 被多个元数据文件引用；已排除在删除之外。",
+    "duplicateUuid": "相同的会话 UUID 也存在于另一个项目文件夹中。",
+    "orphanFolder": "会话数据文件夹没有会话记录或元数据文件（孤立）。",
+    "ambiguousOwner": "多个会话拥有此 UUID；该文件夹未关联到任何会话。",
+    "sharedFolder": "{{label}} 文件夹 {{uuid}} 被多个会话共享；已排除在删除之外。",
+    "remote": "远程（{{kind}}）会话：会话记录存储在远程主机上。"
+  },
+  "scan": {
+    "projectsRootMissing": "未找到 Claude Code 项目文件夹 (~/.claude/projects)。"
+  }
+}

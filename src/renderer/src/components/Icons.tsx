@@ -10,7 +10,7 @@ function Icon({ size = 16, children, ...rest }: IconProps & { children: ReactEle
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={1.7}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -159,15 +159,40 @@ export const IconMinus = (p: IconProps): ReactElement => (
   </Icon>
 )
 
+export const IconShield = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <path d="M12 3 5 6v5.5c0 4.3 3 8 7 9.5 4-1.5 7-5.2 7-9.5V6l-7-3Z" />
+    <path d="m9 12 2 2 4-4" />
+  </Icon>
+)
+export const IconShieldAlert = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <path d="M12 3 5 6v5.5c0 4.3 3 8 7 9.5 4-1.5 7-5.2 7-9.5V6l-7-3Z" />
+    <path d="M12 8.5v4M12 15.5h.01" />
+  </Icon>
+)
+export const IconGlobe = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+  </Icon>
+)
+export const IconActivity = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <path d="M3 12h4l3-8 4 16 3-8h4" />
+  </Icon>
+)
+
 /** Neutral app mark (stacked session cards) — not a Claude/Anthropic logo. */
 export function AppMark({ size = 28 }: { size?: number }): ReactElement {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect x="2" y="2" width="60" height="60" rx="14" fill="#1b2230" stroke="#2f3a4d" strokeWidth="2" />
-      <rect x="16" y="14" width="32" height="8" rx="3" fill="#3c4a63" />
-      <rect x="13" y="26" width="38" height="10" rx="3.5" fill="#56709c" />
-      <rect x="10" y="40" width="44" height="12" rx="4" fill="#7aa2ff" />
-      <rect x="16" y="44.5" width="18" height="3" rx="1.5" fill="#0d1320" opacity="0.75" />
+      <rect x="2" y="2" width="60" height="60" rx="14" fill="#151211" stroke="#2f2a28" strokeWidth="2" />
+      <rect x="16" y="14" width="32" height="8" rx="3" fill="#3a2b26" />
+      <rect x="13" y="26" width="38" height="10" rx="3.5" fill="#86503e" />
+      <rect x="10" y="40" width="44" height="12" rx="4" fill="#d97757" />
+      <rect x="16" y="44.5" width="18" height="3" rx="1.5" fill="#2a0e05" opacity="0.8" />
     </svg>
   )
 }

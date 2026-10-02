@@ -7,11 +7,15 @@ import type {
   BulkActionResult,
   ExportFormat,
   ExportResult,
+  MessageRef,
+  MotionPreference,
   ProcessStatus,
   SafetyModeState,
   ScanSnapshot,
   UpdateState
 } from '../../../shared/types'
+import { resolveLocale, type SupportedLocale } from '../../../shared/locale'
+import { applyLocale } from '../i18n'
 
 import type { GroupBy, SessionFilter, SortKey } from '../../../shared/sessionQuery'
 export type { GroupBy, SessionFilter, SortKey }
@@ -21,10 +25,18 @@ export type View =
   | { kind: 'storage' }
   | { kind: 'settings' }
 
+/**
+ * A piece of toast text, resolved at render time so it follows the UI language:
+ *  - { key, params }: a renderer translation key
+ *  - { text, msg }: a main-process message (translated when `msg` is known, else the English text)
+ */
+export type ToastPart = { key: string; params?: Record<string, string | number> } | { text: string; msg?: MessageRef }
+
 export interface Toast {
   id: number
   kind: 'success' | 'error' | 'info' | 'warning'
-  message: string
+  parts: ToastPart[]
+  leaving?: boolean
 }
 
 export interface DeleteRequest {
@@ -120,15 +132,21 @@ export function useAppState<T>(selector: (s: AppState) => T): T {
 // Toasts
 // ---------------------------------------------------------------------------
 
+/** Matches the toast exit animation in global.css. */
+const TOAST_EXIT_MS = 220
+
 let toastId = 0
-export function toast(kind: Toast['kind'], message: string, ttl = kind === 'error' ? 9000 : 4500): void {
+export function toast(kind: Toast['kind'], parts: ToastPart | ToastPart[], ttl = kind === 'error' ? 9000 : 4500): void {
   const id = ++toastId
-  setState((s) => ({ toasts: [...s.toasts.slice(-4), { id, kind, message }] }))
+  const list = Array.isArray(parts) ? parts : [parts]
+  setState((s) => ({ toasts: [...s.toasts.filter((t) => !t.leaving).slice(-3), { id, kind, parts: list }] }))
   window.setTimeout(() => dismissToast(id), ttl)
 }
 
 export function dismissToast(id: number): void {
-  setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
+  if (!state.toasts.some((t) => t.id === id && !t.leaving)) return
+  setState((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t)) }))
+  window.setTimeout(() => setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), TOAST_EXIT_MS)
 }
 
 function errText(err: unknown): string {
@@ -136,8 +154,42 @@ function errText(err: unknown): string {
   return msg.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 }
 
+/** Toast for a failed call: translated prefix + the raw (technical) error. */
+function toastError(key: string, err: unknown): void {
+  toast('error', { key, params: { error: errText(err) } })
+}
+
+const resultPart = (r: { message: string; msg?: MessageRef }): ToastPart => ({ text: r.message, msg: r.msg })
+
 function reportResult(r: ActionResult): void {
-  toast(r.ok ? (r.dryRun ? 'info' : 'success') : r.code === 'CLAUDE_RUNNING' || r.code === 'SESSION_IN_USE' ? 'warning' : 'error', r.message)
+  const kind = r.ok ? (r.dryRun ? 'info' : 'success') : r.code === 'CLAUDE_RUNNING' || r.code === 'SESSION_IN_USE' ? 'warning' : 'error'
+  // Notes (warnings) are part of the English `message`; with keys they are shown translated after it.
+  const notes = r.msg ? (r.notes ?? []).map((n): ToastPart => ({ text: '', msg: n })) : []
+  toast(kind, [resultPart(r), ...notes])
+}
+
+// ---------------------------------------------------------------------------
+// Language and motion (saved in the main-process settings file)
+// ---------------------------------------------------------------------------
+
+function applyMotion(motion: MotionPreference | undefined): void {
+  document.documentElement.dataset.motion = motion === 'reduced' ? 'reduced' : 'system'
+}
+
+function applyUiSettings(settings: AppSettings, appInfo: AppInfo | null): void {
+  applyLocale(resolveLocale(settings.language, appInfo?.systemLanguages ?? navigator.languages ?? []))
+  applyMotion(settings.motion)
+}
+
+/** Switch language now and remember the choice. */
+export async function setLanguage(language: SupportedLocale | null): Promise<void> {
+  applyLocale(resolveLocale(language, state.appInfo?.systemLanguages ?? navigator.languages ?? []))
+  await updateSettings({ language })
+}
+
+export async function setMotion(motion: MotionPreference): Promise<void> {
+  applyMotion(motion)
+  await updateSettings({ motion })
 }
 
 // ---------------------------------------------------------------------------
@@ -171,10 +223,11 @@ export async function init(): Promise<void> {
   void api()
     .getSafetyMode()
     .then((safety) => setState({ safety }))
-    .catch((err) => toast('error', `Cannot read safety mode: ${errText(err)}`))
+    .catch((err) => toastError('common:toast.safetyReadFailed', err))
   try {
     const [appInfo, settings] = await Promise.all([api().getAppInfo(), api().getSettings()])
     setState({ appInfo, settings })
+    applyUiSettings(settings, appInfo)
   } catch (err) {
     setState({ loadError: errText(err) })
   }
@@ -184,7 +237,7 @@ export async function init(): Promise<void> {
     applySnapshot(await api().scanSessions())
   } catch (err) {
     setState({ loadError: errText(err) })
-    toast('error', `Scan failed: ${errText(err)}`)
+    toastError('common:toast.scanFailed', err)
   } finally {
     setState({ scanning: false })
   }
@@ -196,7 +249,7 @@ export async function refresh(): Promise<void> {
     applySnapshot(await api().refreshSessions())
     void refreshProcess(true)
   } catch (err) {
-    toast('error', `Refresh failed: ${errText(err)}`)
+    toastError('common:toast.refreshFailed', err)
   } finally {
     setState({ scanning: false })
   }
@@ -209,7 +262,7 @@ export async function refreshProcess(force: boolean): Promise<ProcessStatus | nu
     setState({ process })
     return process
   } catch (err) {
-    toast('error', `Process check failed: ${errText(err)}`)
+    toastError('common:toast.processCheckFailed', err)
     return null
   } finally {
     setState({ processChecking: false })
@@ -260,7 +313,7 @@ async function withBusy<T>(fn: () => Promise<T>): Promise<T | undefined> {
   try {
     return await fn()
   } catch (err) {
-    toast('error', errText(err))
+    toast('error', { text: errText(err) })
     return undefined
   } finally {
     setState({ busy: false })
@@ -275,7 +328,9 @@ export async function archive(id: string, archived: boolean): Promise<void> {
 function reportBulk(r: BulkActionResult | undefined): void {
   if (!r) return
   const first = r.results.find((x) => !x.ok)
-  toast(r.ok ? (r.results.some((x) => x.dryRun) ? 'info' : 'success') : 'warning', first ? `${r.message} ${first.title}: ${first.message}` : r.message)
+  const parts: ToastPart[] = [resultPart(r)]
+  if (first) parts.push({ key: 'common:toast.firstFailure', params: { title: first.title } }, resultPart(first))
+  toast(r.ok ? (r.results.some((x) => x.dryRun) ? 'info' : 'success') : 'warning', parts)
   if (r.ok) setState({ checked: [] })
 }
 
@@ -296,7 +351,7 @@ export async function bulkHideInManager(ids: string[], hidden: boolean): Promise
 
 function reportExport(r: ExportResult | undefined): void {
   if (!r || r.cancelled) return
-  toast(r.ok ? 'success' : 'error', r.errors.length ? `${r.message} ${r.errors[0]}` : r.message)
+  toast(r.ok ? 'success' : 'error', r.errors.length ? [resultPart(r), { text: r.errors[0] }] : resultPart(r))
 }
 
 export async function exportOne(id: string, format: ExportFormat): Promise<void> {
@@ -324,7 +379,7 @@ export async function updateSettings(patch: Partial<AppSettings>): Promise<void>
   try {
     setState({ settings: await api().updateSettings(patch) })
   } catch (err) {
-    toast('error', `Could not save settings: ${errText(err)}`)
+    toastError('common:toast.settingsSaveFailed', err)
   }
 }
 
@@ -341,11 +396,11 @@ export async function armRealDelete(confirmation: string): Promise<ArmResult | u
   try {
     const r = await api().armRealDelete(confirmation)
     setState({ safety: r.state })
-    toast(r.ok ? 'warning' : 'error', r.message)
+    toast(r.ok ? 'warning' : 'error', resultPart(r))
     if (r.ok) setState({ armModalOpen: false })
     return r
   } catch (err) {
-    toast('error', errText(err))
+    toast('error', { text: errText(err) })
     return undefined
   }
 }
@@ -353,9 +408,9 @@ export async function armRealDelete(confirmation: string): Promise<ArmResult | u
 export async function returnToSafeMode(): Promise<void> {
   try {
     setState({ safety: await api().returnToSafeMode() })
-    toast('info', 'Safe Mode restored. No Claude files can be deleted.')
+    toast('info', { key: 'safety:toast.returned' })
   } catch (err) {
-    toast('error', errText(err))
+    toast('error', { text: errText(err) })
   }
 }
 
@@ -375,7 +430,7 @@ async function updateCall(fn: () => Promise<UpdateState>): Promise<void> {
   try {
     setState({ updates: await fn() })
   } catch (err) {
-    toast('error', `Update: ${errText(err)}`)
+    toastError('updater:toast.failed', err)
   }
 }
 
@@ -385,9 +440,9 @@ export const downloadUpdate = (): Promise<void> => updateCall(() => api().downlo
 export async function installUpdate(): Promise<void> {
   try {
     const r = await api().installUpdate()
-    toast(r.ok ? 'info' : 'error', r.message)
+    toast(r.ok ? 'info' : 'error', resultPart(r))
   } catch (err) {
-    toast('error', `Update: ${errText(err)}`)
+    toastError('updater:toast.failed', err)
   }
 }
 
@@ -395,13 +450,22 @@ export async function openReleasesPage(): Promise<void> {
   try {
     await api().openReleasesPage()
   } catch (err) {
-    toast('error', errText(err))
+    toast('error', { text: errText(err) })
   }
 }
 
 export async function clearCache(): Promise<void> {
   const r = await withBusy(() => api().clearCache())
   if (r) reportResult(r)
+}
+
+export async function copyToClipboard(text: string, what: ToastPart = { key: 'common:toast.copied' }): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast('info', what)
+  } catch (err) {
+    toastError('common:toast.copyFailed', err)
+  }
 }
 
 export { errText }

@@ -3,6 +3,7 @@ import { IPC } from '../../shared/ipc'
 import type { ActionResult, AppInfo, AppSettings } from '../../shared/types'
 import { isDirectory, lstatOrNull } from '../util/fsx'
 import { errorMessage, logger } from '../util/logger'
+import { msg } from '../util/messages'
 import type { ArchiveService } from '../services/archiveService'
 import type { ScanCache } from '../services/cacheService'
 import type { DeleteService } from '../services/deleteService'
@@ -30,11 +31,11 @@ export interface IpcContext {
   isTrustedSender(event: IpcMainInvokeEvent): boolean
 }
 
-async function reveal(p: string | undefined, label: string): Promise<ActionResult> {
-  if (!p) return { ok: false, code: 'NOT_FOUND', message: `This session has no ${label}.` }
-  if (!(await lstatOrNull(p))) return { ok: false, code: 'NOT_FOUND', message: `The ${label} no longer exists: ${p}` }
+async function reveal(p: string | undefined, what: 'metadata' | 'transcript' | 'sessionData'): Promise<ActionResult> {
+  if (!p) return { ok: false, code: 'NOT_FOUND', ...msg(`reveal.${what}.none`) }
+  if (!(await lstatOrNull(p))) return { ok: false, code: 'NOT_FOUND', ...msg(`reveal.${what}.gone`, { path: p }) }
   shell.showItemInFolder(p)
-  return { ok: true, message: `Revealed ${label} in Explorer.` }
+  return { ok: true, ...msg(`reveal.${what}.done`) }
 }
 
 export function registerIpc(ctx: IpcContext): void {
@@ -82,15 +83,15 @@ export function registerIpc(ctx: IpcContext): void {
     return ctx.exporter.exportMany(assertIds(ids), [...new Set(formats.map(assertFormat))])
   })
 
-  handle(IPC.revealMetadata, (id) => reveal(record(id)?.metadata?.filePath, 'metadata file'))
+  handle(IPC.revealMetadata, (id) => reveal(record(id)?.metadata?.filePath, 'metadata'))
   handle(IPC.revealTranscript, (id) => reveal(record(id)?.transcript?.filePath, 'transcript'))
-  handle(IPC.revealSessionData, (id) => reveal(record(id)?.dataDir?.dirPath, 'session data folder'))
+  handle(IPC.revealSessionData, (id) => reveal(record(id)?.dataDir?.dirPath, 'sessionData'))
   handle(IPC.openProject, async (id): Promise<ActionResult> => {
     const p = record(id)?.session.projectPath
-    if (!p) return { ok: false, code: 'NOT_FOUND', message: 'Project path is unknown for this session.' }
-    if (!(await isDirectory(p))) return { ok: false, code: 'NOT_FOUND', message: `Project folder does not exist: ${p}` }
+    if (!p) return { ok: false, code: 'NOT_FOUND', ...msg('project.unknownPath') }
+    if (!(await isDirectory(p))) return { ok: false, code: 'NOT_FOUND', ...msg('project.missingFolder', { path: p }) }
     const err = await shell.openPath(p)
-    return err ? { ok: false, code: 'IO_ERROR', message: err } : { ok: true, message: 'Opened project folder.' }
+    return err ? { ok: false, code: 'IO_ERROR', message: err } : { ok: true, ...msg('project.opened') }
   })
 
   handle(IPC.getClaudeProcessStatus, (force) => ctx.processes.getStatus(force === true))
@@ -119,6 +120,6 @@ export function registerIpc(ctx: IpcContext): void {
   handle(IPC.clearCache, async (): Promise<ActionResult> => {
     await ctx.cache.clear()
     await ctx.repo.scan('cache-cleared')
-    return { ok: true, message: 'Cache cleared and sessions rescanned.' }
+    return { ok: true, ...msg('cache.cleared') }
   })
 }

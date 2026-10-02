@@ -7,6 +7,8 @@ import type {
   ProcessStatus
 } from '../../shared/types'
 import { errorMessage, logger } from '../util/logger'
+import { msg, msgText } from '../util/messages'
+import type { MessageRef } from '../../shared/messages'
 import { readLiveSessionRegistry } from './sessionScanner'
 
 export interface RawProcess {
@@ -206,19 +208,17 @@ export class ProcessService {
 export interface GuardResult {
   code: ActionErrorCode
   message: string
+  msg: MessageRef
 }
 
-export const CLAUDE_RUNNING_MESSAGE = 'Close Claude Desktop before modifying session files.'
+export const CLAUDE_RUNNING_MESSAGE = msgText('guard.claudeRunning')
 
 /** Block every Claude file mutation while Claude Desktop runs (or status is unknown). */
 export function globalGuard(status: ProcessStatus): GuardResult | null {
   if (status.error) {
-    return {
-      code: 'CLAUDE_RUNNING',
-      message: `Could not verify whether Claude is running (${status.error}). Use "Refresh process status" and try again.`
-    }
+    return { code: 'CLAUDE_RUNNING', ...msg('guard.statusUnknown', { error: status.error }) }
   }
-  if (status.desktopRunning) return { code: 'CLAUDE_RUNNING', message: CLAUDE_RUNNING_MESSAGE }
+  if (status.desktopRunning) return { code: 'CLAUDE_RUNNING', ...msg('guard.claudeRunning') }
   return null
 }
 
@@ -229,6 +229,6 @@ export function sessionGuard(status: ProcessStatus, sessionUuids: string[]): Gua
   if (!live) return null
   return {
     code: 'SESSION_IN_USE',
-    message: `This session is open in a running Claude Code process (PID ${live.pid}${live.name ? `, "${live.name}"` : ''}). Close it first.`
+    ...(live.name ? msg('guard.sessionInUseNamed', { pid: live.pid, name: live.name }) : msg('guard.sessionInUse', { pid: live.pid }))
   }
 }

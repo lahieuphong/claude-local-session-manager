@@ -2,6 +2,7 @@ import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { RELEASES_URL } from '../src/shared/appIdentity'
 import { compareVersions, detectUpdateMode, UpdateService, type UpdaterLike } from '../src/main/services/updateService'
+import { DEV_FAKE_UPDATE_ENV, devFakeUpdater } from '../src/main/services/devFakeUpdater'
 
 type Listener = (arg: never) => void
 
@@ -127,5 +128,21 @@ describe('portable and development builds', () => {
     expect(await s.check()).toMatchObject({ status: 'unsupported', canCheck: false, canDownload: false, canInstall: false })
     expect(f.calls).toEqual([])
     expect(svc('development', null).getState().status).toBe('unsupported')
+  })
+})
+
+describe('development-only fake updater (UI review)', () => {
+  it('is ignored by packaged builds and invalid versions', () => {
+    expect(devFakeUpdater({ isPackaged: true, env: { [DEV_FAKE_UPDATE_ENV]: '9.9.9' } })).toBeNull()
+    expect(devFakeUpdater({ isPackaged: false, env: {} })).toBeNull()
+    expect(devFakeUpdater({ isPackaged: false, env: { [DEV_FAKE_UPDATE_ENV]: 'latest' } })).toBeNull()
+  })
+
+  it('drives the update UI without network access and never installs anything', async () => {
+    const u = devFakeUpdater({ isPackaged: false, env: { [DEV_FAKE_UPDATE_ENV]: '9.9.9' } })!
+    const s = new UpdateService({ mode: 'installed', currentVersion: '1.1.0', releasesUrl: RELEASES_URL, updater: u, openExternal: async () => undefined })
+    expect(await s.check()).toMatchObject({ status: 'available', latestVersion: '9.9.9', canDownload: true, msg: { key: 'update.available' } })
+    expect(await s.download()).toMatchObject({ status: 'downloaded', canInstall: true })
+    expect(() => u.quitAndInstall(true, true)).not.toThrow()
   })
 })

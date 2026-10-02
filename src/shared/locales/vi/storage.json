@@ -1,0 +1,40 @@
+{
+  "title": "Dung lượng",
+  "lastScan": "Lần quét gần nhất {{time}}",
+  "loading": "Đang tải thống kê dung lượng…",
+  "loadFailed": "Không tải được thống kê dung lượng",
+  "stat": {
+    "totalDisk": "Tổng dung lượng đĩa",
+    "sessions": "Phiên",
+    "active": "Đang hoạt động",
+    "archived": "Đã lưu trữ (Claude)",
+    "hidden": "Ẩn trong trình quản lý",
+    "transcriptOnly": "Chỉ có bản ghi hội thoại",
+    "metadataOrphan": "Chỉ có siêu dữ liệu / mồ côi"
+  },
+  "section": {
+    "breakdown": "Phân bổ dung lượng",
+    "topProjects": "Dự án chiếm nhiều dung lượng nhất",
+    "largestSessions": "Phiên lớn nhất",
+    "lastScan": "Lần quét gần nhất"
+  },
+  "part": {
+    "transcripts": "Bản ghi hội thoại",
+    "sessionData": "Dữ liệu phiên (tác tử phụ, kết quả công cụ)",
+    "other": "Lịch sử tệp, môi trường, siêu dữ liệu"
+  },
+  "sessionsCount_other": "{{count}} phiên",
+  "noProjects": "Không có dự án.",
+  "scan": {
+    "transcripts": "Bản ghi hội thoại",
+    "parsed": "Đã phân tích",
+    "incremental": "Phân tích phần mới",
+    "fromCache": "Từ bộ nhớ đệm",
+    "subagentExcluded": "Nhật ký tác tử phụ bỏ qua",
+    "metadataFiles": "Tệp siêu dữ liệu",
+    "tombstones": "Dấu xóa",
+    "duration": "Thời gian",
+    "ms": "{{value}} ms",
+    "issues_other": "{{count}} vấn đề khi quét"
+  }
+}

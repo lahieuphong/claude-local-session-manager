@@ -1,0 +1,97 @@
+{
+  "title": {
+    "single": "Delete session permanently",
+    "bulk_one": "Delete {{count}} session permanently",
+    "bulk_other": "Delete {{count}} sessions permanently",
+    "dryRunResult": "Dry-run result",
+    "result": "Delete result"
+  },
+  "planId": "Plan {{id}}…",
+  "summary": "{{sessions}} · {{files}} · {{folders}} · {{size}}",
+  "sessionSummary": "{{files}} · {{folders}} · {{size}} ({{bytes}} bytes)",
+  "count": {
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessions",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files",
+    "folders_one": "{{count}} folder",
+    "folders_other": "{{count}} folders"
+  },
+  "building": "Building delete plan…",
+  "wouldBeBlocked": "A real delete would be blocked right now:",
+  "recheck": "Re-check",
+  "blockedSessions_one": "{{count}} session cannot be deleted and is not part of this plan:",
+  "blockedSessions_other": "{{count}} sessions cannot be deleted and are not part of this plan:",
+  "danger": {
+    "title": "This permanently deletes the local files listed below.",
+    "text": "They are not moved to the Recycle Bin and cannot be recovered without your own backup. Only these exact paths are touched, and only if every check still passes at execution time."
+  },
+  "mode": {
+    "safeText": "Validation only: the full check pipeline runs and the exact plan is logged, but no Claude file is modified. To delete for real, arm real deletion in Settings → Deletion safety.",
+    "armedText": "The files below will be permanently deleted. The app returns to Safe Mode right after this delete."
+  },
+  "meta": {
+    "planId": "Plan ID",
+    "hash": "Content hash",
+    "created": "Created",
+    "expires": "Expires"
+  },
+  "confirm": {
+    "type": "Type {{phrase}} to confirm",
+    "typeEither": "Type {{a}} or {{b}} to confirm"
+  },
+  "nothing": "Nothing in this selection can be deleted.",
+  "copyHint": "Copy the exact plan as plain text (English) for independent review",
+  "copied": {
+    "plan": "Delete plan copied to clipboard",
+    "result": "Delete result copied to clipboard"
+  },
+  "action": {
+    "copyPlan": "Copy delete plan",
+    "copyResult": "Copy result",
+    "runDryRun": "Run dry-run validation",
+    "validating": "Validating…",
+    "deleting": "Deleting…"
+  },
+  "itemAction": {
+    "delete-file": "delete file",
+    "delete-directory": "delete folder · {{files}}, {{folders}}",
+    "create-file": "create file",
+    "update-file": "update file",
+    "remove-record": "remove record"
+  },
+  "kind": {
+    "metadata": "Metadata",
+    "transcript": "Transcript",
+    "session-data": "Session data",
+    "subagent-log": "Subagent log",
+    "file-history": "File history",
+    "session-env": "Session env",
+    "tombstone": "Tombstone",
+    "archive-index": "Archive index",
+    "manager-record": "Manager record"
+  },
+  "group": {
+    "willDelete": "Will delete",
+    "willChange": "Will change · Claude Desktop bookkeeping",
+    "managerRecords": "Manager records · this app only",
+    "willNotDelete": "Will not delete"
+  },
+  "outcome": {
+    "deleted": "deleted",
+    "created": "created",
+    "updated": "updated",
+    "missing": "already gone",
+    "failed": "failed",
+    "skipped": "skipped",
+    "dry-run": "validated (dry run)"
+  },
+  "sessionOutcome": {
+    "deleted": "Deleted",
+    "partial": "Partial",
+    "failed": "Failed",
+    "skipped": "Skipped",
+    "dry-run": "Dry run"
+  },
+  "dryRunExplain": "Every target passed validation (approved root, exact shape, canonical path, no link escape, not a workspace) and was logged. Nothing was deleted."
+}
