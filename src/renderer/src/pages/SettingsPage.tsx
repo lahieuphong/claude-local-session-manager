@@ -179,9 +179,33 @@ export function SettingsPage(): ReactElement {
         <SettingRow label={t('settings:debug.label')} hint={t('settings:debug.hint')}>
           <Switch checked={settings?.debugMode ?? false} onChange={(v) => void updateSettings({ debugMode: v })} label={t('settings:debug.label')} />
         </SettingRow>
-        <SettingRow label={t('settings:logs.label')} stacked>
+        <SettingRow label={t('settings:logs.label')} hint={t('settings:logs.hint')} stacked>
           {appInfo && (
             <dl className="kv compact">
+              <dt>{t('settings:distribution.label')}</dt>
+              <dd>{t(`settings:distribution.${appInfo.distribution}`)}</dd>
+              <dt>{t('settings:logs.userHome')}</dt>
+              <dd>
+                <code className="wrap">{appInfo.userHome}</code>
+              </dd>
+              <dt>{t('settings:logs.transcriptRoot')}</dt>
+              <dd>{roots?.projectsRoot ? <code className="wrap">{roots.projectsRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
+              <dt>{t('settings:logs.metadataRoots')}</dt>
+              <dd>
+                {roots && roots.desktopRoots.length > 0 ? (
+                  roots.desktopRoots.map((d) => (
+                    <div key={d.path}>
+                      <code className="wrap">{d.path}</code>
+                    </div>
+                  ))
+                ) : (
+                  <span className="muted">{t('settings:roots.notFound')}</span>
+                )}
+              </dd>
+              <dt>{t('settings:logs.userData')}</dt>
+              <dd>
+                <code className="wrap">{appInfo.userDataPath}</code>
+              </dd>
               <dt>{t('settings:logs.cache')}</dt>
               <dd>
                 <code className="wrap">{appInfo.cachePath}</code>

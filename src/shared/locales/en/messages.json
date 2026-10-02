@@ -146,7 +146,11 @@
     "downloading": "Downloading update…",
     "noDownloaded": "No downloaded update is ready to install.",
     "restarting": "Restarting to install the update…",
-    "openedReleases": "Opened GitHub Releases."
+    "openedReleases": "Opened GitHub Releases.",
+    "storeManaged": "Updates are managed by Microsoft Store.",
+    "openedStore": "Opened Microsoft Store.",
+    "notStoreBuild": "This copy was not installed from Microsoft Store.",
+    "noStoreListing": "No Microsoft Store page is configured for this build."
   },
   "problem": {
     "ambiguousTranscript": "Transcript {{file}} exists in {{count}} project folders; not linked (ambiguous).",

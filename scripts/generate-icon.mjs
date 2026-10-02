@@ -27,17 +27,20 @@ function insideRoundRect(px, py, s) {
   return (px - cx) ** 2 + (py - cy) ** 2 <= r * r
 }
 
-function render(size) {
-  const ss = size <= 32 ? 6 : 4
-  const px = Buffer.alloc(size * size * 4)
-  const scale = DESIGN / size
-  for (let j = 0; j < size; j++) {
-    for (let i = 0; i < size; i++) {
+/** RGBA pixels of a width×height canvas with the mark (markSize px) centered on transparency. */
+function render(width, height = width, markSize = Math.min(width, height)) {
+  const ss = markSize <= 32 ? 6 : 4
+  const px = Buffer.alloc(width * height * 4)
+  const scale = DESIGN / markSize
+  const ox = (width - markSize) / 2
+  const oy = (height - markSize) / 2
+  for (let j = 0; j < height; j++) {
+    for (let i = 0; i < width; i++) {
       let r = 0, g = 0, b = 0, a = 0
       for (let sj = 0; sj < ss; sj++) {
         for (let si = 0; si < ss; si++) {
-          const x = (i + (si + 0.5) / ss) * scale
-          const y = (j + (sj + 0.5) / ss) * scale
+          const x = (i - ox + (si + 0.5) / ss) * scale
+          const y = (j - oy + (sj + 0.5) / ss) * scale
           let cr = 0, cg = 0, cb = 0, ca = 0
           for (const s of SHAPES) {
             if (!insideRoundRect(x, y, s)) continue
@@ -52,7 +55,7 @@ function render(size) {
         }
       }
       const n = ss * ss
-      const o = (j * size + i) * 4
+      const o = (j * width + i) * 4
       const alpha = a / n
       px[o] = alpha ? Math.round(r / n / alpha) : 0
       px[o + 1] = alpha ? Math.round(g / n / alpha) : 0
@@ -81,16 +84,17 @@ function chunk(type, data) {
   crc.writeUInt32BE(crc32(body))
   return Buffer.concat([len, body, crc])
 }
-export function png(size) {
-  const rgba = render(size)
-  const raw = Buffer.alloc((size * 4 + 1) * size)
-  for (let y = 0; y < size; y++) {
-    raw[y * (size * 4 + 1)] = 0
-    rgba.copy(raw, y * (size * 4 + 1) + 1, y * size * 4, (y + 1) * size * 4)
+/** PNG of the mark: square `size`, or a width×height canvas with the mark centered. */
+export function png(width, height = width, markSize = Math.min(width, height)) {
+  const rgba = render(width, height, markSize)
+  const raw = Buffer.alloc((width * 4 + 1) * height)
+  for (let y = 0; y < height; y++) {
+    raw[y * (width * 4 + 1)] = 0
+    rgba.copy(raw, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4)
   }
   const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
   ihdr[8] = 8
   ihdr[9] = 6
   return Buffer.concat([
@@ -124,9 +128,34 @@ export function ico(sizes = ICO_SIZES) {
   return Buffer.concat([header, dir, ...images.map((i) => i.data)])
 }
 
+/**
+ * Size of the mark on a Microsoft Store asset canvas. Small logos use the
+ * whole canvas (the mark has its own rounded tile); tiles keep a margin, as
+ * Windows tile guidance recommends. Never stretched: the mark is always square.
+ */
+export function storeMarkSize(width, height) {
+  if (width === height && width <= 64) return width
+  if (width === height && width === 256) return 256
+  if (width === 71) return 52
+  if (width === 150 && height === 150) return 96
+  if (width === 310 && height === 150) return 96
+  if (width === 310 && height === 310) return 192
+  return Math.round(Math.min(width, height) * 0.64)
+}
+
+export function storeAsset(width, height) {
+  return png(width, height, storeMarkSize(width, height))
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   mkdirSync(outDir, { recursive: true })
   writeFileSync(join(outDir, 'icon.png'), png(512))
   writeFileSync(join(outDir, 'icon.ico'), ico())
   console.log('Wrote build/icon.png and build/icon.ico')
+  // Microsoft Store (AppX) visual assets, picked up from build/appx/ by electron-builder.
+  const { STORE_ASSETS } = await import('./store-config.mjs')
+  const appxDir = join(outDir, 'appx')
+  mkdirSync(appxDir, { recursive: true })
+  for (const [name, [w, h]] of Object.entries(STORE_ASSETS)) writeFileSync(join(appxDir, name), storeAsset(w, h))
+  console.log(`Wrote ${Object.keys(STORE_ASSETS).length} Store assets to build/appx/`)
 }

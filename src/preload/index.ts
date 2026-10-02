@@ -52,6 +52,8 @@ const api: SessionManagerApi = {
   downloadUpdate: () => ipcRenderer.invoke(IPC.downloadUpdate),
   installUpdate: () => ipcRenderer.invoke(IPC.installUpdate),
   openReleasesPage: () => ipcRenderer.invoke(IPC.openReleasesPage),
+  openStoreUpdates: () => ipcRenderer.invoke(IPC.openStoreUpdates),
+  openStoreListing: () => ipcRenderer.invoke(IPC.openStoreListing),
   onUpdateStateChanged: (listener) => {
     const wrapped = (_e: IpcRendererEvent, state: UpdateState): void => listener(state)
     ipcRenderer.on(IPC.updateStateChanged, wrapped)

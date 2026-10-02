@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, Menu, session, shell, type IpcMainInvokeEvent } from 'electron'
+import os from 'node:os'
 import path from 'node:path'
 import { APP_ID, APP_NAME, RELEASES_URL } from '../shared/appIdentity'
 import { IPC } from '../shared/ipc'
@@ -13,7 +14,8 @@ import { ManagerHiddenStore } from './services/managerHiddenStore'
 import { ProcessService } from './services/processService'
 import { resolveInitialMode, SafetyModeController } from './services/safetyMode'
 import type { AppUpdater } from 'electron-updater'
-import { detectUpdateMode, UpdateService, type UpdaterLike } from './services/updateService'
+import { detectUpdateMode, UpdateService, updateModeFor, usesGithubUpdater, type UpdaterLike } from './services/updateService'
+import { readDistribution } from './distribution'
 import { devFakeUpdater } from './services/devFakeUpdater'
 import { SessionRepository } from './services/sessionRepository'
 import { SettingsService } from './services/settingsService'
@@ -28,9 +30,18 @@ app.setName(APP_NAME)
 if (process.env.CLAUDE_SESSION_MANAGER_USER_DATA) {
   app.setPath('userData', path.resolve(process.env.CLAUDE_SESSION_MANAGER_USER_DATA))
 }
+// github | store | development, from the packaged metadata (see src/shared/distribution.ts).
+const distribution = readDistribution({
+  appPath: app.getAppPath(),
+  isPackaged: app.isPackaged,
+  windowsStore: process.windowsStore === true,
+  env: process.env
+})
 // Same ID the installer writes into the shortcuts, so the running window, the
-// Start Menu entry and taskbar pins are one app across upgrades.
-if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
+// Start Menu entry and taskbar pins are one app across upgrades. A Store
+// package gets its ID from the package identity instead; overriding it would
+// split the taskbar/Start entries.
+if (process.platform === 'win32' && distribution.channel !== 'store') app.setAppUserModelId(APP_ID)
 
 let mainWindow: BrowserWindow | null = null
 
@@ -69,9 +80,14 @@ async function start(): Promise<void> {
     cachePath,
     logPath,
     electronVersion: process.versions.electron,
-    systemLanguages: systemLanguages()
+    systemLanguages: systemLanguages(),
+    distribution: distribution.channel,
+    storeListingAvailable: distribution.storeProductId != null,
+    userHome: os.homedir()
   }
-  logger.info(`${APP_NAME} ${appInfo.version} starting (dryRun=${initialMode.dryRun}, packaged=${app.isPackaged})`)
+  logger.info(
+    `${APP_NAME} ${appInfo.version} starting (dryRun=${initialMode.dryRun}, packaged=${app.isPackaged}, distribution=${distribution.channel})`
+  )
   if (initialMode.notice) logger.warn(initialMode.notice)
 
   const settings = new SettingsService(path.join(userData, 'settings.json'))
@@ -118,14 +134,17 @@ async function start(): Promise<void> {
     }
   })
 
-  // Updates (GitHub Releases). electron-updater is loaded only in packaged builds.
-  // Development only: a fake updater to review the update UI (ignored by packaged builds).
-  const fakeUpdater = devFakeUpdater({ isPackaged: app.isPackaged, env: process.env })
+  // Updates. GitHub channel: electron-updater + GitHub Releases (packaged builds
+  // only). Store channel: the Store manages updates; electron-updater is never
+  // loaded. Development: no updater (a fake one can be enabled to review the UI).
+  const fakeUpdater = distribution.channel === 'store' ? null : devFakeUpdater({ isPackaged: app.isPackaged, env: process.env })
   const updateMode = fakeUpdater
     ? 'installed'
-    : detectUpdateMode({ isPackaged: app.isPackaged, execPath: process.execPath, productName: APP_NAME, env: process.env })
+    : updateModeFor(distribution.channel, () =>
+        detectUpdateMode({ isPackaged: app.isPackaged, execPath: process.execPath, productName: APP_NAME, env: process.env })
+      )
   let updater: UpdaterLike | null = fakeUpdater
-  if (updateMode !== 'development' && !fakeUpdater) {
+  if (usesGithubUpdater(updateMode) && !fakeUpdater) {
     try {
       // electron-updater exposes autoUpdater through a getter, which a dynamic
       // import from this CommonJS bundle places under `default`.
@@ -151,7 +170,8 @@ async function start(): Promise<void> {
     currentVersion: app.getVersion(),
     releasesUrl: RELEASES_URL,
     updater,
-    openExternal: (url) => shell.openExternal(url)
+    openExternal: (url) => shell.openExternal(url),
+    storeProductId: distribution.storeProductId
   })
   updates.on('changed', (state: UpdateState) => mainWindow?.webContents.send(IPC.updateStateChanged, state))
   logger.info(`Update mode: ${updateMode}`)
@@ -188,8 +208,9 @@ async function start(): Promise<void> {
   Menu.setApplicationMenu(null)
   createWindow(settings, uiLocale, logPath)
 
-  // Non-blocking update check a little after startup (never delays the window).
-  if (updateMode !== 'development') {
+  // Non-blocking GitHub update check a little after startup (never delays the window).
+  // Only the GitHub channel checks; Store builds are updated by the Store.
+  if (usesGithubUpdater(updateMode) && updater) {
     setTimeout(() => void updates.check('startup'), 8000).unref?.()
   }
 

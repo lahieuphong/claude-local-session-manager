@@ -1,0 +1,83 @@
+# Microsoft Store package (manual). Builds the AppX for a MANUAL Partner Center
+# upload and keeps it as a workflow artifact. It never publishes anything:
+# no GitHub Release, no Store submission, no Partner Center/Azure credentials.
+#
+# Identity: the Partner Center values come from store/identity.json (filled in) or from
+# repository *variables* (Settings → Secrets and variables → Actions →
+# Variables): STORE_IDENTITY_NAME, STORE_PUBLISHER, STORE_PUBLISHER_DISPLAY_NAME,
+# STORE_DISPLAY_NAME, STORE_PRODUCT_ID. They are not secrets.
+# Without them the Store step fails with the list of values to copy.
+#
+# The GitHub Setup/Portable release workflow (release.yml) is separate and unchanged.
+name: Microsoft Store package (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_package:
+        description: 'Build the LOCAL TEST package instead (fake identity, never for submission)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  store:
+    name: Build Microsoft Store package
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Test
+        run: yarn test
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Build
+        run: yarn build
+
+      - name: Store package (Partner Center identity)
+        if: ${{ !inputs.test_package }}
+        env:
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+          STORE_DISPLAY_NAME: ${{ vars.STORE_DISPLAY_NAME }}
+          STORE_PRODUCT_ID: ${{ vars.STORE_PRODUCT_ID }}
+          STORE_ID: ${{ vars.STORE_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: yarn dist:store --skip-build
+
+      - name: Store package (local test identity)
+        if: ${{ inputs.test_package }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: yarn dist:store:test --skip-build
+
+      - name: Upload Store package
+        uses: actions/upload-artifact@v4
+        with:
+          name: microsoft-store-package-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            dist/store/*.appx
+            dist/store/AppxManifest.xml
+            dist/store/manifest-review.txt
+            dist/store/SHA256SUMS.txt
+            dist/store-test/*.appx
+            dist/store-test/AppxManifest.xml
+            dist/store-test/manifest-review.txt
+            dist/store-test/SHA256SUMS.txt

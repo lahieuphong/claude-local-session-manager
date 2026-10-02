@@ -5,6 +5,7 @@ import type { ActionResult, UpdateMode, UpdateState, UpdateStatus } from '../../
 import { errorMessage, logger } from '../util/logger'
 import { msg } from '../util/messages'
 import type { MessageRef } from '../../shared/messages'
+import { STORE_UPDATES_URI, storeProductPageUri, type DistributionChannel } from '../../shared/distribution'
 
 /**
  * The part of electron-updater's AppUpdater this app uses. Injected so the
@@ -43,6 +44,23 @@ export function detectUpdateMode(opts: {
   return exists(uninstaller) ? 'installed' : 'portable'
 }
 
+/**
+ * Update mode per distribution channel. The Store channel never uses the
+ * GitHub updater (the Store installs updates; running the NSIS Setup over a
+ * Store package would be wrong); development never updates.
+ */
+export function updateModeFor(channel: DistributionChannel, detectGithubMode: () => UpdateMode): UpdateMode {
+  if (channel === 'store') return 'store'
+  if (channel === 'development') return 'development'
+  const mode = detectGithubMode()
+  return mode === 'store' ? 'portable' : mode
+}
+
+/** Only these modes load electron-updater and check GitHub Releases. */
+export function usesGithubUpdater(mode: UpdateMode): boolean {
+  return mode === 'installed' || mode === 'portable'
+}
+
 /** Strict MAJOR.MINOR.PATCH comparison (pre-release suffixes are not used by this project). */
 export function compareVersions(a: string, b: string): number {
   const pa = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(a.trim())
@@ -71,9 +89,11 @@ export interface UpdateServiceOptions {
   mode: UpdateMode
   currentVersion: string
   releasesUrl: string
-  /** null in development (no app-update.yml). */
+  /** null in development (no app-update.yml) and always null for the Store channel. */
   updater: UpdaterLike | null
   openExternal(url: string): Promise<void>
+  /** Store builds only: the real Microsoft Store product ID, once it exists. */
+  storeProductId?: string | null
 }
 
 /**
@@ -96,6 +116,12 @@ export class UpdateService extends EventEmitter {
   constructor(private readonly opts: UpdateServiceOptions) {
     super()
     const u = opts.updater
+    if (opts.mode === 'store') {
+      // Store-managed: the GitHub updater is never wired up, even if one was passed.
+      this.status = 'store-managed'
+      this.message = msg('update.storeManaged')
+      return
+    }
     if (opts.mode === 'development' || !u) {
       this.status = 'unsupported'
       this.message = msg(opts.mode === 'development' ? 'update.devOnly' : 'update.updaterMissing')
@@ -117,7 +143,7 @@ export class UpdateService extends EventEmitter {
 
   getState(): UpdateState {
     const mode = this.opts.mode
-    const supported = mode !== 'development' && !!this.opts.updater
+    const supported = usesGithubUpdater(mode) && !!this.opts.updater
     return {
       mode,
       status: this.status,
@@ -129,14 +155,13 @@ export class UpdateService extends EventEmitter {
       msg: this.message?.msg,
       canCheck: supported && !['checking', 'downloading'].includes(this.status),
       canDownload: mode === 'installed' && this.status === 'available',
-      canInstall: mode === 'installed' && this.status === 'downloaded',
-      releasesUrl: this.opts.releasesUrl
+      canInstall: mode === 'installed' && this.status === 'downloaded'
     }
   }
 
   async check(trigger: 'startup' | 'manual' = 'manual'): Promise<UpdateState> {
     const u = this.opts.updater
-    if (!u || this.opts.mode === 'development') return this.getState()
+    if (!u || !usesGithubUpdater(this.opts.mode)) return this.getState()
     if (this.busy || this.status === 'downloading' || this.status === 'downloaded') return this.getState()
     this.busy = true
     this.set({ status: 'checking', message: undefined })
@@ -171,6 +196,7 @@ export class UpdateService extends EventEmitter {
 
   async download(): Promise<UpdateState> {
     const u = this.opts.updater
+    if (this.opts.mode === 'store') return this.getState()
     if (!u || this.opts.mode !== 'installed') {
       this.set({ message: msg('update.cannotSelfUpdate') })
       return this.getState()
@@ -191,6 +217,7 @@ export class UpdateService extends EventEmitter {
   /** Only after an explicit user click, only in the installed app, only when downloaded. */
   install(): ActionResult {
     const u = this.opts.updater
+    if (this.opts.mode === 'store') return { ok: false, code: 'NOT_SUPPORTED', ...msg('update.storeManaged') }
     if (!u || this.opts.mode !== 'installed' || this.status !== 'downloaded') {
       return { ok: false, code: 'NOT_SUPPORTED', ...msg('update.noDownloaded') }
     }
@@ -204,6 +231,21 @@ export class UpdateService extends EventEmitter {
   async openReleasesPage(): Promise<ActionResult> {
     await this.opts.openExternal(this.opts.releasesUrl)
     return { ok: true, ...msg('update.openedReleases') }
+  }
+
+  /** Store builds: the Store's own "Downloads and updates" page (official ms-windows-store URI). */
+  async openStoreUpdates(): Promise<ActionResult> {
+    if (this.opts.mode !== 'store') return { ok: false, code: 'NOT_SUPPORTED', ...msg('update.notStoreBuild') }
+    await this.opts.openExternal(STORE_UPDATES_URI)
+    return { ok: true, ...msg('update.openedStore') }
+  }
+
+  /** Store builds with a real product ID only; otherwise there is nothing to open. */
+  async openStoreListing(): Promise<ActionResult> {
+    const uri = this.opts.mode === 'store' ? storeProductPageUri(this.opts.storeProductId) : null
+    if (!uri) return { ok: false, code: 'NOT_SUPPORTED', ...msg('update.noStoreListing') }
+    await this.opts.openExternal(uri)
+    return { ok: true, ...msg('update.openedStore') }
   }
 
   private set(patch: Partial<{ status: UpdateStatus; latestVersion: string; progressPercent: number; message: Message | undefined }>): void {

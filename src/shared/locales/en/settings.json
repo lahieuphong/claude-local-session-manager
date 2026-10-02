@@ -66,6 +66,23 @@
     "cache": "Cache",
     "logFile": "Log file",
     "show": "Show log",
-    "empty": "(empty)"
+    "empty": "(empty)",
+    "hint": "Local paths for troubleshooting. They are only shown here and never sent anywhere.",
+    "userHome": "User home",
+    "transcriptRoot": "Claude transcript root",
+    "metadataRoots": "Claude metadata roots",
+    "userData": "App data (userData)"
+  },
+  "distribution": {
+    "label": "Distribution",
+    "github": "GitHub",
+    "store": "Microsoft Store",
+    "development": "Development"
+  },
+  "updatesSource": {
+    "label": "Updates",
+    "github": "GitHub Releases",
+    "store": "Managed by Microsoft Store",
+    "development": "Disabled in development builds"
   }
 }

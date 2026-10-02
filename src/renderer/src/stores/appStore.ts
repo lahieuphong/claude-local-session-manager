@@ -454,6 +454,16 @@ export async function openReleasesPage(): Promise<void> {
   }
 }
 
+/** Store builds: open the Store's updates page or (if configured) the app's Store page. */
+export async function openMicrosoftStore(target: 'updates' | 'listing'): Promise<void> {
+  try {
+    const r = target === 'listing' ? await api().openStoreListing() : await api().openStoreUpdates()
+    if (!r.ok) reportResult(r)
+  } catch (err) {
+    toast('error', { text: errText(err) })
+  }
+}
+
 export async function clearCache(): Promise<void> {
   const r = await withBusy(() => api().clearCache())
   if (r) reportResult(r)

@@ -14,19 +14,24 @@
     "error": "Kiểm tra cập nhật thất bại",
     "unsupported": "Không thể tự động kiểm tra cập nhật",
     "unsupportedDev": "Bản phát triển không kiểm tra cập nhật",
-    "noRelease": "Chưa có bản phát hành nào trên GitHub"
+    "noRelease": "Chưa có bản phát hành nào trên GitHub",
+    "storeManaged": "Cập nhật do Microsoft Store quản lý"
   },
   "mode": {
     "installed": "Bản cài đặt (Setup)",
     "portable": "Bản chạy trực tiếp (Portable)",
+    "store": "Microsoft Store",
     "development": "Bản phát triển"
   },
   "action": {
     "check": "Kiểm tra cập nhật",
     "download": "Tải bản cập nhật",
     "install": "Khởi động lại và cài đặt",
-    "openReleases": "Mở GitHub Releases"
+    "openReleases": "Mở GitHub Releases",
+    "openStore": "Mở Microsoft Store",
+    "viewInStore": "Xem trên Microsoft Store"
   },
+  "storeNote": "Bản này được cài từ Microsoft Store. Store sẽ tự tải và cài phiên bản mới; ứng dụng không bao giờ chạy bộ cài từ GitHub.",
   "portableNote": "Bản Portable không bao giờ được tự động thay thế. Hãy tải bản Setup (khuyên dùng) hoặc bản Portable mới từ GitHub Releases.",
   "confirm": {
     "title": "Cài đặt bản cập nhật?",

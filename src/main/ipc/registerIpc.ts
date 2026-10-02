@@ -116,6 +116,9 @@ export function registerIpc(ctx: IpcContext): void {
   handle(IPC.downloadUpdate, () => ctx.updates.download())
   handle(IPC.installUpdate, () => ctx.updates.install())
   handle(IPC.openReleasesPage, () => ctx.updates.openReleasesPage())
+  // Store: argument-free too; the ms-windows-store URIs are fixed in the main process.
+  handle(IPC.openStoreUpdates, () => ctx.updates.openStoreUpdates())
+  handle(IPC.openStoreListing, () => ctx.updates.openStoreListing())
 
   handle(IPC.clearCache, async (): Promise<ActionResult> => {
     await ctx.cache.clear()

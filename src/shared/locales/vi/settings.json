@@ -63,6 +63,23 @@
     "cache": "Bộ nhớ đệm",
     "logFile": "Tệp nhật ký",
     "show": "Xem nhật ký",
-    "empty": "(trống)"
+    "empty": "(trống)",
+    "hint": "Đường dẫn trên máy để xử lý sự cố. Chỉ hiển thị ở đây, không gửi đi đâu.",
+    "userHome": "Thư mục người dùng",
+    "transcriptRoot": "Thư mục bản ghi hội thoại Claude",
+    "metadataRoots": "Thư mục siêu dữ liệu Claude",
+    "userData": "Dữ liệu ứng dụng (userData)"
+  },
+  "distribution": {
+    "label": "Kênh phân phối",
+    "github": "GitHub",
+    "store": "Microsoft Store",
+    "development": "Bản phát triển"
+  },
+  "updatesSource": {
+    "label": "Cập nhật",
+    "github": "GitHub Releases",
+    "store": "Do Microsoft Store quản lý",
+    "development": "Tắt ở bản phát triển"
   }
 }

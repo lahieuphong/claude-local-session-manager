@@ -21,6 +21,13 @@ files:
 asar: true
 npmRebuild: false
 
+# Distribution channel marker, read at runtime (src/shared/distribution.ts).
+# These GitHub builds (Setup + Portable) use electron-updater + GitHub Releases.
+# The Microsoft Store build (`yarn dist:store`, scripts/dist-store.mjs) overrides
+# it with "store", which never loads the GitHub updater.
+extraMetadata:
+  distributionChannel: github
+
 win:
   target:
     - target: nsis

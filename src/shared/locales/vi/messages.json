@@ -141,7 +141,11 @@
     "downloading": "Đang tải bản cập nhật…",
     "noDownloaded": "Chưa có bản cập nhật nào được tải sẵn để cài.",
     "restarting": "Đang khởi động lại để cài bản cập nhật…",
-    "openedReleases": "Đã mở GitHub Releases."
+    "openedReleases": "Đã mở GitHub Releases.",
+    "storeManaged": "Cập nhật do Microsoft Store quản lý.",
+    "openedStore": "Đã mở Microsoft Store.",
+    "notStoreBuild": "Bản này không được cài từ Microsoft Store.",
+    "noStoreListing": "Bản này chưa có trang Microsoft Store."
   },
   "problem": {
     "ambiguousTranscript": "Bản ghi hội thoại {{file}} có trong {{count}} thư mục dự án; không liên kết (không rõ ràng).",

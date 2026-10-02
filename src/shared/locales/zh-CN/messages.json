@@ -141,7 +141,11 @@
     "downloading": "正在下载更新…",
     "noDownloaded": "没有已下载并可安装的更新。",
     "restarting": "正在重启以安装更新…",
-    "openedReleases": "已打开 GitHub Releases。"
+    "openedReleases": "已打开 GitHub Releases。",
+    "storeManaged": "更新由 Microsoft Store 管理。",
+    "openedStore": "已打开 Microsoft Store。",
+    "notStoreBuild": "此副本不是从 Microsoft Store 安装的。",
+    "noStoreListing": "此版本尚未配置 Microsoft Store 页面。"
   },
   "problem": {
     "ambiguousTranscript": "会话记录 {{file}} 存在于 {{count}} 个项目文件夹中；未关联（不明确）。",

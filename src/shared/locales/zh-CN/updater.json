@@ -14,19 +14,24 @@
     "error": "检查更新失败",
     "unsupported": "无法自动检查更新",
     "unsupportedDev": "开发版本已禁用更新检查",
-    "noRelease": "GitHub 上尚未发布任何版本"
+    "noRelease": "GitHub 上尚未发布任何版本",
+    "storeManaged": "更新由 Microsoft Store 管理"
   },
   "mode": {
     "installed": "安装版 (Setup)",
     "portable": "便携版 (Portable)",
+    "store": "Microsoft Store",
     "development": "开发版本"
   },
   "action": {
     "check": "检查更新",
     "download": "下载更新",
     "install": "重启并安装",
-    "openReleases": "打开 GitHub Releases"
+    "openReleases": "打开 GitHub Releases",
+    "openStore": "打开 Microsoft Store",
+    "viewInStore": "在 Microsoft Store 中查看"
   },
+  "storeNote": "此副本是从 Microsoft Store 安装的。新版本由 Store 下载并安装；本应用从不运行 GitHub 安装程序。",
   "portableNote": "便携版永远不会被自动替换。请从 GitHub Releases 下载新的 Setup（推荐）或便携版。",
   "confirm": {
     "title": "安装更新？",

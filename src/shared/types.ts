@@ -7,6 +7,7 @@
 
 import type { MessageRef } from './messages'
 import type { SupportedLocale } from './locale'
+import type { DistributionChannel } from './distribution'
 
 export type { MessageRef }
 
@@ -488,6 +489,12 @@ export interface AppInfo {
   electronVersion: string
   /** OS preferred languages (app.getPreferredSystemLanguages), used when no language is saved. */
   systemLanguages: string[]
+  /** github | store | development (from the packaged build metadata, never the file name). */
+  distribution: DistributionChannel
+  /** True only when a real Microsoft Store product ID was built into a Store package. */
+  storeListingAvailable: boolean
+  /** os.homedir(), for the local diagnostics view only. */
+  userHome: string
 }
 
 export interface LogEntry {
@@ -536,11 +543,22 @@ export interface ArmResult extends ActionResult {
 /**
  * installed  = NSIS Setup install (can download + install updates)
  * portable   = Portable exe or an unpacked build (notify only, manual download)
+ * store      = Microsoft Store package: updates are managed by the Store; the
+ *              GitHub updater is never initialized
  * development = not packaged (`yarn dev`): update checks are disabled
  */
-export type UpdateMode = 'installed' | 'portable' | 'development'
+export type UpdateMode = 'installed' | 'portable' | 'store' | 'development'
 
-export type UpdateStatus = 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'downloaded' | 'error' | 'unsupported'
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'up-to-date'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
+  | 'unsupported'
+  | 'store-managed'
 
 export interface UpdateState {
   mode: UpdateMode
@@ -554,5 +572,4 @@ export interface UpdateState {
   canCheck: boolean
   canDownload: boolean
   canInstall: boolean
-  releasesUrl: string
 }

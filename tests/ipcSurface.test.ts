@@ -19,13 +19,15 @@ describe('renderer API surface', () => {
   })
 
   it('update actions take no arguments (no URL, path or command can be passed)', () => {
-    for (const name of ['getUpdateState', 'checkForUpdates', 'downloadUpdate', 'installUpdate', 'openReleasesPage']) {
+    for (const name of ['getUpdateState', 'checkForUpdates', 'downloadUpdate', 'installUpdate', 'openReleasesPage', 'openStoreUpdates', 'openStoreListing']) {
       expect(preload).toMatch(new RegExp(`${name}: \\(\\) => ipcRenderer\\.invoke\\(IPC\\.${name}\\)`))
     }
     expect(register).toMatch(/handle\(IPC\.checkForUpdates, \(\) =>/)
     expect(register).toMatch(/handle\(IPC\.downloadUpdate, \(\) =>/)
     expect(register).toMatch(/handle\(IPC\.installUpdate, \(\) =>/)
     expect(register).toMatch(/handle\(IPC\.openReleasesPage, \(\) =>/)
+    expect(register).toMatch(/handle\(IPC\.openStoreUpdates, \(\) =>/)
+    expect(register).toMatch(/handle\(IPC\.openStoreListing, \(\) =>/)
   })
 
   it('there is no IPC to persist or set the dry-run mode directly', () => {

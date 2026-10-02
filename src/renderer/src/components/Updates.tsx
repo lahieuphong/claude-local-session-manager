@@ -2,11 +2,12 @@ import { useId, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { UpdateState } from '../../../shared/types'
 import { useFmt } from '../i18n'
-import { checkForUpdates, downloadUpdate, installUpdate, openReleasesPage, setView, useAppState } from '../stores/appStore'
+import { checkForUpdates, downloadUpdate, installUpdate, openMicrosoftStore, openReleasesPage, setView, useAppState } from '../stores/appStore'
 import { AppMark, IconDownload, IconExternal, IconRefresh, IconRestore } from './Icons'
 import { Modal } from './Modal'
 
 function statusKey(u: UpdateState): string {
+  if (u.status === 'store-managed') return 'updater:status.storeManaged'
   if (u.status === 'unsupported') return u.mode === 'development' ? 'updater:status.unsupportedDev' : 'updater:status.unsupported'
   return `updater:status.${u.status}`
 }
@@ -16,12 +17,15 @@ export function UpdatesSection(): ReactElement {
   const { t } = useTranslation()
   const fmt = useFmt()
   const u = useAppState((s) => s.updates)
+  const appInfo = useAppState((s) => s.appInfo)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const titleId = useId()
   if (!u) return <div className="muted">{t('updater:loading')}</div>
 
+  const store = u.mode === 'store'
   // The status line already says it; show the main-process detail only when it adds something.
-  const detail = u.message && !['checking', 'up-to-date', 'available', 'downloading', 'downloaded'].includes(u.status) ? fmt.msg(u.msg, u.message) : null
+  const detail =
+    u.message && !['checking', 'up-to-date', 'available', 'downloading', 'downloaded', 'store-managed'].includes(u.status) ? fmt.msg(u.msg, u.message) : null
   const noRelease = u.status === 'up-to-date' && u.msg?.key === 'update.noRelease'
 
   return (
@@ -55,10 +59,24 @@ export function UpdatesSection(): ReactElement {
           </>
         )}
       </dl>
+      {store && <p className="hint">{t('updater:storeNote')}</p>}
       <div className="row-actions">
-        <button className="btn" disabled={!u.canCheck} onClick={() => void checkForUpdates()}>
-          <IconRefresh size={14} className={u.status === 'checking' ? 'spin' : ''} /> {t('updater:action.check')}
-        </button>
+        {store ? (
+          <>
+            <button className="btn" onClick={() => void openMicrosoftStore('updates')}>
+              <IconExternal size={14} /> {t('updater:action.openStore')}
+            </button>
+            {appInfo?.storeListingAvailable && (
+              <button className="btn" onClick={() => void openMicrosoftStore('listing')}>
+                <IconExternal size={14} /> {t('updater:action.viewInStore')}
+              </button>
+            )}
+          </>
+        ) : (
+          <button className="btn" disabled={!u.canCheck} onClick={() => void checkForUpdates()}>
+            <IconRefresh size={14} className={u.status === 'checking' ? 'spin' : ''} /> {t('updater:action.check')}
+          </button>
+        )}
         {u.canDownload && (
           <button className="btn primary" onClick={() => void downloadUpdate()}>
             <IconDownload size={14} /> {t('updater:action.download')}
@@ -69,7 +87,7 @@ export function UpdatesSection(): ReactElement {
             <IconRestore size={14} /> {t('updater:action.install')}
           </button>
         )}
-        {u.mode !== 'installed' && u.status === 'available' && (
+        {u.mode === 'portable' && u.status === 'available' && (
           <button className="btn" onClick={() => void openReleasesPage()}>
             <IconExternal size={14} /> {t('updater:action.openReleases')}
           </button>
@@ -116,6 +134,14 @@ export function AboutSection(): ReactElement {
         <div className="about-name">{t('common:app.name')}</div>
         <div className="about-version mono">{t('updater:version', { version: appInfo?.version ?? '…' })}</div>
         <p className="hint">{t('common:app.disclaimer')}</p>
+        {appInfo && (
+          <dl className="kv compact about-meta">
+            <dt>{t('settings:distribution.label')}</dt>
+            <dd>{t(`settings:distribution.${appInfo.distribution}`)}</dd>
+            <dt>{t('settings:updatesSource.label')}</dt>
+            <dd>{t(`settings:updatesSource.${appInfo.distribution}`)}</dd>
+          </dl>
+        )}
         <p className="hint mono">
           Electron {appInfo?.electronVersion} · {appInfo?.platform}
         </p>

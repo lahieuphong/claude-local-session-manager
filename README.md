@@ -85,6 +85,21 @@ are used only if they are already installed on the machine.
 
 ## Installation
 
+There are three Windows options. Each is a **separate distribution channel**
+with its own updates; they share one version number.
+
+| Option | Updates |
+|---|---|
+| **Microsoft Store** — recommended once it is published ([listing](https://apps.microsoft.com/detail/9N5XNN8H1TSZ), live after certification) | Delivered by the Microsoft Store |
+| **GitHub Setup** — `…-Setup-X.Y.Z-x64.exe` | From GitHub Releases, inside the app (Settings → Updates) |
+| **Portable** (advanced) — `…-Portable-X.Y.Z-x64.exe` | Manual: download the new release |
+
+Settings → About shows which channel a copy came from (*Distribution: GitHub /
+Microsoft Store / Development*). The Store version never uses the GitHub
+updater. Store packaging and submission are described in
+[docs/MICROSOFT_STORE.md](docs/MICROSOFT_STORE.md). The Store product exists
+in Partner Center; the listing goes live only after Microsoft certifies a submission.
+
 Download from **[GitHub Releases](https://github.com/lahieuphong/claude-local-session-manager/releases)**:
 
 | File | Use it when |
@@ -188,6 +203,10 @@ yarn i18n:check # translation completeness (en / vi / zh-CN)
 yarn typecheck  # TypeScript, main + renderer
 yarn build      # production bundles into out/
 yarn dist       # clean dist/, build, then Setup + Portable into dist/ (never publishes)
+                # (= yarn dist:github; the GitHub channel)
+yarn store:check      # Microsoft Store: validate identity, version mapping and assets
+yarn dist:store       # Microsoft Store package into dist/store/ (needs the Partner Center identity)
+yarn dist:store:test  # local TEST Store package (fake identity, never submit) into dist/store-test/
 yarn clean      # remove build output only: dist/, release/, out/
 ```
 
@@ -437,9 +456,11 @@ src/
     locale.ts        supported UI languages + OS language detection
     locales/         translations: <language>/<namespace>.json
     messages.ts      main-process message keys (translated in the UI)
+    distribution.ts  github | store | development channel (from packaged metadata)
   main/              Electron main process (all filesystem access)
     index.ts         window, security hardening, service wiring
     windowGuard.ts   never leave the window hidden (fallback show, load/crash dialog)
+    distribution.ts  reads the channel marker + Store product ID at startup
     ipc/             typed IPC handlers (validate IDs, never accept paths)
     security/        pathValidator.ts – allowed roots + per-kind path rules
     services/
@@ -454,7 +475,7 @@ src/
       processService.ts    Claude Desktop / Claude Code process detection
       exportService.ts     JSONL / JSON / Markdown export (copies only)
       safetyMode.ts        Safe Mode / REAL DELETE ARMED (memory only)
-      updateService.ts     GitHub Releases updates (installed / portable / dev)
+      updateService.ts     GitHub Releases updates (installed / portable / dev); Store-managed mode
       cacheService.ts      parsed-transcript index in userData
       watchService.ts      throttled fs.watch / interval refresh
   preload/           contextBridge API (named session-ID operations only)
@@ -463,7 +484,10 @@ src/
     src/styles/      design tokens (colors, type, spacing, motion)
 tests/               Vitest safety tests (temp fixture trees only)
 fixtures/            sample metadata + transcripts (incl. Vietnamese text)
-scripts/             icon generator, release helpers, i18n-check.mjs
+scripts/             icon + Store asset generator, release helpers, i18n-check.mjs,
+                     dist-store.mjs / store-config.mjs / store-inspect.mjs (Microsoft Store)
+store/               Store identity, manifest template, listing drafts, privacy policy
+docs/                MICROSOFT_STORE.md
 ```
 
 Security model:
@@ -488,6 +512,13 @@ Vietnamese) is never split mid-character. Summaries are cached in
 (never inside `.claude`), keyed by path + size + mtime. When a transcript
 only grew, just the new bytes are parsed. On a machine with ~1 GB of
 transcripts, a cold scan takes about 1.6 s and a cached rescan about 50 ms.
+
+## Privacy
+
+No telemetry, analytics or crash reporting. Session data is read and changed
+only on your computer; nothing is uploaded. GitHub builds contact GitHub
+Releases for updates; the Microsoft Store build never contacts GitHub. Details:
+[store/privacy.md](store/privacy.md).
 
 ## Troubleshooting
 

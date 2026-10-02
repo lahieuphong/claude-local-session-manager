@@ -61,6 +61,8 @@ export const IPC = {
   downloadUpdate: 'updates:download',
   installUpdate: 'updates:install',
   openReleasesPage: 'updates:open-releases',
+  openStoreUpdates: 'updates:open-store-updates',
+  openStoreListing: 'updates:open-store-listing',
   updateStateChanged: 'updates:changed',
   /** main → renderer push */
   sessionsChanged: 'sessions:changed',
@@ -128,6 +130,10 @@ export interface SessionManagerApi {
   installUpdate(): Promise<ActionResult>
   /** Opens the fixed GitHub Releases page of this project. */
   openReleasesPage(): Promise<ActionResult>
+  /** Store builds: the Microsoft Store "Downloads and updates" page (fixed URI in main). */
+  openStoreUpdates(): Promise<ActionResult>
+  /** Store builds with a real product ID: the app's Store page (fixed URI in main). */
+  openStoreListing(): Promise<ActionResult>
   onUpdateStateChanged(listener: (state: UpdateState) => void): () => void
 
   onSessionsChanged(listener: (snapshot: ScanSnapshot) => void): () => void
