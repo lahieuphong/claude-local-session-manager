@@ -1,9 +1,9 @@
-import { app, BrowserWindow, dialog, Menu, session, shell, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, type IpcMainInvokeEvent } from 'electron'
 import os from 'node:os'
 import path from 'node:path'
 import { APP_ID, APP_NAME, RELEASES_URL } from '../shared/appIdentity'
 import { IPC } from '../shared/ipc'
-import type { AppInfo, ExportFormat, SafetyModeState, UpdateState } from '../shared/types'
+import type { AppInfo, AppSettings, ExportFormat, SafetyModeState, UpdateState } from '../shared/types'
 import { registerIpc } from './ipc/registerIpc'
 import { ArchiveService } from './services/archiveService'
 import { ScanCache } from './services/cacheService'
@@ -24,11 +24,18 @@ import { errorMessage, logger } from './util/logger'
 import { localText } from './util/messages'
 import { resolveLocale, type SupportedLocale } from '../shared/locale'
 import { guardWindow } from './windowGuard'
+import { buildScreenshotFixture } from './screenshot/fixtures'
+import { createScreenshotHandlers, screenshotAppInfo } from './screenshot/screenshotIpc'
+import { resolveScreenshotMode, type ScreenshotModeConfig } from './screenshot/screenshotMode'
 
 app.setName(APP_NAME)
+// Store screenshot mode: static demo data, development runs only (null when packaged).
+const screenshotMode = resolveScreenshotMode({ isPackaged: app.isPackaged, env: process.env })
 // Separate app data (and single-instance lock) for test/verification runs.
 if (process.env.CLAUDE_SESSION_MANAGER_USER_DATA) {
   app.setPath('userData', path.resolve(process.env.CLAUDE_SESSION_MANAGER_USER_DATA))
+} else if (screenshotMode) {
+  app.setPath('userData', path.join(os.tmpdir(), 'claude-local-session-manager-screenshots'))
 }
 // github | store | development, from the packaged metadata (see src/shared/distribution.ts).
 const distribution = readDistribution({
@@ -64,6 +71,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 async function start(): Promise<void> {
+  if (screenshotMode) return startScreenshotMode(screenshotMode)
   const userData = app.getPath('userData')
   const logPath = path.join(userData, 'logs', 'main.log')
   await logger.setLogFile(logPath)
@@ -221,6 +229,36 @@ async function start(): Promise<void> {
   })
 }
 
+/**
+ * Store screenshot mode (development only, see screenshot/screenshotMode.ts).
+ * None of the real services is created: no Claude data or process is read,
+ * no settings, cache or log file is written, and every IPC call is answered
+ * from the static fixture. Deletion stays in Safe Mode and cannot be armed.
+ */
+function startScreenshotMode(config: ScreenshotModeConfig): void {
+  logger.warn('STORE SCREENSHOT MODE: showing static demo data only (development build).')
+  const appInfo = screenshotAppInfo({
+    name: APP_NAME,
+    version: app.getVersion(),
+    electronVersion: process.versions.electron,
+    platform: `${process.platform} ${process.arch}`,
+    locale: config.locale
+  })
+  // Whole minutes, so relative times in the UI do not change between captures.
+  const handlers = createScreenshotHandlers({ appInfo, fixture: buildScreenshotFixture(Math.floor(Date.now() / 60_000) * 60_000) })
+  for (const [channel, fn] of Object.entries(handlers)) {
+    ipcMain.handle(channel, async (event, ...args) => {
+      if (!isTrustedSender(event)) throw new Error('Rejected IPC call from an untrusted frame')
+      return fn(...args)
+    })
+  }
+  hardenSession()
+  Menu.setApplicationMenu(null)
+  const settings = { get: () => handlers[IPC.getSettings]() as AppSettings }
+  createWindow(settings, () => resolveLocale(config.locale, appInfo.systemLanguages), appInfo.logPath)
+  app.on('window-all-closed', () => app.quit())
+}
+
 /** OS language preferences (first-run UI language), with the Chromium locale as a fallback. */
 function systemLanguages(): string[] {
   try {
@@ -255,7 +293,7 @@ function hardenSession(): void {
   })
 }
 
-function createWindow(settings: SettingsService, uiLocale: () => SupportedLocale, logPath: string): void {
+function createWindow(settings: Pick<SettingsService, 'get'>, uiLocale: () => SupportedLocale, logPath: string): void {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,

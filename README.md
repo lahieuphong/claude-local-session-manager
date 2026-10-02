@@ -207,6 +207,8 @@ yarn dist       # clean dist/, build, then Setup + Portable into dist/ (never pu
 yarn store:check      # Microsoft Store: validate identity, version mapping and assets
 yarn dist:store       # Microsoft Store package into dist/store/ (needs the Partner Center identity)
 yarn dist:store:test  # local TEST Store package (fake identity, never submit) into dist/store-test/
+yarn store:screenshots      # Store listing screenshots (demo data only) into store/listing-assets/
+yarn store:validate-assets  # check the Store listing images (sizes, PNG, all languages)
 yarn clean      # remove build output only: dist/, release/, out/
 ```
 
@@ -447,6 +449,12 @@ Without a backup the data cannot be recovered.
 - **Test isolation.** `CLAUDE_SESSION_MANAGER_USER_DATA=<folder>` runs the app with
   a separate data folder (and single-instance lock), e.g. to verify a build
   while another instance is open.
+- **Store screenshot mode.** `CLAUDE_SESSION_MANAGER_SCREENSHOT_MODE=true`
+  (development builds only; a packaged build ignores it) shows static demo data
+  for the Microsoft Store screenshots (`yarn store:screenshots`). It reads no
+  Claude data, starts none of the real services, refuses every action that would
+  change, delete, export or open something, and cannot leave Safe Mode. See
+  [`store/listing-assets/README.md`](store/listing-assets/README.md).
 
 ## Architecture
 
@@ -463,6 +471,7 @@ src/
     distribution.ts  reads the channel marker + Store product ID at startup
     ipc/             typed IPC handlers (validate IDs, never accept paths)
     security/        pathValidator.ts – allowed roots + per-kind path rules
+    screenshot/      Store screenshot mode (dev only): static demo data + read-only IPC
     services/
       claudeDiscovery.ts   find Claude roots from env vars
       metadataParser.ts    local_*.json, archive index, tombstones
@@ -485,8 +494,9 @@ src/
 tests/               Vitest safety tests (temp fixture trees only)
 fixtures/            sample metadata + transcripts (incl. Vietnamese text)
 scripts/             icon + Store asset generator, release helpers, i18n-check.mjs,
-                     dist-store.mjs / store-config.mjs / store-inspect.mjs (Microsoft Store)
-store/               Store identity, manifest template, listing drafts, privacy policy
+                     dist-store.mjs / store-config.mjs / store-inspect.mjs (Microsoft Store),
+                     store-screenshots.mjs / store-listing-assets.mjs (Store listing images)
+store/               Store identity, manifest template, listing drafts + images, privacy policy
 docs/                MICROSOFT_STORE.md
 ```
 

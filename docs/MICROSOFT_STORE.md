@@ -214,8 +214,12 @@ a higher version than the previous one, so bump `package.json` (the usual
    Partner Center checks the identity against the reservation here.
    Device families: Windows 10/11 Desktop.
 6. **Store listings:** use the drafts in [`store/listing/`](../store/listing/)
-   (English, Tiếng Việt, 简体中文) and screenshots (see
-   [`store/screenshots/README.md`](../store/screenshots/README.md)).
+   (English, Tiếng Việt, 简体中文) and the images in
+   [`store/listing-assets/`](../store/listing-assets/): 4 screenshots per
+   language, the 300×300 app tile icon and the captions. Its
+   [`README.md`](../store/listing-assets/README.md) lists which Partner Center
+   image fields to fill and which to leave blank (poster/box art, trailers,
+   super hero art, Xbox images).
 7. **Submission options → Restricted capabilities:** paste the justifications
    for `runFullTrust` and `unvirtualizedResources` from
    [`store/certification-notes.md`](../store/certification-notes.md), which also

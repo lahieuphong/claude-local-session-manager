@@ -30,6 +30,8 @@
     "dist:store": "node scripts/dist-store.mjs",
     "dist:store:test": "node scripts/dist-store.mjs --test",
     "store:check": "node scripts/store-check.mjs",
+    "store:screenshots": "node scripts/store-screenshots.mjs",
+    "store:validate-assets": "node scripts/store-listing-assets.mjs",
     "version:patch": "node scripts/version.mjs patch",
     "version:minor": "node scripts/version.mjs minor",
     "version:major": "node scripts/version.mjs major",

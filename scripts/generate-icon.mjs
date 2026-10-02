@@ -147,6 +147,18 @@ export function storeAsset(width, height) {
   return png(width, height, storeMarkSize(width, height))
 }
 
+/**
+ * Partner Center → Store listing → "1:1 App tile icon (300 x 300 pixels)",
+ * shown on Store pages instead of the package logo. The same mark on
+ * transparency with a small margin (272 px), so the Store's own framing never
+ * clips its rounded tile. Uploaded by hand; not part of the package.
+ */
+export const STORE_LISTING_TILE = { file: join('store', 'listing-assets', 'common', 'app-tile-300x300.png'), size: 300, markSize: 272 }
+
+export function storeListingTile() {
+  return png(STORE_LISTING_TILE.size, STORE_LISTING_TILE.size, STORE_LISTING_TILE.markSize)
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   mkdirSync(outDir, { recursive: true })
   writeFileSync(join(outDir, 'icon.png'), png(512))
@@ -158,4 +170,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   mkdirSync(appxDir, { recursive: true })
   for (const [name, [w, h]] of Object.entries(STORE_ASSETS)) writeFileSync(join(appxDir, name), storeAsset(w, h))
   console.log(`Wrote ${Object.keys(STORE_ASSETS).length} Store assets to build/appx/`)
+  const tile = join(root, STORE_LISTING_TILE.file)
+  mkdirSync(dirname(tile), { recursive: true })
+  writeFileSync(tile, storeListingTile())
+  console.log(`Wrote ${STORE_LISTING_TILE.file} (Store listing app tile icon)`)
 }
