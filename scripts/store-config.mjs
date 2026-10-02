@@ -2,6 +2,7 @@
 // electron-builder overrides. Pure functions (no build side effects) so they
 // are unit-tested in tests/store.test.ts and reused by dist-store.mjs,
 // store-check.mjs and the store-build workflow.
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -68,6 +69,29 @@ export function toStorePackageVersion(semver) {
   if (parts.some((p) => p > 65535)) throw new Error(`Version parts must be <= 65535: ${semver}`)
   if (parts[0] === 0) throw new Error(`Store package major version must be at least 1: ${semver}`)
   return `${parts.join('.')}.0`
+}
+
+/**
+ * Windows publisher ID: SHA-256 of the Publisher string (UTF-16LE), first 8
+ * bytes, as 13 Crockford base32 characters. Derived, never configured.
+ */
+export function publisherId(publisher) {
+  const hash = createHash('sha256').update(Buffer.from(String(publisher), 'utf16le')).digest()
+  const bits = [...hash.subarray(0, 8)].map((b) => b.toString(2).padStart(8, '0')).join('') + '0'
+  const alphabet = '0123456789abcdefghjkmnpqrstvwxyz'
+  let id = ''
+  for (let i = 0; i < 65; i += 5) id += alphabet[parseInt(bits.slice(i, i + 5), 2)]
+  return id
+}
+
+/**
+ * Package family name as Windows/Partner Center compute it from the package
+ * Identity Name + Publisher. Compare it with Partner Center → Product
+ * identity → Package/Identity/PackageFamilyName before uploading: a single
+ * wrong character in the Publisher changes it.
+ */
+export function packageFamilyName(identityName, publisher) {
+  return `${identityName}_${publisherId(publisher)}`
 }
 
 /** Read store/identity.json, then apply non-empty STORE_* environment overrides. */

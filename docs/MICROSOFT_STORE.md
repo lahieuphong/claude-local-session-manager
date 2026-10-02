@@ -83,7 +83,7 @@ Partner Center. Certification is decided by Microsoft and is **not guaranteed**.
 ---
 
 **This product (configured in `store/identity.json`):** Identity Name `LaHieuPhong.ClaudeLocalSessionManager`,
-Publisher `CN=CA5468D0-A735-4CDB-9E0A-A0CDD47D1EA5`, Publisher display name
+Publisher `CN=CA5468D0-A735-4CDB-9F0A-A0CDD47D1EA5`, Publisher display name
 `La Hieu Phong`, Store ID `9N5XNN8H1TSZ`
 (<https://apps.microsoft.com/detail/9N5XNN8H1TSZ>, live after certification).
 

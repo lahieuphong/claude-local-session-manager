@@ -9,6 +9,8 @@ import {
   TEST_IDENTITY,
   identityHelp,
   loadStoreIdentity,
+  packageFamilyName,
+  publisherId,
   storeArtifactName,
   storeBuilderConfig,
   toStorePackageVersion,
@@ -272,6 +274,17 @@ describe('Store identity (Partner Center values)', () => {
     }
   })
 
+  it('derives the package family name exactly like Windows / Partner Center', () => {
+    // Vectors from Partner Center's package validation for this product.
+    expect(packageFamilyName('LaHieuPhong.ClaudeLocalSessionManager', 'CN=CA5468D0-A735-4CDB-9F0A-A0CDD47D1EA5')).toBe(
+      'LaHieuPhong.ClaudeLocalSessionManager_yh0wwvsc09w1r'
+    )
+    // The earlier typo (9E0A instead of 9F0A) produced a different (rejected) family name.
+    expect(publisherId('CN=CA5468D0-A735-4CDB-9E0A-A0CDD47D1EA5')).toBe('tvw9vj8xdm9st')
+    // Well-known reference: Microsoft's own publisher ID.
+    expect(publisherId('CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US')).toBe('8wekyb3d8bbwe')
+  })
+
   it('the checked-in identity is the Partner Center identity (or empty), never a placeholder', () => {
     const committed = JSON.parse(read('store/identity.json')) as StoreIdentity
     for (const key of ['identityName', 'publisher', 'publisherDisplayName', 'storeProductId'] as const) {
@@ -284,11 +297,13 @@ describe('Store identity (Partner Center values)', () => {
       // Values from Partner Center → Product identity for this product.
       expect(committed).toMatchObject({
         identityName: 'LaHieuPhong.ClaudeLocalSessionManager',
-        publisher: 'CN=CA5468D0-A735-4CDB-9E0A-A0CDD47D1EA5',
+        publisher: 'CN=CA5468D0-A735-4CDB-9F0A-A0CDD47D1EA5',
         publisherDisplayName: 'La Hieu Phong',
         storeProductId: '9N5XNN8H1TSZ'
       })
       expect(validateStoreIdentity(committed)).toEqual([])
+      // Partner Center → Product identity → Package/Identity/PackageFamilyName.
+      expect(packageFamilyName(committed.identityName, committed.publisher)).toBe('LaHieuPhong.ClaudeLocalSessionManager_yh0wwvsc09w1r')
     }
   })
 })

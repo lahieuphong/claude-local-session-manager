@@ -18,6 +18,8 @@ export const STORE_ASSETS: Record<string, [number, number]>
 export const IDENTITY_FIELDS: Record<keyof StoreIdentity, { env: string; aliases?: string[]; partnerCenter: string }>
 export const TEST_IDENTITY: Readonly<StoreIdentity>
 export function toStorePackageVersion(semver: string): string
+export function publisherId(publisher: string): string
+export function packageFamilyName(identityName: string, publisher: string): string
 export function loadStoreIdentity(opts?: { root?: string; env?: Record<string, string | undefined> }): StoreIdentity
 export function validateStoreIdentity(identity: StoreIdentity): string[]
 export function identityHelp(errors: string[]): string

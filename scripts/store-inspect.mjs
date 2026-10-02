@@ -2,7 +2,7 @@
 // dist-store.mjs and tests). No dependencies: lists the zip central directory
 // and checks the manifest text with explicit expectations.
 import { readFileSync } from 'node:fs'
-import { STORE_APPLICATION_ID, STORE_LANGUAGE_MAP } from './store-config.mjs'
+import { STORE_APPLICATION_ID, STORE_LANGUAGE_MAP, packageFamilyName } from './store-config.mjs'
 
 /** File names inside a zip/appx (central directory only; nothing is extracted). */
 export function listZipEntries(buffer) {
@@ -63,6 +63,9 @@ export function reviewManifest(xml, { identity, storeVersion, assets = [], entri
     Languages: languages.join(', '),
     FileSystemWriteVirtualization: text(xml, 'desktop6:FileSystemWriteVirtualization') ?? '(not set)'
   }
+  const name = fields['Identity Name']
+  const publisher = fields.Publisher
+  fields['PackageFamilyName (derived)'] = name && publisher ? packageFamilyName(name, publisher) : undefined
   const checks = [
     ['Identity Name matches the configured identity', fields['Identity Name'] === identity.identityName],
     ['Publisher matches the configured identity', fields.Publisher === identity.publisher],

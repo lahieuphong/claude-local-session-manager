@@ -22,6 +22,7 @@ import {
   TEST_IDENTITY,
   identityHelp,
   loadStoreIdentity,
+  packageFamilyName,
   storeBuilderConfig,
   toStorePackageVersion,
   validateStoreIdentity
@@ -65,7 +66,8 @@ mkdirSync(outDir, { recursive: true })
 console.log(`\nMicrosoft Store package ${test ? '(LOCAL TEST — not for submission) ' : ''}v${pkg.version} → package version ${storeVersion}`)
 console.log(`  Identity Name : ${identity.identityName}`)
 console.log(`  Publisher     : ${identity.publisher}`)
-console.log(`  Display name  : ${identity.displayName}\n`)
+console.log(`  Display name  : ${identity.displayName}`)
+console.log(`  Family name   : ${packageFamilyName(identity.identityName, identity.publisher)} (derived)\n`)
 
 // 3. Compile (same bundles as the GitHub build; the channel marker comes from packaging metadata).
 if (!skipBuild) execSync('yarn build', { cwd: ROOT, stdio: 'inherit', shell: true })
@@ -113,4 +115,5 @@ writeFileSync(path.join(outDir, 'SHA256SUMS.txt'), `${sha}  ${path.basename(arti
 console.log('\n' + review.text)
 if (!review.ok) fail('Manifest review FAILED (see above). Do not submit this package.')
 console.log(`\nPackage: ${path.relative(ROOT, artifact)}`)
+console.log(`Package family name: ${review.fields['PackageFamilyName (derived)']} — compare with Partner Center → Product identity before uploading.`)
 console.log(test ? 'LOCAL TEST package: fake identity, never submit it to the Store.' : 'Ready to upload in Partner Center → Submission → Packages (not uploaded by this script).')
