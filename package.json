@@ -1,7 +1,7 @@
 {
   "name": "claude-local-session-manager",
   "productName": "Claude Local Session Manager",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Unofficial local session manager for Claude Code/Desktop on Windows.",
   "author": "Claude Local Session Manager contributors",
   "license": "MIT",

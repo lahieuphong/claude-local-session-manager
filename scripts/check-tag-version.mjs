@@ -12,6 +12,12 @@ const tag = process.argv[2] ?? process.env.GITHUB_REF_NAME ?? ''
 if (!tagMatchesVersion(tag, version)) {
   console.error(`Tag/version mismatch: tag "${tag}" but package.json version is ${version} (expected tag ${versionToTag(version)}).`)
   console.error('Refusing to build release artifacts with the wrong version.')
+  console.error('')
+  console.error('Fix: commit package.json with the version you want, then point the tag at that commit, e.g.')
+  console.error(`  git tag -d ${tag} && git push origin :refs/tags/${tag}`)
+  console.error('  (set package.json "version", commit, push main)')
+  console.error(`  git tag ${tag} && git push origin ${tag}`)
+  console.error('Tip: `yarn release:patch|minor|major` bumps, commits and tags in one step so they always match.')
   process.exit(1)
 }
 console.log(`OK: tag ${tag} matches package.json version ${version}`)
