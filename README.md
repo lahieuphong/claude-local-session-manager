@@ -194,7 +194,9 @@ yarn clean      # remove build output only: dist/, release/, out/
 `yarn dist` produces in `dist/`: the Setup exe + `.blockmap`, the Portable
 exe, `latest.yml` (updater metadata) and `win-unpacked/` (unpacked app for
 debugging). `yarn icon` regenerates `build/icon.ico` / `build/icon.png` (a
-neutral glyph, not a Claude logo).
+neutral glyph, not a Claude logo) from `src/shared/appMark.json`, the same
+shapes and colors the app draws in its sidebar, so the window, taskbar,
+installer and in-app mark always match (a test fails if they drift).
 
 ## Versioning and releases
 

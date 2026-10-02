@@ -1,23 +1,21 @@
 // Generates build/icon.png (512px) and build/icon.ico (16–256px) for the app.
 // Pure Node (zlib only) so the build has no native image dependencies.
 // The mark is a neutral "stacked session cards" glyph, not a Claude logo.
+// Shapes and colors come from src/shared/appMark.json, which the in-app
+// AppMark also draws, so the window/installer icon and the UI always match
+// (tests/appIcon.test.ts fails if build/ is out of date: run `yarn icon`).
 import { deflateSync } from 'node:zlib'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(root, 'build')
 
-// Shapes in a 64×64 design space, painted in order.
-const SHAPES = [
-  { x: 2, y: 2, w: 60, h: 60, r: 14, color: '#2f3a4d' },
-  { x: 4, y: 4, w: 56, h: 56, r: 12, color: '#1b2230' },
-  { x: 16, y: 14, w: 32, h: 8, r: 3, color: '#3c4a63' },
-  { x: 13, y: 26, w: 38, h: 10, r: 3.5, color: '#56709c' },
-  { x: 10, y: 40, w: 44, h: 12, r: 4, color: '#7aa2ff' },
-  { x: 16, y: 44.5, w: 18, h: 3, r: 1.5, color: '#0d1320', alpha: 0.75 }
-]
+const MARK = JSON.parse(readFileSync(join(root, 'src', 'shared', 'appMark.json'), 'utf8'))
+// Shapes in the mark's design space (64×64), painted in order.
+const SHAPES = MARK.shapes
+const DESIGN = MARK.size
 
 const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16))
 
@@ -32,7 +30,7 @@ function insideRoundRect(px, py, s) {
 function render(size) {
   const ss = size <= 32 ? 6 : 4
   const px = Buffer.alloc(size * size * 4)
-  const scale = 64 / size
+  const scale = DESIGN / size
   for (let j = 0; j < size; j++) {
     for (let i = 0; i < size; i++) {
       let r = 0, g = 0, b = 0, a = 0
@@ -83,7 +81,7 @@ function chunk(type, data) {
   crc.writeUInt32BE(crc32(body))
   return Buffer.concat([len, body, crc])
 }
-function png(size) {
+export function png(size) {
   const rgba = render(size)
   const raw = Buffer.alloc((size * 4 + 1) * size)
   for (let y = 0; y < size; y++) {
@@ -103,7 +101,9 @@ function png(size) {
   ])
 }
 
-function ico(sizes) {
+export const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
+
+export function ico(sizes = ICO_SIZES) {
   const images = sizes.map((s) => ({ size: s, data: png(s) }))
   const header = Buffer.alloc(6)
   header.writeUInt16LE(0, 0)
@@ -124,7 +124,9 @@ function ico(sizes) {
   return Buffer.concat([header, dir, ...images.map((i) => i.data)])
 }
 
-mkdirSync(outDir, { recursive: true })
-writeFileSync(join(outDir, 'icon.png'), png(512))
-writeFileSync(join(outDir, 'icon.ico'), ico([16, 24, 32, 48, 64, 128, 256]))
-console.log('Wrote build/icon.png and build/icon.ico')
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  mkdirSync(outDir, { recursive: true })
+  writeFileSync(join(outDir, 'icon.png'), png(512))
+  writeFileSync(join(outDir, 'icon.ico'), ico())
+  console.log('Wrote build/icon.png and build/icon.ico')
+}
