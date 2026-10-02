@@ -1165,10 +1165,25 @@ html[lang='zh-CN'] .group-label {
   color: var(--text-muted);
   border-style: dashed;
 }
-.badge-live {
+/*
+ * Live Claude Code process state: one color each, never green (a live
+ * session cannot be deleted). Running = Claude orange with a pulsing dot,
+ * idle = blue, in use (waiting for input/permission) = amber.
+ */
+.badge-live.live-running {
+  color: var(--accent-hover);
+  border-color: var(--accent-border);
+  background: var(--accent-subtle);
+}
+.badge-live.live-idle {
   color: var(--info);
   border-color: var(--info-border);
   background: var(--info-subtle);
+}
+.badge-live.live-in-use {
+  color: var(--warning);
+  border-color: var(--warning-border);
+  background: var(--warning-subtle);
 }
 .live-dot {
   width: 6px;
@@ -1177,6 +1192,7 @@ html[lang='zh-CN'] .group-label {
   background: currentColor;
 }
 .live-running .live-dot {
+  box-shadow: 0 0 6px currentColor;
   animation: pulse 1.6s var(--ease) infinite;
 }
 @keyframes pulse {
