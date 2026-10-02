@@ -155,5 +155,12 @@
   },
   "scan": {
     "projectsRootMissing": "未找到 Claude Code 项目文件夹 (~/.claude/projects)。"
+  },
+  "window": {
+    "loadFailed": "无法加载应用窗口。",
+    "rendererGone": "应用窗口意外停止。",
+    "problemDetail": "{{reason}}\n\n请重试。如果问题持续出现，请从 GitHub Releases 重新下载应用（便携版：只启动一次并等待窗口打开）。\n\n日志文件：{{log}}",
+    "retry": "重试",
+    "quit": "退出"
   }
 }

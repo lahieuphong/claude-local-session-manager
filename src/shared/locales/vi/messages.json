@@ -155,5 +155,12 @@
   },
   "scan": {
     "projectsRootMissing": "Không tìm thấy thư mục dự án của Claude Code (~/.claude/projects)."
+  },
+  "window": {
+    "loadFailed": "Không tải được cửa sổ ứng dụng.",
+    "rendererGone": "Cửa sổ ứng dụng bị dừng bất ngờ.",
+    "problemDetail": "{{reason}}\n\nHãy thử lại. Nếu vẫn lỗi, hãy tải lại ứng dụng từ GitHub Releases (bản Portable: chỉ mở một lần và đợi cửa sổ hiện lên).\n\nTệp nhật ký: {{log}}",
+    "retry": "Thử lại",
+    "quit": "Thoát"
   }
 }

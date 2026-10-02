@@ -20,7 +20,8 @@ import { SettingsService } from './services/settingsService'
 import { WatchService } from './services/watchService'
 import { errorMessage, logger } from './util/logger'
 import { localText } from './util/messages'
-import { resolveLocale } from '../shared/locale'
+import { resolveLocale, type SupportedLocale } from '../shared/locale'
+import { guardWindow } from './windowGuard'
 
 app.setName(APP_NAME)
 // Separate app data (and single-instance lock) for test/verification runs.
@@ -39,6 +40,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
+      // A window that never became visible would otherwise block every new launch.
+      if (!mainWindow.isVisible()) mainWindow.show()
       mainWindow.focus()
     }
   })
@@ -74,6 +77,8 @@ async function start(): Promise<void> {
   const settings = new SettingsService(path.join(userData, 'settings.json'))
   await settings.load()
   logger.debugEnabled = settings.get().debugMode
+  /** UI language for the few texts the main process shows itself (native dialogs). */
+  const uiLocale = (): SupportedLocale => resolveLocale(settings.get().language, appInfo.systemLanguages)
 
   const cache = new ScanCache(cachePath)
   await cache.load()
@@ -106,7 +111,7 @@ async function start(): Promise<void> {
       return r.canceled || !r.filePath ? null : r.filePath
     },
     chooseDirectory: async () => {
-      const title = localText(resolveLocale(settings.get().language, appInfo.systemLanguages), 'export.chooseFolder')
+      const title = localText(uiLocale(), 'export.chooseFolder')
       const opts = { title, properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'> }
       const r = mainWindow ? await dialog.showOpenDialog(mainWindow, opts) : await dialog.showOpenDialog(opts)
       return r.canceled || !r.filePaths[0] ? null : r.filePaths[0]
@@ -181,7 +186,7 @@ async function start(): Promise<void> {
 
   hardenSession()
   Menu.setApplicationMenu(null)
-  createWindow(settings)
+  createWindow(settings, uiLocale, logPath)
 
   // Non-blocking update check a little after startup (never delays the window).
   if (updateMode !== 'development') {
@@ -229,7 +234,7 @@ function hardenSession(): void {
   })
 }
 
-function createWindow(settings: SettingsService): void {
+function createWindow(settings: SettingsService, uiLocale: () => SupportedLocale, logPath: string): void {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -250,9 +255,37 @@ function createWindow(settings: SettingsService): void {
     }
   })
 
-  mainWindow.once('ready-to-show', () => mainWindow?.show())
-  mainWindow.on('closed', () => {
+  const win = mainWindow
+  win.on('closed', () => {
     mainWindow = null
+  })
+  // Never leave the window hidden: show it on ready-to-show, after a fallback
+  // delay, or when the page fails to load / the renderer dies (with a dialog).
+  let dialogOpen = false
+  guardWindow(win, {
+    log: logger,
+    onProblem: (problem) => {
+      if (dialogOpen || win.isDestroyed()) return
+      dialogOpen = true
+      const reason = problem.kind === 'load-failed' ? `${problem.description} (${problem.code})` : `${problem.reason} (${problem.exitCode})`
+      const locale = uiLocale()
+      void dialog
+        .showMessageBox(win, {
+          type: 'error',
+          title: APP_NAME,
+          message: localText(locale, problem.kind === 'load-failed' ? 'window.loadFailed' : 'window.rendererGone'),
+          detail: localText(locale, 'window.problemDetail', { reason, log: logPath }),
+          buttons: [localText(locale, 'window.retry'), localText(locale, 'window.quit')],
+          defaultId: 0,
+          cancelId: 1,
+          noLink: true
+        })
+        .then(({ response }) => {
+          dialogOpen = false
+          if (response === 1) app.quit()
+          else if (!win.isDestroyed()) loadRenderer(win)
+        })
+    }
   })
 
   // DevTools only in development or when debug mode is enabled.
@@ -264,7 +297,12 @@ function createWindow(settings: SettingsService): void {
     }
   })
 
+  loadRenderer(win)
+}
+
+function loadRenderer(win: BrowserWindow): void {
   const dev = rendererUrl()
-  if (dev) void mainWindow.loadURL(dev)
-  else void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+  // A failed load is reported through 'did-fail-load' (see guardWindow); only log the rejection here.
+  const loading = dev ? win.loadURL(dev) : win.loadFile(path.join(__dirname, '../renderer/index.html'))
+  loading.catch((err) => logger.warn(`Renderer load rejected: ${errorMessage(err)}`))
 }

@@ -437,6 +437,7 @@ src/
     messages.ts      main-process message keys (translated in the UI)
   main/              Electron main process (all filesystem access)
     index.ts         window, security hardening, service wiring
+    windowGuard.ts   never leave the window hidden (fallback show, load/crash dialog)
     ipc/             typed IPC handlers (validate IDs, never accept paths)
     security/        pathValidator.ts – allowed roots + per-kind path rules
     services/
@@ -496,6 +497,12 @@ transcripts, a cold scan takes about 1.6 s and a cached rescan about 50 ms.
 - **"Claude Desktop is running" even after closing the window**: Claude
   Desktop keeps running in the system tray. Quit it from the tray icon, then
   click **Re-check**.
+- **The window does not appear / "Could not load the app window"**: the app
+  always shows its window (at the latest after 5 seconds) and explains a
+  failed load with **Try again / Quit**. This usually means an incomplete
+  Portable extraction (for example after starting the Portable exe twice
+  quickly): quit, start it once, or download it again. Starting the app
+  again also brings back a window that was hidden.
 - **A session shows "In use"**: it is open in VS Code / a terminal running
   Claude Code. Close that session (or the IDE window) first.
 - Logs: `%APPDATA%\Claude Local Session Manager\logs\main.log` (Settings → Show log).

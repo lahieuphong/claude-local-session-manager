@@ -160,5 +160,12 @@
   },
   "scan": {
     "projectsRootMissing": "Claude Code projects folder (~/.claude/projects) was not found."
+  },
+  "window": {
+    "loadFailed": "The app window could not be loaded.",
+    "rendererGone": "The app window stopped unexpectedly.",
+    "problemDetail": "{{reason}}\n\nTry again. If this keeps happening, download the app again from GitHub Releases (Portable: start it only once and wait for it to open).\n\nLog file: {{log}}",
+    "retry": "Try again",
+    "quit": "Quit"
   }
 }
