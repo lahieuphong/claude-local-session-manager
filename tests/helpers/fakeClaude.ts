@@ -5,10 +5,12 @@ import type { DiscoveryEnv } from '../../src/main/services/claudeDiscovery'
 import { isInsideOrEqual } from '../../src/main/security/pathValidator'
 import { ScanCache } from '../../src/main/services/cacheService'
 import { ManagerHiddenStore } from '../../src/main/services/managerHiddenStore'
+import { packagingPolicy, type PackagingPolicy } from '../../src/main/services/packagingPolicy'
 import { ProcessService, type RawProcess } from '../../src/main/services/processService'
 import { SessionRepository } from '../../src/main/services/sessionRepository'
 import { ArchiveService } from '../../src/main/services/archiveService'
 import { DeleteService } from '../../src/main/services/deleteService'
+import type { DistributionChannel } from '../../src/shared/distribution'
 import type { DeleteResult } from '../../src/shared/types'
 
 export const FIXTURES = path.resolve(__dirname, '../../fixtures')
@@ -150,6 +152,8 @@ export interface Harness {
   cache: ScanCache
   archive: ArchiveService
   deleter: DeleteService
+  /** What this build may write, for the fake profile (see packagingPolicy.ts). */
+  policy: PackagingPolicy
   /** Processes the stubbed process query returns (mutable). */
   processes: RawProcess[]
 }
@@ -168,6 +172,11 @@ export function createHarness(
     recentWriteMs?: number
     decodeFolderNames?: boolean
     planTtlMs?: number
+    /** Distribution channel of the build under test; 'store' = the Microsoft Store edition. Default: GitHub. */
+    channel?: DistributionChannel
+    /** Replaces the policy derived from `channel` (e.g. one that changes between plan and execution). */
+    policy?: PackagingPolicy
+    appName?: string
   } = {}
 ): Harness {
   const processes: RawProcess[] = []
@@ -181,18 +190,22 @@ export function createHarness(
     processService,
     decodeFolderNames: opts.decodeFolderNames ?? false
   })
+  const policy = opts.policy ?? packagingPolicy(opts.channel ?? 'github', fake.env)
   return {
     repo,
     processService,
     hidden,
     cache,
     processes,
-    archive: new ArchiveService(repo, processService, hidden, opts.dryRun ?? false),
+    policy,
+    archive: new ArchiveService(repo, processService, hidden, opts.dryRun ?? false, policy),
     deleter: new DeleteService(repo, processService, {
       dryRun: opts.dryRun ?? false,
       onRealDeleteExecuted: opts.onRealDeleteExecuted,
       recentWriteMs: opts.recentWriteMs ?? 0,
-      planTtlMs: opts.planTtlMs
+      planTtlMs: opts.planTtlMs,
+      policy,
+      appName: opts.appName
     })
   }
 }

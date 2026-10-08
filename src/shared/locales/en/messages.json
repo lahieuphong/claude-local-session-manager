@@ -125,6 +125,11 @@
     "manyWithErrors": "Exported {{count}} file(s) to {{path}}; {{errors}} error(s).",
     "chooseFolder": "Choose export folder"
   },
+  "store": {
+    "archiveUnavailable": "Archive and Restore are not available in the Microsoft Store edition. Windows Store packaging isolates certain AppData writes, so Claude Desktop would not see the change. Nothing was changed.",
+    "deleteUnavailable": "Not available in the Microsoft Store edition: deleting this session needs changes to files under AppData (Claude Desktop's session data), and Windows Store packaging isolates certain AppData writes. Nothing was changed.",
+    "exportIntoAppData": "The Microsoft Store edition cannot export into AppData ({{path}}): Windows Store packaging would redirect the files to a private location. Choose another folder, for example Documents."
+  },
   "safety": {
     "typeExactly": "Type exactly {{phrase}} to arm real deletion.",
     "notArmed": "Real deletion was not armed: {{reason}}",
@@ -169,6 +174,7 @@
     "loadFailed": "The app window could not be loaded.",
     "rendererGone": "The app window stopped unexpectedly.",
     "problemDetail": "{{reason}}\n\nTry again. If this keeps happening, download the app again from GitHub Releases (Portable: start it only once and wait for it to open).\n\nLog file: {{log}}",
+    "problemDetailStore": "{{reason}}\n\nTry again. If this keeps happening, reinstall the app from Microsoft Store.\n\nLog file: {{log}}",
     "retry": "Try again",
     "quit": "Quit"
   }

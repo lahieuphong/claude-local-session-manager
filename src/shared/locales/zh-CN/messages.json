@@ -120,6 +120,11 @@
     "manyWithErrors": "已导出 {{count}} 个文件到 {{path}}；{{errors}} 个错误。",
     "chooseFolder": "选择导出文件夹"
   },
+  "store": {
+    "archiveUnavailable": "Microsoft Store 版不提供归档和恢复。Windows 应用商店的打包机制会隔离部分 AppData 写入，Claude Desktop 看不到这些更改。未更改任何内容。",
+    "deleteUnavailable": "Microsoft Store 版无法执行此操作：删除该会话需要更改 AppData 中的文件（Claude Desktop 的会话数据），而 Windows 应用商店的打包机制会隔离部分 AppData 写入。未更改任何内容。",
+    "exportIntoAppData": "Microsoft Store 版无法导出到 AppData（{{path}}）：Windows 应用商店的打包机制会把文件重定向到私有位置。请选择其他文件夹，例如“文档”。"
+  },
   "safety": {
     "typeExactly": "请准确输入 {{phrase}} 以启用永久删除。",
     "notArmed": "未启用永久删除：{{reason}}",
@@ -164,6 +169,7 @@
     "loadFailed": "无法加载应用窗口。",
     "rendererGone": "应用窗口意外停止。",
     "problemDetail": "{{reason}}\n\n请重试。如果问题持续出现，请从 GitHub Releases 重新下载应用（便携版：只启动一次并等待窗口打开）。\n\n日志文件：{{log}}",
+    "problemDetailStore": "{{reason}}\n\n请重试。如果问题持续出现，请从 Microsoft Store 重新安装应用。\n\n日志文件：{{log}}",
     "retry": "重试",
     "quit": "退出"
   }

@@ -1,8 +1,8 @@
 {
-  "$comment": "Microsoft Store package identity, copied from Partner Center → Claude Local Session Manager → Product management → Product identity. Not secrets. Environment variables (STORE_IDENTITY_NAME, STORE_PUBLISHER, STORE_PUBLISHER_DISPLAY_NAME, STORE_DISPLAY_NAME, STORE_PRODUCT_ID or STORE_ID) override this file. See docs/MICROSOFT_STORE.md.",
+  "$comment": "Microsoft Store package identity, copied from Partner Center → the product → Product management → Product identity. Not secrets. displayName is the Store-facing name reserved in Partner Center (must equal STORE_APP_NAME in src/shared/appIdentity.ts); identityName and publisher are the immutable package identity. Environment variables (STORE_IDENTITY_NAME, STORE_PUBLISHER, STORE_PUBLISHER_DISPLAY_NAME, STORE_DISPLAY_NAME, STORE_PRODUCT_ID or STORE_ID) override this file. See docs/MICROSOFT_STORE.md.",
   "identityName": "LaHieuPhong.ClaudeLocalSessionManager",
   "publisher": "CN=CA5468D0-A735-4CDB-9F0A-A0CDD47D1EA5",
   "publisherDisplayName": "La Hieu Phong",
-  "displayName": "Claude Local Session Manager",
+  "displayName": "LHP Local Session Manager",
   "storeProductId": "9N5XNN8H1TSZ"
 }

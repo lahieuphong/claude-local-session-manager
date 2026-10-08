@@ -1,8 +1,5 @@
 {
   "app": {
-    "name": "Claude Local Session Manager",
-    "nameShort": "Claude Local",
-    "nameSub": "Session Manager",
     "tagline": "非官方 · 仅限本地",
     "disclaimer": "非官方本地工具 · 与 Anthropic 无关"
   },

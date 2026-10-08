@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useFmt } from '../i18n'
 import { setView, useAppState, type SessionFilter } from '../stores/appStore'
 import { UpdatePill } from './Updates'
+import { appBrand } from '../../../shared/appIdentity'
 import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
 import {
   AppMark,
@@ -35,6 +36,8 @@ export function Sidebar(): ReactElement {
   const process = useAppState((s) => s.process)
   const appInfo = useAppState((s) => s.appInfo)
   const [projectsOpen, setProjectsOpen] = useState(true)
+  // The product name depends on the distribution (the Microsoft Store edition has its own).
+  const brand = appInfo ? appBrand(appInfo.distribution) : null
 
   const sessions = useMemo(() => snapshot?.sessions ?? [], [snapshot])
   const counts = useMemo(() => filterCounts(sessions), [sessions])
@@ -51,8 +54,8 @@ export function Sidebar(): ReactElement {
       <div className="identity">
         <AppMark size={28} />
         <div className="identity-text">
-          <div className="identity-name">{t('common:app.nameShort')}</div>
-          <div className="identity-sub">{t('common:app.nameSub')}</div>
+          <div className="identity-name">{brand?.short}</div>
+          <div className="identity-sub">{brand?.sub}</div>
         </div>
       </div>
       <div className="identity-note">{t('common:app.tagline')}</div>

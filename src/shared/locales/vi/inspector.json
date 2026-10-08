@@ -21,6 +21,7 @@
   "note": {
     "transcriptOnly": "Chỉ có bản ghi hội thoại: phiên Claude Code này không có siêu dữ liệu Claude Desktop nên Claude không có trạng thái lưu trữ cho nó. Ẩn trong trình quản lý chỉ thay đổi danh sách của ứng dụng này; tệp của Claude không bị thay đổi và phiên vẫn hiện trong Claude.",
     "orphan": "Thư mục phiên mồ côi: không có bản ghi hội thoại hay siêu dữ liệu Claude Desktop. Ẩn trong trình quản lý chỉ thay đổi danh sách của ứng dụng này; tệp của Claude không bị thay đổi.",
+    "storeDesktop": "Bản Microsoft Store: phiên này có siêu dữ liệu Claude Desktop nên ở đây chỉ xem và xuất được, không lưu trữ, khôi phục hay xóa được. Cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData, và Claude Desktop sẽ không thấy các thay đổi đó.",
     "armed": "Đã bật xóa thật — Xóa vĩnh viễn sẽ xóa thật các tệp của phiên này."
   },
   "section": {

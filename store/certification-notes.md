@@ -1,8 +1,10 @@
-# Store certification notes — restricted capabilities
+# Store certification notes
 
-The Store package declares exactly two restricted capabilities. Both are
-required; nothing else is requested (no broadFileSystemAccess, no
-packageManagement, no registry virtualization changes).
+For the Microsoft Store edition, **LHP Local Session Manager** (package
+1.2.4.0 and later). The package declares exactly one restricted capability,
+`runFullTrust`. Nothing else is requested: no `unvirtualizedResources`, no
+`broadFileSystemAccess`, no `packageManagement`, and no change to file system
+or registry virtualization.
 
 ## Text to paste in Partner Center
 
@@ -10,105 +12,103 @@ packageManagement, no registry virtualization changes).
 
 ### `runFullTrust`
 
-> Claude Local Session Manager is a Win32 desktop application (Electron) packaged
+> LHP Local Session Manager is a Win32 desktop application (Electron) packaged
 > with the Desktop Bridge entry point Windows.FullTrustApplication, so it needs
-> runFullTrust to run as a normal desktop process. It reads Claude Code session
-> files in the user's profile (%USERPROFILE%\.claude) and Claude Desktop's local
-> session metadata, checks read-only whether Claude processes are running so it
-> never touches a session in use, exports sessions to a folder the user picks, and
-> opens session folders in File Explorer. These local file and process operations
-> are not possible from an AppContainer. The app has no server, collects no
-> telemetry, and always starts in a read-only Safe Mode.
-
-### `unvirtualizedResources`
-
-> The app manages Claude Desktop's local session data, which Claude Desktop stores
-> under the user's AppData (%APPDATA%\Claude\claude-code-sessions, or
-> %LOCALAPPDATA%\Packages\<Claude package>\LocalCache\Roaming\Claude\claude-code-sessions).
-> When the user archives or restores a session, the app updates Claude Desktop's
-> metadata file and archive index with a crash-safe write (new temporary file in
-> the same folder, then rename). When the user permanently deletes a session after
-> explicit confirmation, the app also creates Claude Desktop's own deletion marker
-> files (deleted_<id>). With AppData write virtualization, newly created files are
-> redirected into this package's private storage, so these changes would be seen
-> only by this app and never by Claude Desktop: the user would get a success
-> message while Claude Desktop stays unchanged and could re-import a "deleted"
-> session. We therefore set FileSystemWriteVirtualization=disabled (registry
-> virtualization is unchanged). Writes are limited to the exact files listed in a
-> plan the user reviews; deletion must first be armed by typing ENABLE DELETE and
-> then confirmed by typing DELETE, and the app writes nowhere else in AppData
-> except its own settings folder.
+> runFullTrust to run as a normal desktop process. It reads session files in
+> the user's profile (%USERPROFILE%\.claude) and Claude Desktop's local session
+> metadata, checks read-only whether related processes are running so it never
+> touches a session in use, exports sessions to a folder the user picks, and
+> opens the project folder in File Explorer. These local file and process
+> operations are not possible from an AppContainer. The app has no server,
+> collects no telemetry, and always starts in a read-only Safe Mode.
 
 ### Notes for certification (optional field)
 
-> Unofficial local utility, not affiliated with Anthropic. It shows the Claude Code
-> / Claude Desktop sessions stored on this PC; without Claude data installed the
-> list is empty (that is expected). The app starts in Safe Mode (dry run): nothing
-> can be modified until deletion is armed in Settings → Deletion safety by typing
-> ENABLE DELETE, which lasts for one delete or 10 minutes. Every delete shows the
-> exact files that will and will not be removed and requires a typed confirmation.
-> No account, sign-in or network service is required. Updates come only from the
-> Microsoft Store.
+> Unofficial local utility, not affiliated with Anthropic. It lists the
+> AI coding session files stored on this PC (written by Claude Code and Claude
+> Desktop). Without such files installed the list is empty; that is expected.
+>
+> This package no longer requests unvirtualizedResources. The Store edition does
+> not create, replace, rename, or delete files inside Claude Desktop's AppData
+> storage. Unsupported Claude Desktop metadata mutations are blocked before any
+> filesystem change occurs.
+> - Sessions that have Claude Desktop metadata are read-only: they can be viewed
+>   and exported. Archive, Restore and Delete are not offered for them.
+> - Sessions that only have a transcript under %USERPROFILE%\.claude (outside
+>   AppData) can be hidden in the app or permanently deleted.
+> - The app writes its own application data (settings, its hidden-sessions list,
+>   a scan cache and logs) only in its own user-data location.
+>
+> The app starts in Safe Mode (dry run): nothing can be modified until deletion
+> is armed in Settings → Deletion safety by typing ENABLE DELETE, which lasts
+> for one delete or 10 minutes. Every delete shows the exact files that will and
+> will not be removed and requires a typed confirmation. No account, sign-in or
+> network service is required. Updates come only from the Microsoft Store.
 
-## Audit (October 2026, package 1.2.3.0)
+## Store-edition limitations
 
-### Why `runFullTrust` is present
+Store certification denied `unvirtualizedResources`, so the Store package keeps
+Windows' default AppData write virtualization. For a packaged full-trust app,
+Windows redirects files that the app newly creates under the user's `AppData`
+to a private per-package location
+([how packaged desktop apps run](https://learn.microsoft.com/windows/msix/desktop/desktop-to-uwp-behind-the-scenes)).
+Claude Desktop keeps its session metadata under `AppData`, so a redirected write
+would look successful to this app while Claude Desktop never sees it.
 
-- electron-builder's AppX target always adds it (`AppxTarget.getCapabilities()`
-  adds `runFullTrust` unconditionally), because every desktop app packaged with
+The Store edition does not create, replace, rename, or delete files inside
+Claude Desktop's AppData storage. Unsupported Claude Desktop metadata mutations
+are blocked before any filesystem change occurs.
+
+The Store edition may still write its own application data, such as settings
+and manager state, inside the app's own user-data location.
+
+The rule is implemented in `src/main/services/packagingPolicy.ts` and enforced
+in the main process:
+
+| Operation | Store edition | Why |
+|---|---|---|
+| Scan, browse, search, group, inspect | Available | Read only |
+| Storage overview | Available | Read only |
+| Export | Available | Writes a copy to a folder the user picks (not into `AppData`) |
+| Open project folder | Available | Opens File Explorer |
+| Hide / Show in manager | Available | Changes only this app's own list |
+| Delete a transcript-only session (`%USERPROFILE%\.claude`) | Available | All files are outside `AppData`; every existing safety guard applies |
+| Archive / Restore a Claude Desktop session | **Blocked** | Needs a temp file + rename of the metadata file and the archive index under `AppData` |
+| Delete a session that has Claude Desktop metadata | **Blocked** | Needs changes under `AppData`: the metadata file, the archive index and new `deleted_<id>` marker files |
+| Export into `AppData` | **Blocked** | The file would be redirected to a location the user cannot find |
+
+How the block works:
+
+- A delete plan is built per session. If any Claude file in the plan is inside
+  Claude Desktop's AppData storage, or anywhere else under the user's `AppData`,
+  the whole session is refused with "not available in the Microsoft Store
+  edition". Nothing of that session is deleted: there is no partial delete. The
+  app's own records (its hidden list and scan cache) are not Claude files and
+  do not count.
+- The same check runs again when the plan is executed, before any file is
+  touched, and once more immediately before each individual file operation.
+- Archive and Restore are refused before the metadata file is read.
+- The user interface hides Archive / Restore and disables Delete for these
+  sessions, and explains why.
+- GitHub Setup and Portable builds are ordinary desktop programs and keep the
+  full feature set.
+
+Tests: `tests/storeEdition.test.ts`.
+
+## Why `runFullTrust` is present
+
+- electron-builder's AppX target always adds it
+  (`AppxTarget.getCapabilities()`), because every desktop app packaged with
   `EntryPoint="Windows.FullTrustApplication"` needs it.
 - The app is an Electron (Win32) process. Without full trust it would run in an
   AppContainer, where it could not read `%USERPROFILE%\.claude`, Claude
-  Desktop's metadata, other apps' package data or the user's project folders,
-  start the read-only PowerShell process query, or reveal folders in Explorer.
+  Desktop's metadata or the user's project folder names, start the read-only
+  process query, or open folders in Explorer.
 - It is required for the app to work at all.
 
-### Why `unvirtualizedResources` is present
+## History
 
-- Added deliberately in `scripts/store-config.mjs` together with
-  `desktop6:FileSystemWriteVirtualization=disabled` in
-  `store/AppxManifest.template.xml`. Microsoft requires this restricted
-  capability for that property (and for Windows 11 flexible virtualization).
-
-### Is it technically necessary? — Yes
-
-Microsoft's documented behavior for packaged desktop apps on Windows 10 1903+
-([how packaged desktop apps run](https://learn.microsoft.com/windows/msix/desktop/desktop-to-uwp-behind-the-scenes),
-[flexible virtualization](https://learn.microsoft.com/windows/msix/desktop/flexible-virtualization)):
-
-| Operation by the packaged app | With AppData write virtualization (default) |
-|---|---|
-| Read files anywhere (incl. AppData) | Works (private copy first, then the real file) |
-| Create a **new** file under AppData | **Redirected to a private per-package location**, visible only to this app |
-| Modify an existing file under AppData in place | Goes to the real file |
-| Delete a file under AppData | Allowed |
-| Anything outside AppData, e.g. `%USERPROFILE%\.claude` | Real location, never virtualized |
-
-What the app writes, and the effect without `unvirtualizedResources`:
-
-| App operation | Where | Without the capability |
-|---|---|---|
-| Archive / Restore: rewrite `local_*.json` (temp file + rename, `src/main/util/atomicWrite.ts`) | Claude Desktop metadata, AppData | **Broken**: the temp file is a new file → private copy; Claude Desktop keeps the old file while the app shows success |
-| Archive index `archived-sessions.idx` update (same write) | AppData | **Broken** (same reason) |
-| Permanent delete: create `deleted_<id>` tombstones | AppData | **Broken**: Claude Desktop never sees the markers and may re-import the session |
-| Permanent delete: remove metadata file | AppData | Works |
-| Delete transcripts, session folders, file-history, session-env | `%USERPROFILE%\.claude` | Works (outside AppData) |
-| Scanning / reading everything | anywhere | Works |
-| The app's own settings, hidden list, cache, logs | `%APPDATA%\Claude Local Session Manager` | Works, but would be private to the Store install and removed on uninstall |
-
-So the capability is needed for Claude Desktop session management to be
-correct; removing it would make archive/restore and delete silently diverge
-from what Claude Desktop sees. It is kept.
-
-### Alternatives considered (not adopted)
-
-- **Remove the capability** — breaks the operations above. Rejected.
-- **Rewrite files in place instead of temp + rename** — would only fix
-  modifications, loses crash safety (a crash could leave Claude's metadata
-  truncated), and tombstones are inherently new files. Rejected.
-- **Windows 11 flexible virtualization** (`virtualization:ExcludedDirectories`
-  for only Claude's folders) — still requires `unvirtualizedResources`, only works
-  on Windows 11, and Claude Desktop's package folder name varies by install.
-  Could narrow the scope later; it does not remove the capability.
-- **Store "Win32 app (EXE/MSI)" submission** — no package virtualization, but
-  requires a code-signed installer. Not chosen.
+- 1.2.3.0 (first submission) requested `unvirtualizedResources` with
+  `desktop6:FileSystemWriteVirtualization=disabled`. Certification denied it
+  (policy 10.6.3).
+- 1.2.4.0 removes both and blocks the operations that depended on them.

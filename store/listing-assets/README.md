@@ -1,7 +1,7 @@
 # Microsoft Store listing assets
 
-Images for Partner Center → *Claude Local Session Manager* → Submission →
-**Store listings**. They are uploaded by hand and are not part of the app package.
+Images for Partner Center → the product (*LHP Local Session Manager*) →
+Submission → **Store listings**. They are uploaded by hand and are not part of the app package.
 The listing text (description, features, search terms) is in
 [`../listing/`](../listing/); screenshot captions are in
 [`captions.md`](captions.md).
@@ -15,12 +15,15 @@ store/listing-assets/
   en-US/  vi-VN/  zh-CN/
     01-sessions.png        session browser
     02-session-details.png session details
-    03-delete-plan.png     delete plan in Safe Mode (dry run)
-    04-settings.png        Safe Mode, Microsoft Store updates, version
+    03-delete-plan.png     delete plan of a transcript-only session (Safe Mode, dry run)
+    04-settings.png        Safe Mode, Store updates, version, Store-edition limits
 ```
 
 All screenshots are PNG, exactly 1920 × 1080, captured from the real app with
-its UI in that language. `yarn store:validate-assets` checks the files.
+its UI in that language. They show the **Microsoft Store edition**: the product
+name is LHP Local Session Manager, and only features of that edition appear
+(no Archive / Restore; the delete plan is for a transcript-only session).
+`yarn store:validate-assets` checks the files.
 
 ## Microsoft requirements (checked 2 October 2026)
 
@@ -108,14 +111,17 @@ yarn store:validate-assets
   processes. No settings, cache or log file is written. Every action that
   would change, delete, export or open something is refused. Deletion stays
   in Safe Mode and cannot be armed;
+- the app presents itself as the Store edition: Store product name, updates
+  managed by Microsoft Store, and the Store write policy (a session with Claude
+  Desktop metadata gets no Archive button and cannot be deleted);
 - a packaged build ignores the variable (tests in
   `tests/screenshotMode.test.ts`).
 
 The script renders the page at 1920 × 1080 with a device scale factor of 1, so
 the output size does not depend on the monitor or Windows scaling. It checks
 the size of every image. Before saving each image, it stops if any on-screen
-text contains this PC's user name, home folder or checkout path, or a
-session-like ID outside the demo series. The images show only the app
+text contains this PC's user name, home folder or checkout path, a session-like
+ID outside the demo series, or the GitHub product name. The images show only the app
 content: no title bar, taskbar, cursor, tooltip, DevTools or added marketing
 text.
 
@@ -138,7 +144,9 @@ not a Microsoft logo. `tests/appIcon.test.ts` fails if it is out of date.
 
 ## Branding
 
-The name contains "Claude" only to describe what the utility works with. The
+The Store-facing product name is **LHP Local Session Manager**; it contains no
+other company's product name. Names such as Claude Code or Claude Desktop appear
+in the screenshots only where the app states what it reads or checks. The
 assets use no Anthropic or Microsoft logos and no third-party artwork. The app
 shows "Unofficial local utility · Not affiliated with Anthropic" in Settings →
 About, which is visible in `04-settings.png`. The listing text says the same.

@@ -21,6 +21,7 @@
   "note": {
     "transcriptOnly": "Transcript only: this Claude Code session has no Claude Desktop metadata, so Claude has no archive state for it. Hide in manager only changes this app's own list. Claude's files are not modified and the session still appears in Claude.",
     "orphan": "Orphan session folder: there is no transcript or Claude Desktop metadata. Hide in manager only changes this app's own list. Claude's files are not modified.",
+    "storeDesktop": "Microsoft Store edition: this session has Claude Desktop metadata, so it can be viewed and exported here, but not archived, restored or deleted. Windows Store packaging isolates certain AppData writes, and Claude Desktop would not see such changes.",
     "armed": "Real Delete Armed — Delete permanently will really remove this session's files."
   },
   "section": {

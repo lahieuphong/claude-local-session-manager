@@ -81,5 +81,8 @@
     "github": "GitHub Releases",
     "store": "Do Microsoft Store quản lý",
     "development": "Tắt ở bản phát triển"
+  },
+  "storeEdition": {
+    "limits": "Bản Microsoft Store: các phiên có siêu dữ liệu Claude Desktop chỉ xem và xuất được. Không thể Lưu trữ, Khôi phục hay Xóa các phiên này vì cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData. Phiên chỉ có bản ghi hội thoại vẫn ẩn hoặc xóa được như bình thường."
   }
 }

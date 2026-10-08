@@ -7,11 +7,13 @@
   "strip": {
     "reading": "正在读取安全模式…",
     "safeText": "试运行 — 无法删除、归档或恢复任何 Claude 文件。",
+    "safeTextStore": "试运行 — 无法删除任何 Claude 文件。",
     "armedText": "本次应用会话已启用永久删除。删除一次、10 分钟后或关闭应用都会返回安全模式。",
     "settingsLink": "删除安全"
   },
   "claude": {
     "running": "Claude Desktop 正在运行 — 已禁用归档、恢复和删除",
+    "runningStore": "Claude Desktop 正在运行 — 已禁用删除",
     "runningHint": "修改会话文件前请完全退出 Claude Desktop（包括系统托盘）。浏览和导出仍可使用。",
     "unknown": "Claude 状态未知 — 已禁用修改操作",
     "unknownHint": "无法确认 Claude Desktop 是否正在运行。",

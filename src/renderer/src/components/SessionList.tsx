@@ -62,6 +62,8 @@ export function SessionList(): ReactElement {
   const scanning = useAppState((s) => s.scanning)
   const busy = useAppState((s) => s.busy)
   const loadError = useAppState((s) => s.loadError)
+  // Microsoft Store edition: Claude Desktop's archive flag cannot be changed by this build.
+  const canArchive = !useAppState((s) => s.appInfo?.desktopDataReadOnly ?? false)
   const searchRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const titleOf = useSessionTitle()
@@ -201,12 +203,12 @@ export function SessionList(): ReactElement {
         <div className="bulk-bar" role="toolbar" aria-label={t('sessions:bulk.label')}>
           <span className="bulk-count">{t('sessions:bulk.selected', { count: checked.length })}</span>
           {/* Claude archive only applies to sessions with Claude Desktop metadata. */}
-          {selDesktopActive.length > 0 && (
+          {canArchive && selDesktopActive.length > 0 && (
             <button className="btn small" disabled={busy} onClick={() => void bulkArchive(selDesktopActive, true)} title={t('sessions:bulk.archiveHint')}>
               <IconArchive size={14} /> {t('sessions:bulk.archive', { count: selDesktopActive.length })}
             </button>
           )}
-          {selDesktopArchived.length > 0 && (
+          {canArchive && selDesktopArchived.length > 0 && (
             <button className="btn small" disabled={busy} onClick={() => void bulkArchive(selDesktopArchived, false)}>
               <IconRestore size={14} /> {t('sessions:bulk.restore', { count: selDesktopArchived.length })}
             </button>

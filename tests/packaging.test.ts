@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { APP_ID, APP_NAME, GITHUB_OWNER, GITHUB_REPO, PACKAGE_NAME, RELEASES_URL } from '../src/shared/appIdentity'
+import { APP_ID, APP_NAME, GITHUB_OWNER, GITHUB_REPO, PACKAGE_NAME, RELEASES_URL, appBrand } from '../src/shared/appIdentity'
 
 const root = path.resolve(__dirname, '..')
 const read = (p: string): string => readFileSync(path.join(root, p), 'utf8')
@@ -30,7 +30,10 @@ describe('stable Windows identity', () => {
     expect(pkg.productName).toBe(APP_NAME)
     expect(pkg.name).toBe(PACKAGE_NAME)
     expect(read('src/main/index.ts')).toMatch(/app\.setAppUserModelId\(APP_ID\)/)
-    expect(read('src/main/index.ts')).toMatch(/app\.setName\(APP_NAME\)/)
+    // GitHub and development builds are named APP_NAME; only the Store edition has its own name.
+    expect(read('src/main/index.ts')).toMatch(/app\.setName\(brand\.name\)/)
+    expect(appBrand('github').name).toBe(APP_NAME)
+    expect(appBrand('development').name).toBe(APP_NAME)
   })
 
   it('uninstall data cleanup can never resolve to Claude\'s own folders', () => {

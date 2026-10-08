@@ -7,11 +7,13 @@
   "strip": {
     "reading": "Đang đọc chế độ an toàn…",
     "safeText": "Chạy thử — không tệp nào của Claude có thể bị xóa, lưu trữ hay khôi phục.",
+    "safeTextStore": "Chạy thử — không tệp nào của Claude có thể bị xóa.",
     "armedText": "Đã cho phép xóa vĩnh viễn trong lần mở ứng dụng này. Sau một lần xóa, sau 10 phút hoặc khi đóng ứng dụng sẽ quay về Chế độ an toàn.",
     "settingsLink": "An toàn khi xóa"
   },
   "claude": {
     "running": "Claude Desktop đang chạy — đã tắt lưu trữ, khôi phục và xóa",
+    "runningStore": "Claude Desktop đang chạy — đã tắt xóa",
     "runningHint": "Thoát hẳn Claude Desktop (kể cả ở khay hệ thống) trước khi thay đổi tệp phiên. Vẫn xem và xuất được.",
     "unknown": "Không rõ trạng thái Claude — đã tắt các thao tác thay đổi",
     "unknownHint": "Không kiểm tra được Claude Desktop có đang chạy hay không.",

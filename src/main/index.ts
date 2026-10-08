@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, type IpcMainInvokeEvent } from 'electron'
 import os from 'node:os'
 import path from 'node:path'
-import { APP_ID, APP_NAME, RELEASES_URL } from '../shared/appIdentity'
+import { APP_ID, APP_NAME, RELEASES_URL, appBrand } from '../shared/appIdentity'
 import { IPC } from '../shared/ipc'
 import type { AppInfo, AppSettings, ExportFormat, SafetyModeState, UpdateState } from '../shared/types'
 import { registerIpc } from './ipc/registerIpc'
@@ -11,6 +11,7 @@ import { envFromProcess } from './services/claudeDiscovery'
 import { DeleteService } from './services/deleteService'
 import { ExportService } from './services/exportService'
 import { ManagerHiddenStore } from './services/managerHiddenStore'
+import { packagingPolicy } from './services/packagingPolicy'
 import { ProcessService } from './services/processService'
 import { resolveInitialMode, SafetyModeController } from './services/safetyMode'
 import type { AppUpdater } from 'electron-updater'
@@ -28,15 +29,6 @@ import { buildScreenshotFixture } from './screenshot/fixtures'
 import { createScreenshotHandlers, screenshotAppInfo } from './screenshot/screenshotIpc'
 import { resolveScreenshotMode, type ScreenshotModeConfig } from './screenshot/screenshotMode'
 
-app.setName(APP_NAME)
-// Store screenshot mode: static demo data, development runs only (null when packaged).
-const screenshotMode = resolveScreenshotMode({ isPackaged: app.isPackaged, env: process.env })
-// Separate app data (and single-instance lock) for test/verification runs.
-if (process.env.CLAUDE_SESSION_MANAGER_USER_DATA) {
-  app.setPath('userData', path.resolve(process.env.CLAUDE_SESSION_MANAGER_USER_DATA))
-} else if (screenshotMode) {
-  app.setPath('userData', path.join(os.tmpdir(), 'claude-local-session-manager-screenshots'))
-}
 // github | store | development, from the packaged metadata (see src/shared/distribution.ts).
 const distribution = readDistribution({
   appPath: app.getAppPath(),
@@ -44,6 +36,19 @@ const distribution = readDistribution({
   windowsStore: process.windowsStore === true,
   env: process.env
 })
+// Store screenshot mode: static demo data, development runs only (null when packaged).
+const screenshotMode = resolveScreenshotMode({ isPackaged: app.isPackaged, env: process.env })
+// The Microsoft Store edition has its own customer-facing name (and so its own
+// app data folder); GitHub Setup/Portable and development keep APP_NAME.
+const storeEdition = distribution.channel === 'store' || screenshotMode !== null
+const brand = appBrand(storeEdition ? 'store' : distribution.channel)
+app.setName(brand.name)
+// Separate app data (and single-instance lock) for test/verification runs.
+if (process.env.CLAUDE_SESSION_MANAGER_USER_DATA) {
+  app.setPath('userData', path.resolve(process.env.CLAUDE_SESSION_MANAGER_USER_DATA))
+} else if (screenshotMode) {
+  app.setPath('userData', path.join(os.tmpdir(), 'local-session-manager-screenshots'))
+}
 // Same ID the installer writes into the shortcuts, so the running window, the
 // Start Menu entry and taskbar pins are one app across upgrades. A Store
 // package gets its ID from the package identity instead; overriding it would
@@ -65,7 +70,7 @@ if (!app.requestSingleInstanceLock()) {
   })
   app.whenReady().then(start).catch((err) => {
     logger.error(`Startup failed: ${errorMessage(err)}`)
-    dialog.showErrorBox(APP_NAME, `Startup failed: ${errorMessage(err)}`)
+    dialog.showErrorBox(brand.name, `Startup failed: ${errorMessage(err)}`)
     app.quit()
   })
 }
@@ -79,8 +84,11 @@ async function start(): Promise<void> {
   // Every launch starts in SAFE MODE (dry run); see safetyMode.ts. Kept in memory only.
   const initialMode = resolveInitialMode({ isPackaged: app.isPackaged, env: process.env })
   const cachePath = path.join(userData, 'scan-cache', 'transcript-index.json')
+  // What this build may write: the Store edition does not modify Claude Desktop's AppData files (packagingPolicy.ts).
+  const discoveryEnv = envFromProcess()
+  const policy = packagingPolicy(distribution.channel, discoveryEnv)
   const appInfo: AppInfo = {
-    name: APP_NAME,
+    name: brand.name,
     version: app.getVersion(),
     isPackaged: app.isPackaged,
     platform: `${process.platform} ${process.arch}`,
@@ -91,10 +99,11 @@ async function start(): Promise<void> {
     systemLanguages: systemLanguages(),
     distribution: distribution.channel,
     storeListingAvailable: distribution.storeProductId != null,
+    desktopDataReadOnly: policy.isolatesAppData,
     userHome: os.homedir()
   }
   logger.info(
-    `${APP_NAME} ${appInfo.version} starting (dryRun=${initialMode.dryRun}, packaged=${app.isPackaged}, distribution=${distribution.channel})`
+    `${brand.name} ${appInfo.version} starting (dryRun=${initialMode.dryRun}, packaged=${app.isPackaged}, distribution=${distribution.channel})`
   )
   if (initialMode.notice) logger.warn(initialMode.notice)
 
@@ -111,18 +120,20 @@ async function start(): Promise<void> {
 
   const processes = new ProcessService(null)
   const safety = new SafetyModeController({ initial: initialMode, processes })
-  const repo = new SessionRepository({ env: envFromProcess(), cache, hidden, processService: processes })
-  const archive = new ArchiveService(repo, processes, hidden, () => safety.isDryRun())
+  const repo = new SessionRepository({ env: discoveryEnv, cache, hidden, processService: processes })
+  const archive = new ArchiveService(repo, processes, hidden, () => safety.isDryRun(), policy)
   const deleter = new DeleteService(repo, processes, {
     dryRun: () => safety.isDryRun(),
     // Arming is single-use: any real delete execution returns the app to Safe Mode.
-    onRealDeleteExecuted: () => safety.disarm('after-delete')
+    onRealDeleteExecuted: () => safety.disarm('after-delete'),
+    policy,
+    appName: brand.name
   })
   safety.on('changed', (state: SafetyModeState) => {
     logger.info(`Safety mode: ${state.dryRun ? 'SAFE MODE (dry run)' : 'REAL DELETE ARMED'} (${state.reason})`)
     mainWindow?.webContents.send(IPC.safetyModeChanged, state)
   })
-  const exporter = new ExportService(repo, {
+  const exportDialogs = {
     chooseFile: async (defaultName: string, format: ExportFormat) => {
       const filters =
         format === 'markdown'
@@ -140,7 +151,8 @@ async function start(): Promise<void> {
       const r = mainWindow ? await dialog.showOpenDialog(mainWindow, opts) : await dialog.showOpenDialog(opts)
       return r.canceled || !r.filePaths[0] ? null : r.filePaths[0]
     }
-  })
+  }
+  const exporter = new ExportService(repo, exportDialogs, { policy, appName: brand.name })
 
   // Updates. GitHub channel: electron-updater + GitHub Releases (packaged builds
   // only). Store channel: the Store manages updates; electron-updater is never
@@ -238,7 +250,7 @@ async function start(): Promise<void> {
 function startScreenshotMode(config: ScreenshotModeConfig): void {
   logger.warn('STORE SCREENSHOT MODE: showing static demo data only (development build).')
   const appInfo = screenshotAppInfo({
-    name: APP_NAME,
+    name: brand.name,
     version: app.getVersion(),
     electronVersion: process.versions.electron,
     platform: `${process.platform} ${process.arch}`,
@@ -300,7 +312,7 @@ function createWindow(settings: Pick<SettingsService, 'get'>, uiLocale: () => Su
     minWidth: 1000,
     minHeight: 620,
     show: false,
-    title: APP_NAME,
+    title: brand.name,
     backgroundColor: '#0b0c0c',
     autoHideMenuBar: true,
     icon: app.isPackaged ? undefined : path.join(app.getAppPath(), 'build', 'icon.png'),
@@ -318,6 +330,8 @@ function createWindow(settings: Pick<SettingsService, 'get'>, uiLocale: () => Su
   win.on('closed', () => {
     mainWindow = null
   })
+  // The window title is this build's product name, whatever the page's <title> says.
+  win.on('page-title-updated', (event) => event.preventDefault())
   // Never leave the window hidden: show it on ready-to-show, after a fallback
   // delay, or when the page fails to load / the renderer dies (with a dialog).
   let dialogOpen = false
@@ -331,9 +345,9 @@ function createWindow(settings: Pick<SettingsService, 'get'>, uiLocale: () => Su
       void dialog
         .showMessageBox(win, {
           type: 'error',
-          title: APP_NAME,
+          title: brand.name,
           message: localText(locale, problem.kind === 'load-failed' ? 'window.loadFailed' : 'window.rendererGone'),
-          detail: localText(locale, 'window.problemDetail', { reason, log: logPath }),
+          detail: localText(locale, storeEdition ? 'window.problemDetailStore' : 'window.problemDetail', { reason, log: logPath }),
           buttons: [localText(locale, 'window.retry'), localText(locale, 'window.quit')],
           defaultId: 0,
           cancelId: 1,

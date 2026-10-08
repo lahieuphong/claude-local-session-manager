@@ -30,6 +30,7 @@ import type { ScanCache } from './cacheService'
 import { formatPlanReport, formatResultReport } from './deleteReport'
 import type { ManagerHiddenStore } from './managerHiddenStore'
 import { ARCHIVE_INDEX_FILE, TOMBSTONE_PREFIX, parseArchiveIndex, serializeArchiveIndex } from './metadataParser'
+import { isolatedPlanItems, type PackagingPolicy } from './packagingPolicy'
 import { globalGuard, sessionGuard, type ProcessService } from './processService'
 import type { SessionRecord } from './sessionBuilder'
 import type { SessionRepository } from './sessionRepository'
@@ -42,6 +43,14 @@ export interface DeleteServiceOptions {
   /** Refuse to delete a transcript written to within this window (it may be in use). */
   recentWriteMs?: number
   planTtlMs?: number
+  /**
+   * What this build may write (see packagingPolicy.ts). The Microsoft Store
+   * edition refuses any session whose plan touches files under AppData or a
+   * Claude Desktop data root. Omitted = unrestricted (GitHub builds).
+   */
+  policy?: PackagingPolicy
+  /** Product name used in the plain-text reports. */
+  appName?: string
 }
 
 const DEFAULT_RECENT_WRITE_MS = 30_000
@@ -216,6 +225,8 @@ export class DeleteService {
   private readonly recentWriteMs: number
   private readonly planTtlMs: number
   private readonly onRealDeleteExecuted?: (result: DeleteResult) => void
+  private readonly policy?: PackagingPolicy
+  private readonly appName?: string
 
   constructor(
     private repo: SessionRepository,
@@ -228,6 +239,13 @@ export class DeleteService {
     this.recentWriteMs = o.recentWriteMs ?? DEFAULT_RECENT_WRITE_MS
     this.planTtlMs = o.planTtlMs ?? DEFAULT_PLAN_TTL_MS
     this.onRealDeleteExecuted = o.onRealDeleteExecuted
+    this.policy = o.policy
+    this.appName = o.appName
+  }
+
+  /** Plan items this build must not touch (Microsoft Store edition: anything under AppData / a Claude Desktop root). */
+  private isolatedItems(items: DeletePlanItem[]): DeletePlanItem[] {
+    return isolatedPlanItems(items, this.policy, this.repo.getRoots()?.desktopRoots.map((d) => d.path))
   }
 
   /** Workspaces, approved roots, home and drive roots: never a target, never inside a target. */
@@ -292,6 +310,13 @@ export class DeleteService {
       }
       const block = (code: ActionErrorCode, reason: string, reasonMsg?: MessageRef): void => {
         blocked.push({ ...plan, blockedReason: reason, blockedMsg: reasonMsg, blockedCode: code })
+      }
+      // Store edition: a plan that needs any change under AppData (Claude Desktop
+      // metadata, archive index, deleted_<id> markers) is refused as a whole.
+      if (this.isolatedItems(items).length) {
+        const m = msg('store.deleteUnavailable')
+        block('NOT_SUPPORTED', m.message, m.msg)
+        continue
       }
       const guard = sessionGuard(status, record.guardUuids)
       if (guard) {
@@ -361,7 +386,7 @@ export class DeleteService {
       totalDirs: ok.reduce((n, s) => n + s.totalDirs, 0),
       confirmationPhrases: confirmationPhrases(ok.length, bulk)
     }
-    return { ...plan, reportText: formatPlanReport(plan) }
+    return { ...plan, reportText: formatPlanReport(plan, this.appName) }
   }
 
   /**
@@ -434,6 +459,8 @@ export class DeleteService {
     // 5. Validate every target before touching anything.
     const protectedPaths = this.protectedPaths()
     for (const s of fresh.ok) {
+      // Never reached for a blocked session (see sessionPlans); checked again so no path can slip through.
+      if (this.isolatedItems(s.items).length) return fail('NOT_SUPPORTED', msg('store.deleteUnavailable'))
       for (const item of s.items) {
         if (item.kind === 'manager-record') continue
         try {
@@ -468,7 +495,7 @@ export class DeleteService {
           : msg('delete.dryRunPassed', { count: sessions.length })),
         sessions
       }
-      result.reportText = formatResultReport(result, fresh.ok)
+      result.reportText = formatResultReport(result, fresh.ok, this.appName)
       logger.info(`[DRY RUN] delete plan ${stored.planId} validated; no files modified.\n${result.reportText}`)
       return result
     }
@@ -500,7 +527,7 @@ export class DeleteService {
       msg: summary.msg,
       sessions: results
     }
-    result.reportText = formatResultReport(result, fresh.ok)
+    result.reportText = formatResultReport(result, fresh.ok, this.appName)
     logger.info(`Delete plan ${stored.planId} executed: ${message}`)
     this.onRealDeleteExecuted?.(result)
     return result
@@ -517,6 +544,7 @@ export class DeleteService {
         // Re-validate immediately before each operation (TOCTOU).
         const target = await validateTarget(item.path, item.kind as ClaudeTargetKind, roots)
         assertNotProtected(target.path, protectedPaths)
+        if (this.isolatedItems([{ ...item, path: target.path }]).length) throw new Error(msgText('store.deleteUnavailable'))
         if (item.action === 'delete-file' || item.action === 'delete-directory') {
           if (!target.exists) {
             results.push({ ...item, outcome: 'missing' })

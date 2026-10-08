@@ -479,6 +479,7 @@ export interface AppSettings {
 }
 
 export interface AppInfo {
+  /** Product name of this build (the Microsoft Store edition has its own; see shared/appIdentity.ts). */
   name: string
   version: string
   isPackaged: boolean
@@ -493,6 +494,13 @@ export interface AppInfo {
   distribution: DistributionChannel
   /** True only when a real Microsoft Store product ID was built into a Store package. */
   storeListingAvailable: boolean
+  /**
+   * Microsoft Store edition: Windows isolates this package's AppData writes, so
+   * sessions with Claude Desktop metadata can be viewed and exported but not
+   * archived, restored or deleted. The main process enforces it; the UI uses
+   * this to hide or disable those actions.
+   */
+  desktopDataReadOnly: boolean
   /** os.homedir(), for the local diagnostics view only. */
   userHome: string
 }

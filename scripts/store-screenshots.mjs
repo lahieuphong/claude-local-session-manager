@@ -5,6 +5,8 @@
 // The app runs unpackaged in Store screenshot mode (src/main/screenshot/):
 // static demo data only — no Claude data, process, settings or log is read or
 // written, deletion stays in Safe Mode. Nothing is clicked that changes data.
+// It presents itself as the Microsoft Store edition: Store product name, Store
+// updates, and only the features that edition has.
 //
 // Usage: yarn build && yarn store:screenshots [--locale vi-VN] [--out <dir>]
 import { spawn } from 'node:child_process'
@@ -33,6 +35,11 @@ const BROWSER_SESSION = 'Refactor authentication flow'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** The Store-facing product name the screenshots must show (STORE_APP_NAME in src/shared/appIdentity.ts). */
+const STORE_NAME = 'LHP Local Session Manager'
+/** The GitHub product name must not appear in a Store screenshot (Store policy 10.1.1). */
+const FORBIDDEN_NAME = /claude local/i
+
 /** Text that must never appear in a screenshot: this machine's user, home and checkout paths. */
 const PRIVATE_TEXT = [os.homedir(), path.basename(os.homedir()), os.userInfo().username, ROOT, path.basename(path.dirname(ROOT))]
   .filter((s) => s && s.length >= 3)
@@ -50,6 +57,7 @@ async function assertNoPrivateData(page, name) {
   const leaked = PRIVATE_TEXT.filter((s) => lower.includes(s))
   const ids = [...new Set(text.match(ANY_UUID) ?? [])].filter((id) => !DEMO_UUID.test(id))
   if (leaked.length || ids.length) throw new Error(`${name}: private data on screen (${[...leaked, ...ids].join(', ')}); not saved`)
+  if (FORBIDDEN_NAME.test(text)) throw new Error(`${name}: the GitHub product name is on screen; not saved`)
 }
 
 /** Minimal Chrome DevTools Protocol client (Node's built-in WebSocket). */
@@ -176,6 +184,9 @@ async function shoot(listingLocale, appLocale) {
     // Guard: this must be screenshot mode on demo data, in the requested language.
     const info = await page.evaluate('window.sessionManager.getAppInfo()')
     if (info.userHome !== 'C:\\Users\\Demo' || info.distribution !== 'store') throw new Error('Not running in Store screenshot mode; aborting')
+    // The Store edition: its own product name, and Claude Desktop's data is read-only.
+    if (info.name !== STORE_NAME || info.desktopDataReadOnly !== true) throw new Error('The app is not presenting the Microsoft Store edition; aborting')
+    await page.waitFor(`document.querySelector('.identity-name')?.textContent === 'LHP Local'`, 'the Store product name in the sidebar')
     const lang = await page.evaluate('document.documentElement.lang')
     if (lang !== appLocale) throw new Error(`UI language is ${lang}, expected ${appLocale}`)
     const dpr = await page.evaluate('window.devicePixelRatio')
@@ -194,9 +205,12 @@ async function shoot(listingLocale, appLocale) {
     await page.evaluate(scrollToTop(`document.querySelectorAll('.inspector-section')[2]`, 20))
     await capture(page, path.join(outDir, '02-session-details.png'))
 
-    // 3. Delete plan in Safe Mode: the dry-run dialog with the confirmation typed. Nothing is executed.
+    // 3. Delete plan in Safe Mode: a transcript-only session (supported in the Store edition), the
+    //    dry-run dialog with the confirmation typed. Nothing is executed.
     await page.evaluate(`document.querySelector('.inspector .actions .btn.danger').click()`)
     await page.waitFor(`document.querySelector('.plan-session')`, 'the delete plan')
+    const planText = await page.evaluate(`document.querySelector('.modal-body').innerText`)
+    if (/deleted_|local_a1b2c3d4|archived-sessions\.idx/.test(planText)) throw new Error('The delete plan touches Claude Desktop metadata; not a Store-supported scenario')
     await page.evaluate(setValue(`document.querySelector('.confirm-input')`, 'DELETE'))
     await page.evaluate(`document.activeElement?.blur()`)
     await page.evaluate(`document.querySelector('.modal-body').scrollTop = 0`)

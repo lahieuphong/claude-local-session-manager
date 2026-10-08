@@ -5,6 +5,8 @@ import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   STORE_ASSETS,
+  STORE_CAPABILITIES,
+  STORE_DESCRIPTION,
   STORE_LANGUAGE_MAP,
   TEST_IDENTITY,
   identityHelp,
@@ -18,6 +20,9 @@ import {
   type StoreIdentity
 } from '../scripts/store-config.mjs'
 import { listZipEntries, reviewManifest } from '../scripts/store-inspect.mjs'
+
+/** electron-builder's own AppX manifest template: the Store build uses it as is. */
+const DEFAULT_TEMPLATE = 'node_modules/app-builder-lib/templates/appx/appxmanifest.xml'
 import { storeAsset } from '../scripts/generate-icon.mjs'
 import { RELEASES_URL } from '../src/shared/appIdentity'
 import {
@@ -40,7 +45,7 @@ const FIXTURE_IDENTITY: StoreIdentity = {
   identityName: '12345Fixture.ClaudeLocalSessionManager',
   publisher: 'CN=0A1B2C3D-0000-4000-8000-ABCDEF012345',
   publisherDisplayName: 'Fixture Publisher',
-  displayName: 'Claude Local Session Manager',
+  displayName: 'LHP Local Session Manager',
   storeProductId: ''
 }
 
@@ -220,7 +225,9 @@ describe('Store package version', () => {
     expect(toStorePackageVersion('10.20.30')).toBe('10.20.30.0')
     const pkg = JSON.parse(read('package.json'))
     expect(toStorePackageVersion(pkg.version)).toBe(`${pkg.version}.0`)
-    expect(storeArtifactName(toStorePackageVersion('1.2.3'))).toBe('Claude-Local-Session-Manager-1.2.3.0-x64.appx')
+    expect(storeArtifactName(toStorePackageVersion('1.2.4'))).toBe('LHP-Local-Session-Manager-1.2.4.0-x64.appx')
+    expect(storeArtifactName('1.2.4.0', { test: true })).toBe('LHP-Local-Session-Manager-1.2.4.0-x64-TEST-NOT-FOR-STORE.appx')
+    expect(storeBuilderConfig({ identity: FIXTURE_IDENTITY, version: '1.2.4' }).appx.artifactName).toBe('LHP-Local-Session-Manager-1.2.4.0-x64.appx')
   })
 
   it('rejects versions the Store cannot accept', () => {
@@ -299,6 +306,8 @@ describe('Store identity (Partner Center values)', () => {
         identityName: 'LaHieuPhong.ClaudeLocalSessionManager',
         publisher: 'CN=CA5468D0-A735-4CDB-9F0A-A0CDD47D1EA5',
         publisherDisplayName: 'La Hieu Phong',
+        // The Store-facing name changed after certification; the identity above did not.
+        displayName: 'LHP Local Session Manager',
         storeProductId: '9N5XNN8H1TSZ'
       })
       expect(validateStoreIdentity(committed)).toEqual([])
@@ -327,30 +336,48 @@ describe('Store languages, assets and manifest', () => {
     expect(fs.readdirSync(path.join(ROOT, 'build', 'appx')).sort()).toEqual(Object.keys(STORE_ASSETS).sort())
   })
 
-  it('requests only runFullTrust + unvirtualizedResources and disables AppData write virtualization', () => {
+  it('requests no capability besides runFullTrust and keeps the default manifest (AppData virtualization on)', () => {
     const cfg = storeBuilderConfig({ identity: FIXTURE_IDENTITY, version: '1.2.3' })
-    expect(cfg.appx.capabilities).toEqual(['unvirtualizedResources'])
+    expect(cfg.appx.capabilities).toEqual([]) // runFullTrust is added by electron-builder
+    expect(cfg.appx.customManifestPath).toBeUndefined()
     expect(cfg.appx.addAutoLaunchExtension).toBe(false)
     expect(cfg.files).toEqual(['!**/node_modules/electron-updater/**/*']) // no self-updater code in the Store package
     expect(cfg.directories.output.replace(/\\/g, '/')).toBe('dist/store')
     expect(storeBuilderConfig({ identity: FIXTURE_IDENTITY, version: '1.2.3', test: true }).directories.output.replace(/\\/g, '/')).toBe('dist/store-test')
-    const template = read('store/AppxManifest.template.xml')
-    expect(template).toMatch(/<desktop6:FileSystemWriteVirtualization>disabled<\/desktop6:FileSystemWriteVirtualization>/)
+    const template = read(DEFAULT_TEMPLATE)
+    expect(template).not.toMatch(/FileSystemWriteVirtualization|desktop6/)
     expect(template).toMatch(/EntryPoint="Windows\.FullTrustApplication"/)
     expect(template).toMatch(/TargetDeviceFamily Name="Windows\.Desktop"/)
   })
 
-  it('every requested restricted capability has a certification justification', () => {
+  it('the Store build is packaged under the Store-facing name, not the GitHub product name', () => {
+    const cfg = storeBuilderConfig({ identity: FIXTURE_IDENTITY, version: '1.2.4' })
+    expect(cfg.productName).toBe('LHP Local Session Manager')
+    expect(cfg.executableName).toBe('LHP Local Session Manager')
+    expect(cfg.appx.displayName).toBe('LHP Local Session Manager')
+    expect(cfg.extraMetadata).toMatchObject({ productName: 'LHP Local Session Manager', author: { name: FIXTURE_IDENTITY.publisherDisplayName } })
+    expect(cfg.extraMetadata.description).toBe(STORE_DESCRIPTION)
+    // Everything a customer can see is free of other products' names (the internal identity is not customer-facing).
+    const visible = [cfg.productName, cfg.executableName, cfg.appx.displayName, cfg.appx.artifactName, cfg.extraMetadata.productName, cfg.extraMetadata.description]
+    for (const value of visible) expect(String(value)).not.toMatch(/Claude|Anthropic/i)
+    // The immutable package identity is untouched by the rename.
+    expect(cfg.appx.identityName).toBe(FIXTURE_IDENTITY.identityName)
+    expect(cfg.appx.publisher).toBe(FIXTURE_IDENTITY.publisher)
+  })
+
+  it('the only requested restricted capability has a certification justification; the denied one is gone', () => {
     const notes = read('store/certification-notes.md')
     const requested = ['runFullTrust', ...(storeBuilderConfig({ identity: FIXTURE_IDENTITY, version: '1.2.3' }).appx.capabilities as string[])]
-    expect(requested).toEqual(['runFullTrust', 'unvirtualizedResources'])
+    expect(requested).toEqual(STORE_CAPABILITIES)
     for (const cap of requested) expect(notes).toMatch(new RegExp(`### \`${cap}\``))
-    expect(notes).toMatch(/FileSystemWriteVirtualization=disabled/)
+    expect(notes).not.toMatch(/### `unvirtualizedResources`/)
+    expect(notes).toMatch(/no `unvirtualizedResources`/)
+    expect(notes).toMatch(/## Store-edition limitations/)
   })
 
   it('the manifest review catches identity, version, capability and language problems', () => {
     const fill = (caps: string[], langs: string[], version = '1.2.3.0') =>
-      read('store/AppxManifest.template.xml').replace(/\$\{(\w+)\}/g, (_m, k: string) => {
+      read(DEFAULT_TEMPLATE).replace(/\$\{(\w+)\}/g, (_m, k: string) => {
         const v: Record<string, string> = {
           identityName: FIXTURE_IDENTITY.identityName,
           publisher: FIXTURE_IDENTITY.publisher,
@@ -359,7 +386,7 @@ describe('Store languages, assets and manifest', () => {
           version,
           arch: 'x64',
           applicationId: 'ClaudeLocalSessionManager',
-          executable: 'app\\Claude Local Session Manager.exe',
+          executable: 'app\\LHP Local Session Manager.exe',
           capabilities: `<Capabilities>${caps.map((c) => `<rescap:Capability Name="${c}"/>`).join('')}</Capabilities>`,
           resourceLanguages: langs.map((l) => `<Resource Language="${l}" />`).join(''),
           minVersion: '10.0.19041.0',
@@ -368,12 +395,18 @@ describe('Store languages, assets and manifest', () => {
         return v[k] ?? ''
       })
     const opts = { identity: FIXTURE_IDENTITY, storeVersion: '1.2.3.0' }
-    expect(reviewManifest(fill(['runFullTrust', 'unvirtualizedResources'], ['en-US', 'vi-VN', 'zh-CN']), opts).ok).toBe(true)
-    expect(reviewManifest(fill(['unvirtualizedResources'], ['en-US', 'vi-VN', 'zh-CN']), opts).ok).toBe(false)
-    expect(reviewManifest(fill(['runFullTrust', 'unvirtualizedResources', 'broadFileSystemAccess'], ['en-US', 'vi-VN', 'zh-CN']), opts).ok).toBe(false)
-    expect(reviewManifest(fill(['runFullTrust', 'unvirtualizedResources'], ['en-US']), opts).ok).toBe(false)
-    expect(reviewManifest(fill(['runFullTrust', 'unvirtualizedResources'], ['en-US', 'vi-VN', 'zh-CN'], '1.2.3.7'), opts).ok).toBe(false)
-    expect(reviewManifest(fill(['runFullTrust', 'unvirtualizedResources'], ['en-US', 'vi-VN', 'zh-CN']), { ...opts, identity: { ...FIXTURE_IDENTITY, publisher: 'CN=other' } }).ok).toBe(false)
+    const langs = ['en-US', 'vi-VN', 'zh-CN']
+    expect(reviewManifest(fill(['runFullTrust'], langs), opts).ok).toBe(true)
+    expect(reviewManifest(fill(['runFullTrust', 'unvirtualizedResources'], langs), opts).ok).toBe(false) // denied by certification
+    expect(reviewManifest(fill(['unvirtualizedResources'], langs), opts).ok).toBe(false)
+    expect(reviewManifest(fill(['runFullTrust', 'broadFileSystemAccess'], langs), opts).ok).toBe(false)
+    expect(reviewManifest(fill(['runFullTrust'], ['en-US']), opts).ok).toBe(false)
+    expect(reviewManifest(fill(['runFullTrust'], langs, '1.2.3.7'), opts).ok).toBe(false)
+    expect(reviewManifest(fill(['runFullTrust'], langs), { ...opts, identity: { ...FIXTURE_IDENTITY, publisher: 'CN=other' } }).ok).toBe(false)
+    // A Store-facing name with another product's name in it fails the review (policy 10.1.1).
+    const oldName = { ...FIXTURE_IDENTITY, displayName: 'Claude Local Session Manager' }
+    const withOldName = fill(['runFullTrust'], langs).replaceAll('LHP Local Session Manager', 'Claude Local Session Manager')
+    expect(reviewManifest(withOldName, { ...opts, identity: oldName }).ok).toBe(false)
   })
 
   it('lists package entries without extracting anything', () => {

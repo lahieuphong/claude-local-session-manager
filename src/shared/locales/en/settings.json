@@ -84,5 +84,8 @@
     "github": "GitHub Releases",
     "store": "Managed by Microsoft Store",
     "development": "Disabled in development builds"
+  },
+  "storeEdition": {
+    "limits": "Microsoft Store edition: sessions that have Claude Desktop metadata are view- and export-only. Archive, Restore and Delete are unavailable for them because Windows Store packaging isolates certain AppData writes. Transcript-only sessions can be hidden or deleted as usual."
   }
 }

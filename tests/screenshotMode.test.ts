@@ -26,6 +26,7 @@ vi.mock('node:fs', async (original) => trap(await original(), 'fs'))
 vi.mock('node:fs/promises', async (original) => trap(await original(), 'fs/promises'))
 vi.mock('node:child_process', async (original) => trap(await original(), 'child_process'))
 
+import { STORE_APP_NAME } from '../src/shared/appIdentity'
 import { IPC } from '../src/shared/ipc'
 import type { AppSettings, ArmResult, DeletePlan, DeleteResult, ScanSnapshot, SafetyModeState, UpdateState } from '../src/shared/types'
 import { buildScreenshotFixture, demoUuid, DEMO_ID_RE, DEMO_PROJECTS } from '../src/main/screenshot/fixtures'
@@ -37,7 +38,7 @@ const NOW = Date.UTC(2026, 9, 2, 8, 0)
 const ON = { [SCREENSHOT_MODE_ENV]: 'true' }
 
 function setup(): { handlers: ScreenshotHandlers; snapshot: ScanSnapshot } {
-  const appInfo = screenshotAppInfo({ name: 'Claude Local Session Manager', version: '1.2.3', electronVersion: '44.5.1', platform: 'win32 x64', locale: 'vi' })
+  const appInfo = screenshotAppInfo({ name: STORE_APP_NAME, version: '1.2.4', electronVersion: '44.5.1', platform: 'win32 x64', locale: 'vi' })
   const handlers = createScreenshotHandlers({ appInfo, fixture: buildScreenshotFixture(NOW), now: () => NOW })
   return { handlers, snapshot: handlers[IPC.scanSessions]() as ScanSnapshot }
 }
@@ -200,6 +201,26 @@ describe('Store screenshot mode: IPC handlers', () => {
     const live = (await handlers[IPC.createDeletePlan](byTitle(snapshot, 'Refactor authentication flow'))) as DeletePlan
     expect(live.sessions).toEqual([])
     expect(live.blocked[0].blockedCode).toBe('SESSION_IN_USE')
+  })
+
+  it('shows the Microsoft Store edition: its own product name, and Desktop-backed sessions cannot be deleted', async () => {
+    const { handlers, snapshot } = setup()
+    expect(await handlers[IPC.getAppInfo]()).toMatchObject({
+      name: 'LHP Local Session Manager',
+      distribution: 'store',
+      desktopDataReadOnly: true,
+      userDataPath: 'C:\\Users\\Demo\\AppData\\Roaming\\LHP Local Session Manager'
+    })
+    const cli = (await handlers[IPC.createDeletePlan](byTitle(snapshot, 'Update dashboard layout'))) as DeletePlan
+    expect(cli.reportText).toMatch(/^LHP LOCAL SESSION MANAGER - DELETE PLAN/)
+    expect(JSON.stringify([cli, snapshot, await handlers[IPC.getAppInfo]()])).not.toMatch(/Claude Local/)
+    // The plan of the screenshot touches nothing under AppData except this app's own cache record.
+    const outsideClaudeHome = cli.sessions[0].items.filter((i) => !i.path.startsWith('C:\\Users\\Demo\\.claude\\'))
+    expect(outsideClaudeHome.map((i) => i.kind)).toEqual(['manager-record'])
+    // A session with Claude Desktop metadata: refused as a whole, like in the real Store build.
+    const desktop = (await handlers[IPC.createDeletePlan](byTitle(snapshot, 'Database migration review'))) as DeletePlan
+    expect(desktop.sessions).toEqual([])
+    expect(desktop.blocked[0]).toMatchObject({ blockedCode: 'NOT_SUPPORTED', blockedMsg: { key: 'store.deleteUnavailable' } })
   })
 
   it('reports the Microsoft Store update state and keeps settings in memory only', async () => {

@@ -1,4 +1,5 @@
 import type { DeleteItemResult, DeletePlan, DeletePlanItem, DeleteResult, SessionDeletePlan } from '../../shared/types'
+import { APP_NAME } from '../../shared/appIdentity'
 import { formatBytes, formatDateTime } from '../../shared/format'
 
 const ACTION_LABEL: Record<DeletePlanItem['action'], string> = {
@@ -53,10 +54,10 @@ function sessionBlock(s: SessionDeletePlan, index: number, total: number, items:
   return lines
 }
 
-/** Plain-text plan for review / "COPY DELETE PLAN". */
-export function formatPlanReport(plan: Omit<DeletePlan, 'reportText'>): string {
+/** Plain-text plan for review / "COPY DELETE PLAN". `appName` is the product name of this build. */
+export function formatPlanReport(plan: Omit<DeletePlan, 'reportText'>, appName = APP_NAME): string {
   const lines = [
-    'CLAUDE LOCAL SESSION MANAGER - DELETE PLAN',
+    `${appName.toUpperCase()} - DELETE PLAN`,
     `Plan ID:        ${plan.planId}`,
     `Content hash:   sha256:${plan.contentHash}`,
     `Created:        ${formatDateTime(plan.createdAt)}   (expires ${formatDateTime(plan.expiresAt)})`,
@@ -81,9 +82,9 @@ export function formatPlanReport(plan: Omit<DeletePlan, 'reportText'>): string {
 }
 
 /** Plain-text report of an executed (or dry-run) plan. */
-export function formatResultReport(result: DeleteResult, plans: SessionDeletePlan[]): string {
+export function formatResultReport(result: DeleteResult, plans: SessionDeletePlan[], appName = APP_NAME): string {
   const lines = [
-    `CLAUDE LOCAL SESSION MANAGER - DELETE ${result.dryRun ? 'DRY RUN ' : ''}RESULT`,
+    `${appName.toUpperCase()} - DELETE ${result.dryRun ? 'DRY RUN ' : ''}RESULT`,
     `Plan ID:   ${result.planId ?? '-'}`,
     `Mode:      ${result.dryRun ? 'DRY RUN - nothing was modified' : 'LIVE'}`,
     `Result:    ${result.message}`,

@@ -7,11 +7,13 @@
   "strip": {
     "reading": "Reading safety mode…",
     "safeText": "Dry run — no Claude files can be deleted, archived or restored.",
+    "safeTextStore": "Dry run — no Claude files can be deleted.",
     "armedText": "Permanent deletion is enabled for this app session. One delete, 10 minutes or closing the app returns to Safe Mode.",
     "settingsLink": "Deletion safety"
   },
   "claude": {
     "running": "Claude Desktop is running — archive, restore and delete are disabled",
+    "runningStore": "Claude Desktop is running — delete is disabled",
     "runningHint": "Quit Claude Desktop (including from the system tray) before modifying session files. Browsing and export still work.",
     "unknown": "Claude status unknown — modifying actions are disabled",
     "unknownHint": "Could not verify whether Claude Desktop is running.",

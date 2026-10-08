@@ -90,7 +90,7 @@ with its own updates; they share one version number.
 
 | Option | Updates |
 |---|---|
-| **Microsoft Store** — recommended once it is published ([listing](https://apps.microsoft.com/detail/9N5XNN8H1TSZ), live after certification) | Delivered by the Microsoft Store |
+| **Microsoft Store** — published there as **LHP Local Session Manager**, once Microsoft certifies it | Delivered by the Microsoft Store |
 | **GitHub Setup** — `…-Setup-X.Y.Z-x64.exe` | From GitHub Releases, inside the app (Settings → Updates) |
 | **Portable** (advanced) — `…-Portable-X.Y.Z-x64.exe` | Manual: download the new release |
 
@@ -99,6 +99,15 @@ Microsoft Store / Development*). The Store version never uses the GitHub
 updater. Store packaging and submission are described in
 [docs/MICROSOFT_STORE.md](docs/MICROSOFT_STORE.md). The Store product exists
 in Partner Center; the listing goes live only after Microsoft certifies a submission.
+
+**The Microsoft Store edition is more limited.** The Microsoft Store edition
+does not modify Claude Desktop's AppData files: sessions that have Claude
+Desktop metadata can be browsed and exported, but not archived, restored or
+deleted. It may still write its own application data, such as settings and
+manager state, inside the app's own user-data location. Transcript-only
+sessions under `~\.claude` can be hidden or deleted as usual. Everything
+described in this README applies in full to the GitHub Setup and Portable
+builds.
 
 Download from **[GitHub Releases](https://github.com/lahieuphong/claude-local-session-manager/releases)**:
 
@@ -204,7 +213,8 @@ yarn typecheck  # TypeScript, main + renderer
 yarn build      # production bundles into out/
 yarn dist       # clean dist/, build, then Setup + Portable into dist/ (never publishes)
                 # (= yarn dist:github; the GitHub channel)
-yarn store:check      # Microsoft Store: validate identity, version mapping and assets
+yarn store:check      # Microsoft Store: validate identity, name, version mapping and assets
+yarn store:privacy    # rebuild the public privacy page (docs/privacy/) from store/privacy.md
 yarn dist:store       # Microsoft Store package into dist/store/ (needs the Partner Center identity)
 yarn dist:store:test  # local TEST Store package (fake identity, never submit) into dist/store-test/
 yarn store:screenshots      # Store listing screenshots (demo data only) into store/listing-assets/
@@ -485,6 +495,7 @@ src/
       exportService.ts     JSONL / JSON / Markdown export (copies only)
       safetyMode.ts        Safe Mode / REAL DELETE ARMED (memory only)
       updateService.ts     GitHub Releases updates (installed / portable / dev); Store-managed mode
+      packagingPolicy.ts   what a build may write (Store edition: no changes to Claude Desktop's AppData files)
       cacheService.ts      parsed-transcript index in userData
       watchService.ts      throttled fs.watch / interval refresh
   preload/           contextBridge API (named session-ID operations only)
@@ -496,8 +507,8 @@ fixtures/            sample metadata + transcripts (incl. Vietnamese text)
 scripts/             icon + Store asset generator, release helpers, i18n-check.mjs,
                      dist-store.mjs / store-config.mjs / store-inspect.mjs (Microsoft Store),
                      store-screenshots.mjs / store-listing-assets.mjs (Store listing images)
-store/               Store identity, manifest template, listing drafts + images, privacy policy
-docs/                MICROSOFT_STORE.md
+store/               Store identity, listing drafts + images, privacy policy, certification notes
+docs/                MICROSOFT_STORE.md; privacy/ + index.html = the public pages (GitHub Pages)
 ```
 
 Security model:
@@ -528,7 +539,9 @@ transcripts, a cold scan takes about 1.6 s and a cached rescan about 50 ms.
 No telemetry, analytics or crash reporting. Session data is read and changed
 only on your computer; nothing is uploaded. GitHub builds contact GitHub
 Releases for updates; the Microsoft Store build never contacts GitHub. Details:
-[store/privacy.md](store/privacy.md).
+[store/privacy.md](store/privacy.md), published at
+<https://lahieuphong.github.io/claude-local-session-manager/privacy/> once
+GitHub Pages is enabled for `main` / `docs`.
 
 ## Troubleshooting
 

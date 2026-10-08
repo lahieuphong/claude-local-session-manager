@@ -14,6 +14,7 @@ import {
   stripBom,
   type DesktopMetadataRecord
 } from './metadataParser'
+import type { PackagingPolicy } from './packagingPolicy'
 import { globalGuard, sessionGuard, type ProcessService } from './processService'
 import type { SessionRepository } from './sessionRepository'
 
@@ -129,7 +130,9 @@ export class ArchiveService {
     private repo: SessionRepository,
     private processes: ProcessService,
     private hidden: ManagerHiddenStore,
-    dryRun: boolean | (() => boolean)
+    dryRun: boolean | (() => boolean),
+    /** What this build may write (see packagingPolicy.ts). Omitted = unrestricted (GitHub builds). */
+    private policy?: PackagingPolicy
   ) {
     this.isDryRun = typeof dryRun === 'function' ? dryRun : () => dryRun
   }
@@ -141,6 +144,13 @@ export class ArchiveService {
     const roots = this.repo.getAllowedRoots()
     if (!record || !roots) return { ok: false, code: 'NOT_FOUND', ...msg('common.sessionNotFound') }
     if (!record.metadata) return { ok: false, code: 'NOT_SUPPORTED', ...msg('archive.notArchivable') }
+    // Store edition: the rewrite (temp file + rename) and the archive index live
+    // under AppData, where Windows isolates this package's new files. Refused
+    // before anything is read or written.
+    const desktopRoots = this.repo.getRoots()?.desktopRoots.map((d) => d.path)
+    if (this.policy?.isolatedRootOf(record.metadata.filePath, desktopRoots)) {
+      return { ok: false, code: 'NOT_SUPPORTED', ...msg('store.archiveUnavailable') }
+    }
 
     const status = await this.processes.getStatus(true)
     const guard = globalGuard(status) ?? sessionGuard(status, record.guardUuids)

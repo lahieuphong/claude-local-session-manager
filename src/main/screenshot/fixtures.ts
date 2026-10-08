@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
+import { STORE_APP_NAME } from '../../shared/appIdentity'
 import type { CandidatePath, LiveCliSession, ProcessStatus, ScanSnapshot, SessionDetails, StorageRoots } from '../../shared/types'
 import type { DesktopMetadataRecord, DesktopRootScan, DesktopStorageDir } from '../services/metadataParser'
 import { buildSessions, type SessionRecord } from '../services/sessionBuilder'
@@ -29,12 +30,15 @@ const PROJECTS_ROOT = win.join(CLAUDE_HOME, 'projects')
 const FILE_HISTORY_ROOT = win.join(CLAUDE_HOME, 'file-history')
 const SESSION_ENV_ROOT = win.join(CLAUDE_HOME, 'session-env')
 const LIVE_SESSIONS_DIR = win.join(CLAUDE_HOME, 'sessions')
-const APPDATA = win.join(DEMO_HOME, 'AppData', 'Roaming')
+export const DEMO_APPDATA = win.join(DEMO_HOME, 'AppData', 'Roaming')
+export const DEMO_LOCALAPPDATA = win.join(DEMO_HOME, 'AppData', 'Local')
+const APPDATA = DEMO_APPDATA
 const DESKTOP_ROOT = win.join(APPDATA, 'Claude', 'claude-code-sessions')
 const ACCOUNT_ID = 'a1b2c3d4-0000-4000-a000-000000000001'
 const ORG_ID = 'a1b2c3d4-0000-4000-b000-000000000001'
 const DESKTOP_DIR = win.join(DESKTOP_ROOT, ACCOUNT_ID, ORG_ID)
-export const DEMO_USER_DATA = win.join(APPDATA, 'Claude Local Session Manager')
+/** The screenshots show the Microsoft Store edition, so its app data folder carries the Store name. */
+export const DEMO_USER_DATA = win.join(APPDATA, STORE_APP_NAME)
 
 /** Synthetic Claude Code session UUID number `n`. */
 export const demoUuid = (n: number): string => `a1b2c3d4-0000-4000-8000-${String(n).padStart(12, '0')}`

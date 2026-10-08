@@ -4,10 +4,12 @@ import path from 'node:path'
 import { once } from 'node:events'
 import type { ExportFormat, ExportResult } from '../../shared/types'
 import { formatDateTime } from '../../shared/format'
+import { APP_NAME } from '../../shared/appIdentity'
 import { isInsideClaudeStorage, type AllowedRoots } from '../security/pathValidator'
 import { pathKey } from '../util/fsx'
 import { errorMessage, logger } from '../util/logger'
-import { msg } from '../util/messages'
+import { msg, msgText } from '../util/messages'
+import type { PackagingPolicy } from './packagingPolicy'
 import type { SessionRecord } from './sessionBuilder'
 import type { SessionRepository } from './sessionRepository'
 import { extractUserText, readJsonlLines } from './transcriptParser'
@@ -36,7 +38,7 @@ export async function exportJsonl(record: SessionRecord, dest: string): Promise<
   await copyFile(record.transcript.filePath, dest)
 }
 
-export async function exportInfo(record: SessionRecord, rawMetadata: string | undefined, dest: string): Promise<void> {
+export async function exportInfo(record: SessionRecord, rawMetadata: string | undefined, dest: string, appName = APP_NAME): Promise<void> {
   let metadata: unknown = undefined
   if (rawMetadata !== undefined) {
     try {
@@ -47,7 +49,7 @@ export async function exportInfo(record: SessionRecord, rawMetadata: string | un
   }
   const info = {
     exportedAt: new Date().toISOString(),
-    exportedBy: 'Claude Local Session Manager (unofficial)',
+    exportedBy: `${appName} (unofficial)`,
     session: record.session,
     metadata
   }
@@ -61,7 +63,7 @@ function truncate(text: string, max: number): string {
 }
 
 /** Render a readable conversation (user prompts, assistant text, tool calls). */
-export async function exportMarkdown(record: SessionRecord, dest: string): Promise<void> {
+export async function exportMarkdown(record: SessionRecord, dest: string, appName = APP_NAME): Promise<void> {
   if (!record.transcript) throw new Error('This session has no transcript file')
   const s = record.session
   const out = createWriteStream(dest, { encoding: 'utf8' })
@@ -75,7 +77,7 @@ export async function exportMarkdown(record: SessionRecord, dest: string): Promi
     if (s.projectPath) await write(`| Project | \`${s.projectPath}\` |\n`)
     await write(`| Created | ${formatDateTime(s.createdAt)} |\n| Updated | ${formatDateTime(s.updatedAt)} |\n`)
     if (s.model) await write(`| Model | ${s.model} |\n`)
-    await write(`\n> Exported by Claude Local Session Manager (unofficial). Tool output and thinking are omitted.\n\n---\n\n`)
+    await write(`\n> Exported by ${appName} (unofficial). Tool output and thinking are omitted.\n\n---\n\n`)
 
     let lastAssistantId: string | undefined
     for await (const line of readJsonlLines(record.transcript.filePath)) {
@@ -121,11 +123,27 @@ export interface ExportDialogs {
   chooseDirectory(): Promise<string | null>
 }
 
+export interface ExportOptions {
+  /** What this build may write (see packagingPolicy.ts). Omitted = unrestricted (GitHub builds). */
+  policy?: PackagingPolicy
+  /** Product name written into exported files. */
+  appName?: string
+}
+
 export class ExportService {
   constructor(
     private repo: SessionRepository,
-    private dialogs: ExportDialogs
+    private dialogs: ExportDialogs,
+    private options: ExportOptions = {}
   ) {}
+
+  /**
+   * Store edition: Windows would redirect files created under AppData to a
+   * private package location, so the user would not find the export there.
+   */
+  private isolatedDestination(dest: string): boolean {
+    return !!this.options.policy?.isolatedRootOf(dest, this.repo.getRoots()?.desktopRoots.map((d) => d.path))
+  }
 
   private roots(): AllowedRoots & { claudeHome?: string } {
     const roots = this.repo.getAllowedRoots()
@@ -135,11 +153,12 @@ export class ExportService {
 
   async writeExport(record: SessionRecord, format: ExportFormat, dest: string): Promise<void> {
     assertDestination(dest, record, this.roots())
+    if (this.isolatedDestination(dest)) throw new Error(msgText('store.exportIntoAppData', { path: dest }))
     if (format === 'jsonl') await exportJsonl(record, dest)
-    else if (format === 'markdown') await exportMarkdown(record, dest)
+    else if (format === 'markdown') await exportMarkdown(record, dest, this.options.appName)
     else {
       const details = await this.repo.getDetails(record.session.id)
-      await exportInfo(record, details?.rawMetadata, dest)
+      await exportInfo(record, details?.rawMetadata, dest, this.options.appName)
     }
     logger.info(`Exported ${format} of ${record.session.id} to ${dest}`)
   }
@@ -153,6 +172,7 @@ export class ExportService {
     const name = safeFileName(record.session.displayTitle, record.session.cliSessionId ?? id) + EXPORT_EXTENSIONS[format]
     const dest = await this.dialogs.chooseFile(name, format)
     if (!dest) return { ok: false, cancelled: true, ...msg('export.cancelled'), files: [], errors: [] }
+    if (this.isolatedDestination(dest)) return { ok: false, ...msg('store.exportIntoAppData', { path: dest }), files: [], errors: [] }
     try {
       await this.writeExport(record, format, dest)
       return { ok: true, ...msg('export.done', { path: dest }), files: [dest], errors: [] }
@@ -164,6 +184,7 @@ export class ExportService {
   async exportMany(ids: string[], formats: ExportFormat[]): Promise<ExportResult> {
     const dir = await this.dialogs.chooseDirectory()
     if (!dir) return { ok: false, cancelled: true, ...msg('export.cancelled'), files: [], errors: [] }
+    if (this.isolatedDestination(dir)) return { ok: false, ...msg('store.exportIntoAppData', { path: dir }), files: [], errors: [] }
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const target = path.join(dir, `claude-sessions-export-${stamp}`)
     const files: string[] = []

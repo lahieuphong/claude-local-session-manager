@@ -1,7 +1,7 @@
 {
   "name": "claude-local-session-manager",
   "productName": "Claude Local Session Manager",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Unofficial local session manager for Claude Code/Desktop on Windows.",
   "author": "Claude Local Session Manager contributors",
   "license": "MIT",
@@ -30,6 +30,7 @@
     "dist:store": "node scripts/dist-store.mjs",
     "dist:store:test": "node scripts/dist-store.mjs --test",
     "store:check": "node scripts/store-check.mjs",
+    "store:privacy": "node scripts/privacy-page.mjs",
     "store:screenshots": "node scripts/store-screenshots.mjs",
     "store:validate-assets": "node scripts/store-listing-assets.mjs",
     "version:patch": "node scripts/version.mjs patch",

@@ -120,6 +120,11 @@
     "manyWithErrors": "Đã xuất {{count}} tệp vào {{path}}; {{errors}} lỗi.",
     "chooseFolder": "Chọn thư mục xuất"
   },
+  "store": {
+    "archiveUnavailable": "Bản Microsoft Store không có Lưu trữ và Khôi phục. Cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData nên Claude Desktop sẽ không thấy thay đổi. Chưa có gì bị thay đổi.",
+    "deleteUnavailable": "Không dùng được trong bản Microsoft Store: xóa phiên này cần thay đổi tệp trong AppData (dữ liệu phiên của Claude Desktop), mà cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData. Chưa có gì bị thay đổi.",
+    "exportIntoAppData": "Bản Microsoft Store không thể xuất vào AppData ({{path}}): cơ chế đóng gói của Windows Store sẽ chuyển tệp sang một vị trí riêng. Hãy chọn thư mục khác, ví dụ Documents."
+  },
   "safety": {
     "typeExactly": "Gõ chính xác {{phrase}} để bật xóa thật.",
     "notArmed": "Chưa bật xóa thật: {{reason}}",
@@ -164,6 +169,7 @@
     "loadFailed": "Không tải được cửa sổ ứng dụng.",
     "rendererGone": "Cửa sổ ứng dụng bị dừng bất ngờ.",
     "problemDetail": "{{reason}}\n\nHãy thử lại. Nếu vẫn lỗi, hãy tải lại ứng dụng từ GitHub Releases (bản Portable: chỉ mở một lần và đợi cửa sổ hiện lên).\n\nTệp nhật ký: {{log}}",
+    "problemDetailStore": "{{reason}}\n\nHãy thử lại. Nếu vẫn lỗi, hãy cài lại ứng dụng từ Microsoft Store.\n\nTệp nhật ký: {{log}}",
     "retry": "Thử lại",
     "quit": "Thoát"
   }

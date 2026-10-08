@@ -13,6 +13,8 @@ export function StatusStrip(): ReactElement {
   const safety = useAppState((s) => s.safety)
   const process = useAppState((s) => s.process)
   const checking = useAppState((s) => s.processChecking)
+  // Microsoft Store edition: Archive / Restore do not exist, so the texts do not mention them.
+  const storeEdition = useAppState((s) => s.appInfo?.desktopDataReadOnly ?? false)
   const remaining = useArmCountdown(safety)
   const armed = !!safety && !safety.dryRun
   const claudeBlocks = !!process && (process.desktopRunning || !!process.error)
@@ -40,7 +42,7 @@ export function StatusStrip(): ReactElement {
               <IconShield size={14} />
               {t('safety:mode.safe')}
             </span>
-            <span className="strip-text">{t('safety:strip.safeText')}</span>
+            <span className="strip-text">{t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText')}</span>
             <button className="link-btn" onClick={() => setView({ kind: 'settings' })}>
               {t('safety:strip.settingsLink')}
             </button>
@@ -53,7 +55,7 @@ export function StatusStrip(): ReactElement {
           <>
             <IconAlert size={14} />
             <span className="strip-text" title={t(process?.error ? 'safety:claude.unknownHint' : 'safety:claude.runningHint')}>
-              {t(process?.error ? 'safety:claude.unknown' : 'safety:claude.running')}
+              {t(process?.error ? 'safety:claude.unknown' : storeEdition ? 'safety:claude.runningStore' : 'safety:claude.running')}
             </span>
           </>
         ) : (

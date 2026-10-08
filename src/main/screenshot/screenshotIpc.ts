@@ -19,13 +19,14 @@ import type {
 import { assertFormat, assertId, assertIds, assertPlanId, assertString } from '../ipc/validators'
 import { formatPlanReport } from '../services/deleteReport'
 import { buildPlanItems, keptPaths } from '../services/deleteService'
+import { isolatedPlanItems, packagingPolicy } from '../services/packagingPolicy'
 import { globalGuard, sessionGuard } from '../services/processService'
 import { ARM_DURATION_MS } from '../services/safetyMode'
 import { DEFAULT_SETTINGS, mergeSettings } from '../services/settingsService'
 import { computeStorageInfo } from '../services/storageService'
 import { UpdateService } from '../services/updateService'
 import { msg, msgText, ref } from '../util/messages'
-import { DEMO_HOME, DEMO_USER_DATA, demoHash, screenshotDetails, type ScreenshotFixture } from './fixtures'
+import { DEMO_APPDATA, DEMO_HOME, DEMO_LOCALAPPDATA, DEMO_USER_DATA, demoHash, screenshotDetails, type ScreenshotFixture } from './fixtures'
 
 /** main → renderer push channels; everything else in IPC is an invoke channel. */
 export const PUSH_CHANNELS = [IPC.safetyModeChanged, IPC.updateStateChanged, IPC.sessionsChanged, IPC.scanStateChanged] as const
@@ -56,6 +57,7 @@ export function screenshotAppInfo(o: { name: string; version: string; electronVe
     systemLanguages: [INTL_LOCALE[o.locale ?? 'en']],
     distribution: 'store',
     storeListingAvailable: true,
+    desktopDataReadOnly: true,
     userHome: DEMO_HOME
   }
 }
@@ -78,6 +80,10 @@ export function createScreenshotHandlers(opts: { appInfo: AppInfo; fixture: Scre
     updater: null,
     openExternal: async () => undefined
   })
+
+  // The Store edition's write policy, applied to the demo profile exactly as the real services apply it.
+  const policy = packagingPolicy('store', { homedir: DEMO_HOME, appData: DEMO_APPDATA, localAppData: DEMO_LOCALAPPDATA })
+  const desktopRoots = fixture.snapshot.roots.desktopRoots.map((d) => d.path)
 
   // The manager's own records about a session (hidden list, scan cache), as a scan would leave them.
   const planContext = {
@@ -134,7 +140,10 @@ export function createScreenshotHandlers(opts: { appInfo: AppInfo; fixture: Scre
         warningMsgs
       }
       const guard = sessionGuard(status, record.guardUuids)
-      if (guard) {
+      if (isolatedPlanItems(items, policy, desktopRoots).length) {
+        const m = msg('store.deleteUnavailable')
+        blocked.push({ ...plan, blockedReason: m.message, blockedMsg: m.msg, blockedCode: 'NOT_SUPPORTED' })
+      } else if (guard) {
         blocked.push({ ...plan, blockedReason: guard.message, blockedMsg: guard.msg, blockedCode: guard.code })
       } else if (!items.some((i) => i.action.startsWith('delete'))) {
         const m = msg('delete.nothingOnDisk')
@@ -164,7 +173,7 @@ export function createScreenshotHandlers(opts: { appInfo: AppInfo; fixture: Scre
       totalDirs: ok.reduce((n, s) => n + s.totalDirs, 0),
       confirmationPhrases: confirmationPhrases(ok.length, bulk)
     }
-    return { ...plan, reportText: formatPlanReport(plan) }
+    return { ...plan, reportText: formatPlanReport(plan, appInfo.name) }
   }
 
   return {

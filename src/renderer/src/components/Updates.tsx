@@ -100,7 +100,7 @@ export function UpdatesSection(): ReactElement {
           <h2 id={titleId}>{t('updater:confirm.title')}</h2>
         </header>
         <div className="modal-body">
-          <p>{t('updater:confirm.text', { version: u.latestVersion ?? '' })}</p>
+          <p>{t('updater:confirm.text', { appName: appInfo?.name ?? '', version: u.latestVersion ?? '' })}</p>
           <p className="hint">{t('updater:confirm.safeModeNote')}</p>
         </div>
         <footer className="modal-footer">
@@ -131,7 +131,7 @@ export function AboutSection(): ReactElement {
     <div className="about">
       <AppMark size={40} />
       <div className="about-body">
-        <div className="about-name">{t('common:app.name')}</div>
+        <div className="about-name">{appInfo?.name}</div>
         <div className="about-version mono">{t('updater:version', { version: appInfo?.version ?? '…' })}</div>
         <p className="hint">{t('common:app.disclaimer')}</p>
         {appInfo && (
@@ -142,6 +142,7 @@ export function AboutSection(): ReactElement {
             <dd>{t(`settings:updatesSource.${appInfo.distribution}`)}</dd>
           </dl>
         )}
+        {appInfo?.desktopDataReadOnly && <p className="hint">{t('settings:storeEdition.limits')}</p>}
         <p className="hint mono">
           Electron {appInfo?.electronVersion} · {appInfo?.platform}
         </p>

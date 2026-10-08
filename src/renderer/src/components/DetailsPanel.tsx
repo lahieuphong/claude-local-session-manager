@@ -65,7 +65,10 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
   const process = useAppState((st) => st.process)
   const busy = useAppState((st) => st.busy)
   const safety = useAppState((st) => st.safety)
+  const appInfo = useAppState((st) => st.appInfo)
   const raw = settings?.showRawPaths ?? false
+  // Microsoft Store edition: Claude Desktop's data is read-only for this build (the main process enforces it).
+  const storeReadOnly = s.hasMetadata && !!appInfo?.desktopDataReadOnly
   const title = useSessionTitle()(s)
   const project = s.projectKey === 'unresolved' ? t('sessions:unknownProject') : s.projectName
 
@@ -100,7 +103,7 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
         </header>
 
         <div className="actions" role="toolbar" aria-label={t('inspector:actions')}>
-          {s.hasMetadata ? (
+          {storeReadOnly ? null : s.hasMetadata ? (
             s.archived ? (
               <button className="btn" disabled={busy || archiveBlock} onClick={() => void archive(s.id, false)} title={t('inspector:action.restoreHint')}>
                 <IconRestore size={14} /> {t('common:action.restore')}
@@ -124,11 +127,12 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
             <IconFolder size={14} /> {t('inspector:action.openProject')}
           </button>
           <div className="spacer" />
-          <button className="btn danger" disabled={busy || deleteBlock} onClick={() => openDelete([s.id], false)}>
+          <button className="btn danger" disabled={busy || deleteBlock || storeReadOnly} onClick={() => openDelete([s.id], false)}>
             <IconTrash size={14} /> {t('common:action.deletePermanently')}
           </button>
         </div>
-        {blockReason && (
+        {/* A Store-edition read-only session cannot be changed whatever is running: only the Store note applies. */}
+        {blockReason && !storeReadOnly && (
           <div className="notice warn small" role="note">
             <IconAlert size={14} />
             <span>{blockReason}</span>
@@ -138,6 +142,12 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
           <div className="notice subtle small" role="note">
             <IconInfo size={14} />
             <span>{t(s.kind === 'cli' ? 'inspector:note.transcriptOnly' : 'inspector:note.orphan')}</span>
+          </div>
+        )}
+        {storeReadOnly && (
+          <div className="notice subtle small" role="note">
+            <IconInfo size={14} />
+            <span>{t('inspector:note.storeDesktop')}</span>
           </div>
         )}
         {safety && !safety.dryRun && (

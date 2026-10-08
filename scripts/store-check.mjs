@@ -11,7 +11,8 @@ import {
   loadStoreIdentity,
   packageFamilyName,
   toStorePackageVersion,
-  validateStoreIdentity
+  validateStoreIdentity,
+  validateStoreName
 } from './store-config.mjs'
 
 const pkg = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
@@ -35,12 +36,13 @@ for (const [name, [w, h]] of Object.entries(STORE_ASSETS)) {
 if (ok) console.log(`Assets: ${Object.keys(STORE_ASSETS).length} present with exact sizes`)
 
 const identity = loadStoreIdentity()
-const errors = validateStoreIdentity(identity)
+const errors = [...validateStoreIdentity(identity), ...validateStoreName(identity)]
 if (errors.length) {
   console.error('\n' + identityHelp(errors))
   process.exit(2)
 }
 console.log('Identity: complete (values come from Partner Center; the Store verifies them on upload)')
+console.log(`  Display name      : ${identity.displayName} (the name reserved in Partner Center; shown by the Store edition)`)
 console.log(`  Identity Name     : ${identity.identityName}`)
 console.log(`  Publisher         : ${identity.publisher}`)
 console.log(`  PackageFamilyName : ${packageFamilyName(identity.identityName, identity.publisher)} (derived)`)

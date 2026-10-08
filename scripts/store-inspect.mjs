@@ -2,7 +2,7 @@
 // dist-store.mjs and tests). No dependencies: lists the zip central directory
 // and checks the manifest text with explicit expectations.
 import { readFileSync } from 'node:fs'
-import { STORE_APPLICATION_ID, STORE_LANGUAGE_MAP, packageFamilyName } from './store-config.mjs'
+import { STORE_APPLICATION_ID, STORE_CAPABILITIES, STORE_LANGUAGE_MAP, THIRD_PARTY_NAME_RE, packageFamilyName } from './store-config.mjs'
 
 /** File names inside a zip/appx (central directory only; nothing is extracted). */
 export function listZipEntries(buffer) {
@@ -77,11 +77,15 @@ export function reviewManifest(xml, { identity, storeVersion, assets = [], entri
     ['Full-trust desktop entry point', fields.EntryPoint === 'Windows.FullTrustApplication'],
     [`Application Id is ${STORE_APPLICATION_ID}`, fields['Application Id'] === STORE_APPLICATION_ID],
     ['runFullTrust capability present', capabilities.includes('runFullTrust')],
+    [`No capability besides ${STORE_CAPABILITIES.join(', ')}`, JSON.stringify(capabilities) === JSON.stringify(STORE_CAPABILITIES)],
+    ['unvirtualizedResources is not requested', !/unvirtualizedResources/i.test(xml)],
+    ['AppData write virtualization is left on (no FileSystemWriteVirtualization / desktop6)', !/FileSystemWriteVirtualization|RegistryWriteVirtualization|desktop6/i.test(xml)],
     [
-      'No capabilities besides runFullTrust + unvirtualizedResources',
-      capabilities.every((c) => c === 'runFullTrust' || c === 'unvirtualizedResources')
+      'Store-facing names and description contain no third-party product name',
+      !THIRD_PARTY_NAME_RE.test(
+        [fields.DisplayName, attr(xml, 'uap:VisualElements', 'DisplayName'), fields.Executable, text(xml, 'Description'), attr(xml, 'uap:VisualElements', 'Description')].join(' ')
+      )
     ],
-    ['AppData write virtualization disabled', fields.FileSystemWriteVirtualization === 'disabled'],
     [`Languages ${Object.values(STORE_LANGUAGE_MAP).join(', ')}`, JSON.stringify(languages) === JSON.stringify(Object.values(STORE_LANGUAGE_MAP))],
     ['No auto-start, protocol or file-type extensions', !/<Extensions>/.test(xml)]
   ]

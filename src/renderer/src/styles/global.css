@@ -1,5 +1,5 @@
 /*
- * Claude Local Session Manager — design tokens and styles.
+ * Local Session Manager — design tokens and styles.
  *
  * Dark, near-black, list-first. Hairline borders, quiet controls, one warm
  * Claude-orange accent. Semantic colors are reserved: green = safe/healthy,
@@ -1970,6 +1970,10 @@ html[lang='zh-CN'] .update-mode {
   display: flex;
   gap: var(--space-4);
   padding: var(--space-4);
+}
+/* The mark keeps its size however long the text next to it is. */
+.about > svg {
+  flex: none;
 }
 .about-body {
   display: flex;
