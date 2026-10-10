@@ -4,6 +4,54 @@
 import { readFileSync } from 'node:fs'
 import { STORE_APPLICATION_ID, STORE_CAPABILITIES, STORE_LANGUAGE_MAP, THIRD_PARTY_NAME_RE, packageFamilyName } from './store-config.mjs'
 
+/**
+ * Name, CRC-32 and uncompressed size of every entry of a zip/appx (central
+ * directory only; nothing is extracted). Lets a script prove that a local file
+ * is byte-identical to the one inside the package.
+ */
+export function readZipDirectory(buffer) {
+  let eocd = -1
+  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 65557); i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      eocd = i
+      break
+    }
+  }
+  if (eocd < 0) throw new Error('not a zip/appx file (no end of central directory)')
+  let count = buffer.readUInt16LE(eocd + 10)
+  let offset = buffer.readUInt32LE(eocd + 16)
+  if (count === 0xffff || offset === 0xffffffff) {
+    const loc = eocd - 20
+    if (buffer.readUInt32LE(loc) !== 0x07064b50) throw new Error('zip64 locator missing')
+    const rec = Number(buffer.readBigUInt64LE(loc + 8))
+    count = Number(buffer.readBigUInt64LE(rec + 32))
+    offset = Number(buffer.readBigUInt64LE(rec + 48))
+  }
+  const entries = []
+  for (let n = 0; n < count; n++) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) throw new Error('bad central directory entry')
+    const crc32 = buffer.readUInt32LE(offset + 16)
+    let size = buffer.readUInt32LE(offset + 24)
+    const compressed = buffer.readUInt32LE(offset + 20)
+    const nameLen = buffer.readUInt16LE(offset + 28)
+    const extraLen = buffer.readUInt16LE(offset + 30)
+    const commentLen = buffer.readUInt16LE(offset + 32)
+    const name = buffer.toString('utf8', offset + 46, offset + 46 + nameLen)
+    // ZIP64 extended information: the real sizes when the 32-bit fields are saturated.
+    let extra = offset + 46 + nameLen
+    const extraEnd = extra + extraLen
+    while (extra + 4 <= extraEnd) {
+      const id = buffer.readUInt16LE(extra)
+      const len = buffer.readUInt16LE(extra + 2)
+      if (id === 0x0001 && size === 0xffffffff && len >= 8) size = Number(buffer.readBigUInt64LE(extra + 4))
+      extra += 4 + len
+    }
+    entries.push({ name, crc32, size, compressed })
+    offset += 46 + nameLen + extraLen + commentLen
+  }
+  return entries
+}
+
 /** File names inside a zip/appx (central directory only; nothing is extracted). */
 export function listZipEntries(buffer) {
   let eocd = -1

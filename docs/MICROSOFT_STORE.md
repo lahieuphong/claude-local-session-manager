@@ -293,7 +293,9 @@ new Store package.
 1. Bump the version (`yarn version:patch|minor|major`). Release on GitHub as
    usual if the GitHub builds should get the same version.
 2. `yarn dist:store` (or run the `store-build` workflow on that commit).
-3. If the UI changed: `yarn build && yarn store:screenshots`.
+3. If the UI changed: `yarn dist:store && yarn store:screenshots` (the
+   screenshots are taken from the package's own binaries and must show the
+   package's version).
 4. Partner Center → **Update** submission → **Packages** → upload the new
    `.appx` (version must be higher than the last Store version) → submit.
 

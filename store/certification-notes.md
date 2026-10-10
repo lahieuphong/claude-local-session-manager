@@ -24,26 +24,44 @@ or registry virtualization.
 
 ### Notes for certification (optional field)
 
-> Unofficial local utility, not affiliated with Anthropic. It lists the
-> AI coding session files stored on this PC (written by Claude Code and Claude
-> Desktop). Without such files installed the list is empty; that is expected.
+For package 1.2.4.0. Paste the whole block. It is kept under 2,000 characters
+(a test checks it); Partner Center's own limit for the field is authoritative.
+
+> WHAT THE APP IS. LHP Local Session Manager is an independent, unofficial
+> local utility, not affiliated with Anthropic. It reads the session files that
+> two third-party developer tools, Claude Code and Claude Desktop, have already
+> stored on the user's PC, to browse, inspect, export, hide and clean them up.
+> It is not an AI assistant and does not create sessions. No account, sign-in
+> or network service is needed.
 >
-> This package no longer requests unvirtualizedResources. The Store edition does
-> not create, replace, rename, or delete files inside Claude Desktop's AppData
-> storage. Unsupported Claude Desktop metadata mutations are blocked before any
-> filesystem change occurs.
-> - Sessions that have Claude Desktop metadata are read-only: they can be viewed
->   and exported. Archive, Restore and Delete are not offered for them.
+> AN EMPTY LIST IS NORMAL. A test PC without Claude sessions has no such files,
+> so the app opens with an empty list ("0 of 0", "No sessions in this view").
+> This is expected behavior, not a fault. Settings and Storage work without
+> data.
+>
+> SCREENSHOTS. The listing screenshots show the real UI. They were captured by
+> running the executable contained in this package (1.2.4.0, unpacked from the
+> package, not an installed copy) on synthetic sample session files stored on
+> disk. The sample data is not part of the package, so the sessions shown will
+> not appear on a test PC.
+>
+> SAFE MODE. Every launch starts in Safe Mode (dry run): no file can be deleted
+> until deletion is armed in Settings > Deletion safety by typing ENABLE DELETE,
+> and every delete needs a typed confirmation on a plan that lists every file.
+>
+> STORE EDITION LIMITS. The only restricted capability is runFullTrust. The
+> Store edition does not create, replace, rename, or delete files inside Claude
+> Desktop's AppData storage. Unsupported Claude Desktop metadata mutations are
+> blocked before any filesystem change occurs.
+> - Sessions that have Claude Desktop metadata are read-only: view and export.
+>   Archive, Restore and Delete are not offered for them.
 > - Sessions that only have a transcript under %USERPROFILE%\.claude (outside
 >   AppData) can be hidden in the app or permanently deleted.
-> - The app writes its own application data (settings, its hidden-sessions list,
->   a scan cache and logs) only in its own user-data location.
->
-> The app starts in Safe Mode (dry run): nothing can be modified until deletion
-> is armed in Settings → Deletion safety by typing ENABLE DELETE, which lasts
-> for one delete or 10 minutes. Every delete shows the exact files that will and
-> will not be removed and requires a typed confirmation. No account, sign-in or
-> network service is required. Updates come only from the Microsoft Store.
+> - The app writes its own data only in its own user-data location.
+
+No sample data is offered to reviewers: the app has to work, and does work, on
+a PC without session files. The synthetic sessions of the screenshots come from
+`scripts/store-demo-data.mjs` and exist only while the screenshots are taken.
 
 ## Store-edition limitations
 
@@ -112,3 +130,8 @@ Tests: `tests/storeEdition.test.ts`.
   `desktop6:FileSystemWriteVirtualization=disabled`. Certification denied it
   (policy 10.6.3).
 - 1.2.4.0 removes both and blocks the operations that depended on them.
+  Certification then reported 10.1.1.3 (inaccurate representation, listing
+  images) without naming an image. The screenshots in that listing came from a
+  development build with in-memory sample data. They were replaced by
+  screenshots captured from the 1.2.4.0 package's own executable
+  (`yarn store:screenshots`). The package itself was not changed.

@@ -13,16 +13,16 @@ store/listing-assets/
   common/
     app-tile-300x300.png   1:1 App tile icon (all languages)
   en-US/  vi-VN/  zh-CN/
-    01-sessions.png        session browser
-    02-session-details.png session details
-    03-delete-plan.png     delete plan of a transcript-only session (Safe Mode, dry run)
-    04-settings.png        Safe Mode, Store updates, version, Store-edition limits
+    01-sessions.png        session overview: list, search, filters, projects
+    02-session-details.png session details: project, IDs, model, storage, files
+    03-delete-plan.png     safe deletion preview of a transcript-only session (dry run)
+    04-settings.png        settings and safety: Safe Mode, Store updates, version, limits
 ```
 
-All screenshots are PNG, exactly 1920 × 1080, captured from the real app with
-its UI in that language. They show the **Microsoft Store edition**: the product
-name is LHP Local Session Manager, and only features of that edition appear
-(no Archive / Restore; the delete plan is for a transcript-only session).
+All screenshots are PNG, exactly 1920 × 1080, captured from the **Microsoft
+Store package's own binaries** with the UI in that language. The product name
+is LHP Local Session Manager, and only features of that edition appear (every
+demo session is transcript-only; nothing is archived, restored or deleted).
 `yarn store:validate-assets` checks the files.
 
 ## Microsoft requirements (checked 2 October 2026)
@@ -93,46 +93,74 @@ Repeat for each listing language: **English (United States)**, **Vietnamese
 ## How the screenshots are made
 
 ```powershell
-yarn build
+yarn dist:store                 # once: the package and dist\store\win-unpacked
 yarn store:screenshots          # all languages, or: --locale vi-VN
+                                # add --software-rendering if the graphics card is busy
 yarn store:validate-assets
 ```
 
-`store:screenshots` starts the unpackaged app in **Store screenshot mode**
-(`CLAUDE_SESSION_MANAGER_SCREENSHOT_MODE=true`, see
-[`src/main/screenshot/`](../../src/main/screenshot/)). In this mode:
+`store:screenshots` does not build or imitate anything. It runs the packaged
+Store app and takes pictures of its window content:
 
-- the session list, details and delete plan come from static demo data
-  (user `C:\Users\Demo`, projects `C:\Projects\DemoWebApp`, `SampleAPI`,
-  `DesignSystem`, session IDs `a1b2c3d4-0000-4000-8000-0000000000NN`). The
-  app's real session builder and delete-plan rules turn this data into what
-  the UI shows;
-- nothing is read from `~\.claude`, Claude Desktop's metadata or running
-  processes. No settings, cache or log file is written. Every action that
-  would change, delete, export or open something is refused. Deletion stays
-  in Safe Mode and cannot be armed;
-- the app presents itself as the Store edition: Store product name, updates
-  managed by Microsoft Store, and the Store write policy (a session with Claude
-  Desktop metadata gets no Archive button and cannot be deleted);
-- a packaged build ignores the variable (tests in
-  `tests/screenshotMode.test.ts`).
+- **The build.** `dist\store\win-unpacked\LHP Local Session Manager.exe`, the
+  layout that electron-builder packed into `dist\store\*.appx` as its `app\`
+  folder. Before it starts, the script compares every file of that folder with
+  the entries inside the `.appx` (size and CRC-32; nothing may be missing or
+  extra), checks the manifest copy the same way and prints the package's
+  SHA-256, so the screenshots can be tied to the uploaded package. The app
+  must report itself as packaged, distribution *Microsoft Store*, with the
+  package's version. If `win-unpacked` is gone, do not rebuild a package that
+  was already submitted: unpack it (`makeappx unpack /p <package> /d <folder>`)
+  and use its `app\` folder as `dist\store\win-unpacked`.
+- **The data.** `scripts/store-demo-data.mjs` writes 12 synthetic Claude Code
+  sessions as real files (transcripts, session folders, file history) into a
+  throw-away user folder, by default `<drive>:\Users\Demo`. Projects are
+  `C:\Projects\DemoWebApp`, `SampleAPI` and `DesignSystem`; session IDs are
+  `a1b2c3d4-0000-4000-8000-0000000000NN`. All of them are transcript-only
+  sessions, the kind the Store edition supports in full. The app's profile
+  folders (`USERPROFILE`, `APPDATA`, `LOCALAPPDATA`) point at that folder, so
+  the real scanner reads these files and no real Claude data. The folder is
+  removed afterwards.
+- **One run of the app.** The app is started once and closed by closing its
+  window. The other languages are chosen in *Settings → Language*, as a user
+  does. Only Chromium switches are passed on the command line: a DevTools port
+  to drive the window, 100% scale and, with `--software-rendering`,
+  `--disable-gpu` (the window is drawn by the CPU; its content is the same).
+- **What is clicked.** A session row, the group-by menu, *Delete permanently*
+  (which opens the plan preview), *Cancel*, *Settings* and the language
+  options. The typed confirmation enables *Run dry-run validation*, which is
+  not clicked. Nothing is deleted, exported or changed; the app stays in Safe
+  Mode.
+- **The delete preview is the app's own plan.** The app's delete service
+  builds it from the files on disk. The script checks that every Claude path
+  the plan would delete exists, and still exists after *Cancel*. After the app
+  has closed, the whole synthetic profile is compared with a hash taken before
+  the app started: not one file may differ.
+- **Claude Desktop must be closed** on the PC. If it is running, the app
+  (correctly) disables deletion and shows a warning, and the script stops
+  instead of capturing that state.
+- **Checks before each image is saved.** No on-screen text may contain this
+  PC's user name, home folder or checkout path, a session ID outside the demo
+  series, or the GitHub product name; no label or button may be clipped; the
+  image must be exactly 1920 × 1080.
 
-The script renders the page at 1920 × 1080 with a device scale factor of 1, so
-the output size does not depend on the monitor or Windows scaling. It checks
-the size of every image. Before saving each image, it stops if any on-screen
-text contains this PC's user name, home folder or checkout path, a session-like
-ID outside the demo series, or the GitHub product name. The images show only the app
-content: no title bar, taskbar, cursor, tooltip, DevTools or added marketing
-text.
+The images show the window's content area at 1920 × 1080 and 100% scale: no
+title bar, taskbar, cursor, tooltip, DevTools, and no added text or artwork.
+`dist\store\screenshot-capture-report.json` records the package hash, the
+command-line switches, the app's own version and state, the delete-preview
+checks, the profile hash and the hash of every image.
+
+The app's development-only screenshot mode (`src/main/screenshot/`) is not
+used for these assets.
 
 Microsoft notes that text overlays may cover the bottom third of a
 screenshot. The key content (SAFE MODE strip, list headers, the delete plan's
 Will delete / Will not delete) sits in the upper two thirds.
 
-The four screenshots cannot also show the language selector at the top of
-Settings: Settings is taller than 1080 px, so `04-settings.png` shows Deletion
-safety, Updates and About. The localized screenshots show the three
-languages instead.
+`04-settings.png` is one scroll position of Settings, starting at Deletion
+safety. Settings is taller than 1080 px, so the language selector at its top
+is not in the picture; the localized screenshots show the three languages
+instead.
 
 ## App tile icon
 

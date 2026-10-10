@@ -217,7 +217,7 @@ yarn store:check      # Microsoft Store: validate identity, name, version mappin
 yarn store:privacy    # rebuild the public privacy page (docs/privacy/) from store/privacy.md
 yarn dist:store       # Microsoft Store package into dist/store/ (needs the Partner Center identity)
 yarn dist:store:test  # local TEST Store package (fake identity, never submit) into dist/store-test/
-yarn store:screenshots      # Store listing screenshots (demo data only) into store/listing-assets/
+yarn store:screenshots      # Store listing screenshots from the built Store package (synthetic demo profile) into store/listing-assets/
 yarn store:validate-assets  # check the Store listing images (sizes, PNG, all languages)
 yarn clean      # remove build output only: dist/, release/, out/
 ```
@@ -460,10 +460,12 @@ Without a backup the data cannot be recovered.
   a separate data folder (and single-instance lock), e.g. to verify a build
   while another instance is open.
 - **Store screenshot mode.** `CLAUDE_SESSION_MANAGER_SCREENSHOT_MODE=true`
-  (development builds only; a packaged build ignores it) shows static demo data
-  for the Microsoft Store screenshots (`yarn store:screenshots`). It reads no
-  Claude data, starts none of the real services, refuses every action that would
-  change, delete, export or open something, and cannot leave Safe Mode. See
+  (development builds only; a packaged build ignores it) previews the Store
+  edition's UI on static demo data. It reads no Claude data, starts none of the
+  real services, refuses every action that would change, delete, export or open
+  something, and cannot leave Safe Mode. The published Store screenshots are
+  not made with it: `yarn store:screenshots` runs the packaged Store build on
+  synthetic session files, see
   [`store/listing-assets/README.md`](store/listing-assets/README.md).
 
 ## Architecture
@@ -506,7 +508,7 @@ tests/               Vitest safety tests (temp fixture trees only)
 fixtures/            sample metadata + transcripts (incl. Vietnamese text)
 scripts/             icon + Store asset generator, release helpers, i18n-check.mjs,
                      dist-store.mjs / store-config.mjs / store-inspect.mjs (Microsoft Store),
-                     store-screenshots.mjs / store-listing-assets.mjs (Store listing images)
+                     store-screenshots.mjs / store-demo-data.mjs / store-listing-assets.mjs (Store listing images)
 store/               Store identity, listing drafts + images, privacy policy, certification notes
 docs/                MICROSOFT_STORE.md; privacy/ + index.html = the public pages (GitHub Pages)
 ```

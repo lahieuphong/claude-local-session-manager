@@ -26,6 +26,10 @@ projects, dates, sizes and the exact files behind each session.
 Everything happens locally. The app has no account and no server, sends no
 session content anywhere and collects no telemetry.
 
+The app works with session files that already exist on your PC. It is not an AI
+assistant, does not include Claude Code or Claude Desktop, and does not create
+sessions. On a PC without such files the list is empty.
+
 What you can do:
 • Browse and inspect local sessions: title, project, model, message counts,
   files and sizes.

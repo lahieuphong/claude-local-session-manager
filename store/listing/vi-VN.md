@@ -26,6 +26,10 @@ trên máy của bạn và hiển thị trong một danh sách nhanh, dễ tìm,
 Mọi thứ diễn ra trên máy của bạn. Ứng dụng không cần tài khoản, không có máy
 chủ, không gửi nội dung phiên đi đâu và không thu thập dữ liệu sử dụng.
 
+Ứng dụng làm việc với các tệp phiên đã có sẵn trên máy. Đây không phải trợ lý
+AI, không kèm Claude Code hay Claude Desktop và không tự tạo phiên. Trên máy
+chưa có các tệp này, danh sách sẽ trống.
+
 Bạn có thể:
 • Xem và kiểm tra các phiên trên máy: tiêu đề, dự án, mô hình, số tin nhắn, tệp
   và dung lượng.

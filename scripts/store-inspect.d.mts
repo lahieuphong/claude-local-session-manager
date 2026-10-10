@@ -1,4 +1,5 @@
 import type { StoreIdentity } from './store-config.mjs'
+export function readZipDirectory(buffer: Buffer): Array<{ name: string; crc32: number; size: number; compressed: number }>
 export function listZipEntries(buffer: Buffer): string[]
 export function inspectAppx(file: string): { entries: string[] }
 export function reviewManifest(
