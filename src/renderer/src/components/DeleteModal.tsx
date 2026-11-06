@@ -9,7 +9,7 @@ import type {
 } from '../../../shared/types'
 import { isConfirmationValid } from '../../../shared/confirm'
 import { useFmt, type Formatters } from '../i18n'
-import { closeDelete, copyToClipboard, errText, hasSafeMode, refreshProcess, setChecked, toast, useAppState, type DeleteRequest } from '../stores/appStore'
+import { closeDelete, copyToClipboard, errText, hasSafeMode, refreshProcess, setChecked, useAppState, type DeleteRequest } from '../stores/appStore'
 import { IconAlert, IconCheck, IconCopy, IconMinus, IconRefresh, IconShield, IconShieldAlert, IconTrash, IconX } from './Icons'
 import { Modal } from './Modal'
 import { tCode } from './RichText'
@@ -40,26 +40,44 @@ export function DeleteModal(): ReactElement | null {
   const titleId = useId()
   const descId = useId()
 
+  // A new request starts clean before anything is drawn: the plan, result or typed
+  // text of the last time must never show, not even for a moment.
+  const [startedFor, setStartedFor] = useState<DeleteRequest | null>(null)
+  if (liveRequest && liveRequest !== startedFor) {
+    setStartedFor(liveRequest)
+    setPlan(null)
+    setResult(null)
+    setError(null)
+    setConfirmText('')
+  }
+
+  // Only the newest load may fill the dialog: a slow answer to an earlier request
+  // must not replace the plan on screen, because the delete acts on the plan's sessions.
+  const latestLoad = useRef(0)
   const loadPlan = useCallback(async () => {
     if (!liveRequest) return
+    const load = ++latestLoad.current
     setLoading(true)
     setConfirmText('')
     try {
-      setPlan(liveRequest.bulk ? await api().createBulkDeletePlan(liveRequest.ids) : await api().createDeletePlan(liveRequest.ids[0]))
+      const next = liveRequest.bulk ? await api().createBulkDeletePlan(liveRequest.ids) : await api().createDeletePlan(liveRequest.ids[0])
+      if (load === latestLoad.current) setPlan(next)
     } catch (err) {
-      setError({ text: errText(err) })
+      if (load === latestLoad.current) setError({ text: errText(err) })
     } finally {
-      setLoading(false)
+      if (load === latestLoad.current) setLoading(false)
     }
   }, [liveRequest])
 
   useEffect(() => {
-    if (!liveRequest) return
-    setPlan(null)
-    setResult(null)
-    setError(null)
-    void loadPlan()
+    if (liveRequest) void loadPlan()
   }, [liveRequest, loadPlan])
+
+  // The field that had the focus is gone once the result shows.
+  const closeButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (result) closeButton.current?.focus()
+  }, [result])
 
   // The safety mode changed while the dialog is open (armed, returned, expired):
   // a plan is bound to the mode it was created in, so build a fresh one.
@@ -87,13 +105,11 @@ export function DeleteModal(): ReactElement | null {
       if (r.sessions.length === 0) {
         // Refused before anything ran (stale plan, path rejected, …): show why and a fresh plan.
         setError({ text: r.message, msg: r.msg })
-        toast('error', { text: r.message, msg: r.msg })
         await loadPlan()
         return
       }
       setResult(r)
       if (r.ok && !r.dryRun) setChecked([])
-      toast(r.ok ? (r.dryRun ? 'info' : 'success') : r.dryRun ? 'warning' : 'error', { text: r.message, msg: r.msg })
     } catch (err) {
       setError({ text: errText(err) })
     } finally {
@@ -148,7 +164,8 @@ export function DeleteModal(): ReactElement | null {
         </button>
       </header>
 
-      <div className="modal-body">
+      {/* A new element for the result: it starts at the top, with the outcome in view, wherever the plan was scrolled to. */}
+      <div className="modal-body" key={result ? 'result' : 'plan'}>
         {loading && !plan && (
           <div className="hint" role="status">
             {t('deletion:building')}
@@ -264,7 +281,7 @@ export function DeleteModal(): ReactElement | null {
         )}
         <div className="spacer" />
         {result ? (
-          <button className="btn" onClick={closeDelete} data-autofocus>
+          <button ref={closeButton} className="btn" onClick={closeDelete} data-autofocus>
             {t('common:action.close')}
           </button>
         ) : (

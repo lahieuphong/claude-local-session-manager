@@ -70,12 +70,19 @@ export function Modal({ open, onClose, locked, labelledBy, describedBy, size, to
   closeRef.current = onClose
   lockedRef.current = locked
 
+  // What to return the focus to, noted while rendering: by the time an effect runs, a field
+  // inside the dialog may already have the focus, and an inert app has given it up.
+  const openerRef = useRef<HTMLElement | null>(null)
+  const wasOpenRef = useRef(false)
+  if (open && !wasOpenRef.current) openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  wasOpenRef.current = open
+
   useEffect(() => {
     if (!open) return
     const id = Symbol('modal')
     stack.push(id)
     setAppInert(true)
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const opener = openerRef.current
     const raf = requestAnimationFrame(() => {
       const panel = panelRef.current
       if (!panel) return

@@ -68,6 +68,7 @@ export function Sidebar(): ReactElement {
             className={`nav-item ${activeFilter === f.id ? 'active' : ''}`}
             aria-current={activeFilter === f.id ? 'page' : undefined}
             onClick={() => setView({ kind: 'sessions', filter: f.id })}
+            title={t(`sessions:filter.${f.id}`)}
           >
             <f.icon size={16} />
             <span className="nav-text">{t(`sessions:filter.${f.id}`)}</span>

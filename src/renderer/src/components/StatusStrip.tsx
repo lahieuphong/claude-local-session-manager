@@ -30,7 +30,9 @@ export function StatusStrip(): ReactElement {
               {t('safety:mode.armed')}
               {remaining && <span className="mode-timer">{remaining}</span>}
             </span>
-            <span className="strip-text">{t('safety:strip.armedText')}</span>
+            <span className="strip-text" title={t('safety:strip.armedText')}>
+              {t('safety:strip.armedText')}
+            </span>
             <button className="btn small danger-outline" onClick={() => void returnToSafeMode()}>
               {t('safety:action.returnToSafe')}
             </button>
@@ -41,7 +43,9 @@ export function StatusStrip(): ReactElement {
               <IconShield size={14} />
               {t('safety:mode.safe')}
             </span>
-            <span className="strip-text">{t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText')}</span>
+            <span className="strip-text" title={t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText')}>
+              {t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText')}
+            </span>
             <button className="link-btn" onClick={() => setView({ kind: 'settings' })}>
               {t('safety:strip.settingsLink')}
             </button>

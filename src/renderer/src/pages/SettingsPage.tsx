@@ -152,7 +152,7 @@ export function SettingsPage(): ReactElement {
                   <li key={c.path} className="candidate">
                     {c.exists ? <IconCheck size={14} className="ok-text" /> : <IconX size={14} className="muted" />}
                     <code className="wrap">{c.path}</code>
-                    {c.note && <span className="muted"> — {c.note}</span>}
+                    {c.note && <span className="muted"> — {c.noteKey ? t(`settings:roots.${c.noteKey}`) : c.note}</span>}
                   </li>
                 ))}
               </ul>

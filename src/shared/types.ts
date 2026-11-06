@@ -188,7 +188,10 @@ export interface DesktopRootInfo {
 export interface CandidatePath {
   path: string
   exists: boolean
+  /** What this path is, in English. */
   note?: string
+  /** The translated label for it, when there is one (`settings:roots.<noteKey>`). */
+  noteKey?: 'claudeHome' | 'transcripts' | 'fileHistory' | 'sessionEnv' | 'running'
 }
 
 export interface StorageRoots {

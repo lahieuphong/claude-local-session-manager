@@ -66,21 +66,21 @@ async function canonicalDir(p: string): Promise<string | null> {
  */
 export async function discoverRoots(env: DiscoveryEnv): Promise<DiscoveredRoots> {
   const candidates: CandidatePath[] = []
-  const note = async (p: string, label: string): Promise<string | null> => {
+  const note = async (p: string, label: string, noteKey?: CandidatePath['noteKey']): Promise<string | null> => {
     const canonical = await canonicalDir(p)
-    candidates.push({ path: p, exists: !!canonical, note: label })
+    candidates.push({ path: p, exists: !!canonical, note: label, ...(noteKey ? { noteKey } : {}) })
     return canonical
   }
 
   // --- Claude Code (CLI / IDE) -------------------------------------------
   const claudeHomeRaw = env.claudeConfigDir?.trim() ? env.claudeConfigDir : path.join(env.homedir, '.claude')
   const claudeHome = (await canonicalDir(claudeHomeRaw)) ?? path.resolve(claudeHomeRaw)
-  candidates.push({ path: claudeHomeRaw, exists: await isDirectory(claudeHomeRaw), note: 'Claude Code home' })
+  candidates.push({ path: claudeHomeRaw, exists: await isDirectory(claudeHomeRaw), note: 'Claude Code home', noteKey: 'claudeHome' })
 
-  const projectsRoot = await note(path.join(claudeHome, 'projects'), 'Claude Code transcripts')
-  const fileHistoryRoot = await note(path.join(claudeHome, 'file-history'), 'Claude Code file history')
-  const sessionEnvRoot = await note(path.join(claudeHome, 'session-env'), 'Claude Code session env')
-  const liveSessionsDir = await note(path.join(claudeHome, 'sessions'), 'Running Claude Code sessions')
+  const projectsRoot = await note(path.join(claudeHome, 'projects'), 'Claude Code transcripts', 'transcripts')
+  const fileHistoryRoot = await note(path.join(claudeHome, 'file-history'), 'Claude Code file history', 'fileHistory')
+  const sessionEnvRoot = await note(path.join(claudeHome, 'session-env'), 'Claude Code session env', 'sessionEnv')
+  const liveSessionsDir = await note(path.join(claudeHome, 'sessions'), 'Running Claude Code sessions', 'running')
 
   // --- Claude Desktop ------------------------------------------------------
   const desktop: DesktopRootCandidate[] = []

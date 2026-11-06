@@ -208,6 +208,7 @@ fake updater (no network, nothing is installed; packaged builds ignore it):
 yarn install
 yarn dev        # development app (acts on your real Claude files, like the GitHub builds)
 yarn test       # automated tests (fixtures in temp folders only)
+yarn test:ui    # full UI test on the real app, with synthetic data (see below; takes several minutes)
 yarn i18n:check # translation completeness (en / vi / zh-CN)
 yarn typecheck  # TypeScript, main + renderer
 yarn build      # production bundles into out/
@@ -221,6 +222,17 @@ yarn store:screenshots      # Store listing screenshots from the built Store pac
 yarn store:validate-assets  # check the Store listing images (sizes, PNG, all languages)
 yarn clean      # remove build output only: dist/, release/, out/
 ```
+
+`yarn test:ui` starts the real app on a synthetic profile (`.ui-test/`, never
+your Claude data; it stops before the first click if the app reads anything
+else) and a window opens while it runs. First it injects known defects to prove
+its checks still notice them. Then it checks every screen in every language at
+four window sizes for what a person would call broken: squeezed or overlapping
+items, text cut off, controls covered or out of reach, untranslated text, missing
+screen-reader names, faint text. Finally it clicks through the features with a
+real mouse and keyboard, including real archive and delete on the synthetic
+profile. The report and screenshots are in `.ui-test/report/`. To test a packaged
+build: `node scripts/ui-test.mjs --exe "dist/win-unpacked/Claude Local Session Manager.exe"`.
 
 `yarn dist` produces in `dist/`: the Setup exe + `.blockmap`, the Portable
 exe, `latest.yml` (updater metadata) and `win-unpacked/` (unpacked app for

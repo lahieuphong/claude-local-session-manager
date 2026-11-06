@@ -162,6 +162,7 @@ export function SessionList(): ReactElement {
                 }
               }}
               placeholder={t('sessions:search.placeholder')}
+              title={t('sessions:search.placeholder')}
               aria-label={t('sessions:search.label')}
               spellCheck={false}
               autoComplete="off"
@@ -319,7 +320,9 @@ function Group({
     <section className="group" aria-labelledby={label ? headingId : undefined}>
       {label && (
         <h2 className="group-label" id={headingId}>
-          <span className="group-name">{label}</span>
+          <span className="group-name" title={label}>
+            {label}
+          </span>
           <span className="group-count">{fmt.count(g.sessions.length)}</span>
         </h2>
       )}
@@ -380,7 +383,11 @@ const SessionRow = memo(function SessionRow({
           {title}
         </span>
         <span className="row-meta">
-          {showProject && <span className="row-project">{project}</span>}
+          {showProject && (
+            <span className="row-project" title={project}>
+              {project}
+            </span>
+          )}
           {s.model && <span className="row-model">{s.model.replace(/^claude-/, '')}</span>}
           <SessionBadges session={s} compact />
         </span>

@@ -635,6 +635,8 @@ details[open] > summary .chev {
 .nav-item {
   position: relative;
   overflow: hidden;
+  /* Never shrink: with overflow hidden, flexbox would squeeze these to nothing when the list has to scroll. */
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -832,7 +834,6 @@ html[lang='zh-CN'] .mode-chip {
 }
 .mode-timer {
   font-weight: 500;
-  opacity: 0.9;
   letter-spacing: 0;
 }
 
@@ -1016,7 +1017,7 @@ html[lang='zh-CN'] .group-label {
 }
 .group-count {
   font-variant-numeric: tabular-nums;
-  color: var(--text-disabled);
+  color: var(--text-muted);
 }
 
 .row {
@@ -1127,7 +1128,8 @@ html[lang='zh-CN'] .group-label {
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  min-width: 0;
+  /* A badge is never cut: they wrap, and the project name gives way first. */
+  min-width: min-content;
 }
 .badge {
   display: inline-flex;
@@ -1353,6 +1355,8 @@ html[lang='zh-CN'] .group-label {
 }
 
 .actions {
+  /* The export menu hangs from the whole toolbar, so it always fits the panel. */
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1602,15 +1606,12 @@ html[lang='zh-CN'] .group-label {
   max-height: 300px;
 }
 
-.menu-wrap {
-  position: relative;
-}
 .menu {
   position: absolute;
   z-index: 20;
   top: calc(100% + 4px);
   left: 0;
-  min-width: 240px;
+  width: min(100%, 340px);
   padding: 4px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -2128,7 +2129,7 @@ html[lang='zh-CN'] .update-mode {
   background: var(--bg-surface-hover);
 }
 .rank {
-  color: var(--text-disabled);
+  color: var(--text-muted);
   font-size: 11px;
 }
 .ranked-main {
@@ -2409,7 +2410,7 @@ html[lang='zh-CN'] .plan-group-label {
   font-size: 12px;
 }
 .plan-group-count {
-  color: var(--text-disabled);
+  color: var(--text-muted);
   font-weight: 500;
 }
 .plan-group.delete .plan-group-label {
@@ -2563,6 +2564,15 @@ html[lang='zh-CN'] .plan-group-label {
   gap: 8px;
   pointer-events: none;
 }
+/* Bottom right is where a dialog has its buttons: above a dialog, messages go to the top centre. */
+body:has(.modal-backdrop) .toasts {
+  top: var(--space-3);
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  align-items: center;
+  transform: translateX(-50%);
+}
 .toast {
   pointer-events: auto;
   display: flex;
@@ -2699,17 +2709,21 @@ html[lang='zh-CN'] .plan-group-label {
     --sidebar-w: 192px;
     --inspector-w: 312px;
   }
+  /* Too narrow for project, model and badges on one line; the details panel shows the model. */
+  .row-model {
+    display: none;
+  }
   .page-title {
     font-size: 20px;
   }
   .list-columns,
   .row-main,
   .skeleton-row {
-    grid-template-columns: minmax(0, 1fr) 80px 72px;
+    grid-template-columns: minmax(0, 1fr) 80px 84px;
   }
   .list-columns,
   .skeleton-row {
-    grid-template-columns: 20px minmax(0, 1fr) 80px 72px;
+    grid-template-columns: 20px minmax(0, 1fr) 80px 84px;
   }
   .search .kbd {
     display: none;
