@@ -6,7 +6,7 @@ import { IconCheck, IconChevron, IconX } from '../components/Icons'
 import { DeletionSafetySection } from '../components/SafetyMode'
 import { AboutSection, UpdatesSection } from '../components/Updates'
 import { useFmt } from '../i18n'
-import { clearCache, errText, setLanguage, setMotion, toast, updateSettings, useAppState } from '../stores/appStore'
+import { clearCache, errText, hasSafeMode, setLanguage, setMotion, toast, updateSettings, useAppState } from '../stores/appStore'
 
 const api = (): Window['sessionManager'] => window.sessionManager
 
@@ -21,6 +21,7 @@ export function SettingsPage(): ReactElement {
   const snapshot = useAppState((s) => s.snapshot)
   const appInfo = useAppState((s) => s.appInfo)
   const busy = useAppState((s) => s.busy)
+  const safeMode = useAppState((s) => hasSafeMode(s.safety))
   const [logs, setLogs] = useState<LogEntry[] | null>(null)
   const roots = snapshot?.roots
   const langName = useId()
@@ -166,9 +167,11 @@ export function SettingsPage(): ReactElement {
         </SettingRow>
       </SettingsSection>
 
-      <SettingsSection title={t('settings:section.deletionSafety')} tone="safety">
-        <DeletionSafetySection />
-      </SettingsSection>
+      {safeMode && (
+        <SettingsSection title={t('settings:section.deletionSafety')} tone="safety">
+          <DeletionSafetySection />
+        </SettingsSection>
+      )}
 
       <SettingsSection title={t('settings:section.updates')}>
         <UpdatesSection />

@@ -35,8 +35,7 @@
   "portableNote": "便携版永远不会被自动替换。请从 GitHub Releases 下载新的 Setup（推荐）或便携版。",
   "confirm": {
     "title": "安装更新？",
-    "text": "{{appName}} 将关闭并重启以安装版本 {{version}}。",
-    "safeModeNote": "新版本会像每次启动一样以安全模式启动。"
+    "text": "{{appName}} 将关闭并重启以安装版本 {{version}}。"
   },
   "pillHint": "打开 设置 → 更新",
   "toast": {

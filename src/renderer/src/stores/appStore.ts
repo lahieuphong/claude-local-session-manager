@@ -387,6 +387,11 @@ export async function updateSettings(patch: Partial<AppSettings>): Promise<void>
 // Deletion safety mode
 // ---------------------------------------------------------------------------
 
+/** False while the mode is unknown and in builds with no Safe Mode (GitHub, development): the UI then shows no mode at all. */
+export function hasSafeMode(safety: SafetyModeState | null): safety is SafetyModeState {
+  return !!safety && safety.reason !== 'no-arming'
+}
+
 export function openArmModal(open: boolean): void {
   setState({ armModalOpen: open })
 }

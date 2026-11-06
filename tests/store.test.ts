@@ -206,9 +206,15 @@ describe('Store UI copy', () => {
   })
 })
 
-describe('Safe Mode is independent of the distribution channel', () => {
+describe('Safe Mode exists only in the Store edition', () => {
+  it('a GitHub or development launch has no arming step', () => {
+    for (const channel of ['github', 'development'] as const) {
+      expect(resolveInitialMode({ channel, isPackaged: channel === 'github', env: {} })).toMatchObject({ dryRun: false, reason: 'no-arming' })
+    }
+  })
+
   it('a Store (packaged) launch always starts in Safe Mode, whatever the environment says', () => {
-    const initial = resolveInitialMode({ isPackaged: true, env: { CLAUDE_SESSION_MANAGER_DRY_RUN: 'false', CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM: '1' } })
+    const initial = resolveInitialMode({ channel: 'store', isPackaged: true, env: { CLAUDE_SESSION_MANAGER_DRY_RUN: 'false', CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM: '1' } })
     expect(initial.dryRun).toBe(true)
     const c = new SafetyModeController({ initial, processes: { getStatus: async () => ({}) as never } })
     expect(c.getState()).toMatchObject({ dryRun: true, reason: 'startup' })

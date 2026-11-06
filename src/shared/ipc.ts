@@ -115,7 +115,7 @@ export interface SessionManagerApi {
   updateSettings(patch: Partial<AppSettings>): Promise<AppSettings>
   clearCache(): Promise<ActionResult>
 
-  /** Deletion safety mode. Lives in main-process memory only; every launch starts in Safe Mode. */
+  /** Deletion safety mode, in main-process memory only. The Store edition starts every launch in Safe Mode; other builds report reason 'no-arming'. */
   getSafetyMode(): Promise<SafetyModeState>
   /** Requires exactly "ENABLE DELETE" and Claude Desktop closed. */
   armRealDelete(confirmation: string): Promise<ArmResult>

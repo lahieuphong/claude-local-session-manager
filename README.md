@@ -35,7 +35,7 @@ export or permanently delete sessions.
 - Safety guards:
   - modifying actions are blocked while Claude Desktop runs
   - sessions open in a running Claude Code process are blocked
-  - Safe Mode (DRY RUN) on every launch; real deletion is armed in the app for one delete / 10 minutes
+  - no arming step: a delete runs for real after its typed confirmation (the Microsoft Store edition keeps Safe Mode)
 - A parsed-transcript cache, so restarts and rescans are fast even with 100 MB+ transcripts.
 - Optional auto refresh (file watching or an interval), plus manual **Refresh** (F5).
 - UI in **English, Tiếng Việt and 简体中文** (see [UI languages](#ui-languages)).
@@ -62,8 +62,8 @@ The interface is available in **English**, **Tiếng Việt** and **简体中文
   `ENABLE DELETE`), and session titles/prompts (user content).
 - Logs and the text copied with **Copy delete plan** stay in English, so a
   plan can be reviewed independently of the UI language.
-- The UI language never affects deletion safety: the app still starts in
-  **Safe Mode** on every launch, and **Real Delete Armed** is never saved.
+- The UI language never affects deletion safety: the Store edition still starts
+  in **Safe Mode** on every launch, and **Real Delete Armed** is never saved.
 
 Translations live in `src/shared/locales/<language>/<namespace>.json`
 (`common`, `sessions`, `inspector`, `deletion`, `safety`, `settings`,
@@ -105,8 +105,9 @@ does not modify Claude Desktop's AppData files: sessions that have Claude
 Desktop metadata can be browsed and exported, but not archived, restored or
 deleted. It may still write its own application data, such as settings and
 manager state, inside the app's own user-data location. Transcript-only
-sessions under `~\.claude` can be hidden or deleted as usual. Everything
-described in this README applies in full to the GitHub Setup and Portable
+sessions under `~\.claude` can be hidden or deleted as usual. It also keeps
+Safe Mode, a step the other builds do not have (see [Safety model](#safety-model)).
+Everything else in this README applies in full to the GitHub Setup and Portable
 builds.
 
 Download from **[GitHub Releases](https://github.com/lahieuphong/claude-local-session-manager/releases)**:
@@ -168,7 +169,6 @@ Older test builds were sometimes pinned straight from `dist\`, which breaks
   settings and data are kept.
 - **Portable:** shows *Update available: X.Y.Z* and a link to GitHub Releases.
 - **Development (`yarn dev`):** update checks are disabled.
-- Every start after an update is in **Safe Mode** (real-delete arming is never stored).
 
 Update security: everything runs in the main process via electron-updater,
 over HTTPS from this repository's GitHub Releases only (configured at build
@@ -206,7 +206,7 @@ fake updater (no network, nothing is installed; packaged builds ignore it):
 
 ```bash
 yarn install
-yarn dev        # development app (always starts in Safe Mode / DRY RUN)
+yarn dev        # development app (acts on your real Claude files, like the GitHub builds)
 yarn test       # automated tests (fixtures in temp folders only)
 yarn i18n:check # translation completeness (en / vi / zh-CN)
 yarn typecheck  # TypeScript, main + renderer
@@ -413,7 +413,11 @@ Without a backup the data cannot be recovered.
   be deleted or have its metadata changed. A transcript written in the last
   30 seconds is also treated as possibly in use. Use **Re-check** after
   closing Claude. Scanning, browsing, export and hide-in-manager always work.
-- **Safe Mode / real-delete arming (in the app).** Every launch starts in
+- **No arming step (GitHub Setup, Portable, development).** Archive, restore and
+  delete act for real straight away: there is no dry run, no timer and nothing
+  to switch on. A delete still shows the exact plan, needs the typed `DELETE` /
+  `DELETE <n>` and passes every check below.
+- **Safe Mode / real-delete arming (Microsoft Store edition only).** Every launch starts in
   **SAFE MODE (DRY RUN)**: archive, restore and delete only validate and log;
   no Claude file can be changed. To delete for real:
   1. Quit Claude Desktop (system tray → Quit).
@@ -433,15 +437,19 @@ Without a backup the data cannot be recovered.
   runs the **full** pipeline below (rescan, identity, content hash, path
   validation), logs exactly what would be deleted, reports whether a real
   delete would currently be blocked, and modifies nothing.
-- **Environment variable (development/testing only).** The packaged app
-  **ignores** `CLAUDE_SESSION_MANAGER_DRY_RUN` (a stale variable can never start
-  it armed). In development, `CLAUDE_SESSION_MANAGER_DRY_RUN=false` starts the
-  app armed only together with the explicit opt-in
+- **Environment variable (Store edition, development/testing only).** A packaged
+  Store build **ignores** `CLAUDE_SESSION_MANAGER_DRY_RUN` (a stale variable can
+  never start it armed). A development run of the Store edition
+  (`CLAUDE_SESSION_MANAGER_DISTRIBUTION=store`) starts armed only when
+  `CLAUDE_SESSION_MANAGER_DRY_RUN=false` comes with the explicit opt-in
   `CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM=1`, with the same 10-minute and
-  single-delete limits:
+  single-delete limits. GitHub builds ignore both. A normal `yarn dev` has no
+  Safe Mode either, unless you ask for one with
+  `CLAUDE_SESSION_MANAGER_DRY_RUN=true`, to try the delete flow on real data:
 
   ```powershell
-  $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "false"; $env:CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM = "1"; yarn dev
+  $env:CLAUDE_SESSION_MANAGER_DISTRIBUTION = "store"; $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "false"; $env:CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM = "1"; yarn dev
+  $env:CLAUDE_SESSION_MANAGER_DRY_RUN = "true"; yarn dev   # dry run in a normal development run
   ```
 - **Delete checks** (in the main process, every time):
   1. The renderer sends only internal session IDs (20 hex), the plan ID (32 hex) and the typed confirmation — never a path.
@@ -495,7 +503,7 @@ src/
       deleteService.ts     delete plans, verification, execution
       processService.ts    Claude Desktop / Claude Code process detection
       exportService.ts     JSONL / JSON / Markdown export (copies only)
-      safetyMode.ts        Safe Mode / REAL DELETE ARMED (memory only)
+      safetyMode.ts        Safe Mode / REAL DELETE ARMED (Store edition, memory only); no arming step in other builds
       updateService.ts     GitHub Releases updates (installed / portable / dev); Store-managed mode
       packagingPolicy.ts   what a build may write (Store edition: no changes to Claude Desktop's AppData files)
       cacheService.ts      parsed-transcript index in userData

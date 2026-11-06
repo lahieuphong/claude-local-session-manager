@@ -51,8 +51,9 @@ Partner Center. Certification is decided by Microsoft and is **not guaranteed**.
   Store"* with an **Open Microsoft Store** button (official
   `ms-windows-store://downloadsandupdates` URI). A **View in Microsoft Store**
   button appears only when a real Store ID is configured (§4).
-- **Safe Mode is unchanged.** Every launch starts in SAFE MODE. Real Delete
-  Armed is never saved. Delete plans, hashing, expiry, path validation,
+- **Safe Mode only in the Store edition.** Every launch of the Store edition
+  starts in SAFE MODE and Real Delete Armed is never saved; GitHub Setup and
+  Portable have no arming step. Delete plans, hashing, expiry, path validation,
   workspace protection, link rejection, the process guard and the typed
   `DELETE` confirmation are identical in both channels.
 - **Not signed by us.** Store submissions do not need your own code-signing
@@ -71,7 +72,7 @@ Partner Center. Certification is decided by Microsoft and is **not guaranteed**.
 | Permanent delete of transcript-only sessions (`~\.claude`) | Yes | Yes | Yes |
 | Archive / Restore (Claude Desktop) | Yes | Yes | **No** (blocked) |
 | Permanent delete of sessions with Claude Desktop metadata | Yes | Yes | **No** (blocked as a whole) |
-| Safe Mode on every launch | Yes | Yes | Yes |
+| Safe Mode on every launch | No | No | Yes |
 | Languages (English, Tiếng Việt, 简体中文) | Yes | Yes | Yes |
 | GitHub updater (electron-updater) | Yes | Notify only | **No** (not included) |
 | Store-managed updates | No | No | **Yes** |

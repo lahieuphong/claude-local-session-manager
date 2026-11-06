@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { ARM_CONFIRMATION_PHRASE, isArmConfirmationValid } from '../../shared/confirm'
+import type { DistributionChannel } from '../../shared/distribution'
 import type { ArmResult, ProcessStatus, SafetyModeReason, SafetyModeState } from '../../shared/types'
 import { globalGuard } from './processService'
 import { msg } from '../util/messages'
@@ -14,7 +15,7 @@ export const DRY_RUN_ENV = 'CLAUDE_SESSION_MANAGER_DRY_RUN'
 
 export interface InitialMode {
   dryRun: boolean
-  reason: Extract<SafetyModeReason, 'startup' | 'env-dev'>
+  reason: Extract<SafetyModeReason, 'startup' | 'env-dev' | 'no-arming'>
   notice?: string
   noticeMsg?: MessageRef
 }
@@ -27,14 +28,24 @@ function notice(key: string, params: Record<string, string>): { notice: string; 
 const FALSY = /^(0|false|no|off)$/i
 
 /**
- * Decide the mode at launch. Every launch is SAFE MODE, except a development
+ * Decide the mode at launch.
+ *
+ * GitHub Setup / Portable and development builds have no Safe Mode: deleting
+ * needs no arming step, only the typed confirmation and the delete pipeline's
+ * own guards. A development run can still ask for one explicitly with
+ * CLAUDE_SESSION_MANAGER_DRY_RUN=true, to try the delete flow on real data.
+ *
+ * The Microsoft Store edition keeps Safe Mode (its listing and certification
+ * notes describe it). Every launch there is SAFE MODE, except a development
  * (unpackaged) run that sets BOTH CLAUDE_SESSION_MANAGER_DRY_RUN=false AND
- * CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM=1. A packaged production build
- * ignores the variable entirely, so a stale system/user variable can never
- * start it in real-delete mode.
+ * CLAUDE_SESSION_MANAGER_DEV_ALLOW_ENV_ARM=1. A packaged Store build ignores
+ * the variable entirely, so a stale system/user variable can never start it in
+ * real-delete mode.
  */
-export function resolveInitialMode(opts: { isPackaged: boolean; env: Record<string, string | undefined> }): InitialMode {
+export function resolveInitialMode(opts: { channel: DistributionChannel; isPackaged: boolean; env: Record<string, string | undefined> }): InitialMode {
   const raw = opts.env[DRY_RUN_ENV]?.trim()
+  const devAsksForDryRun = !opts.isPackaged && !!raw && !FALSY.test(raw)
+  if (opts.channel !== 'store' && !devAsksForDryRun) return { dryRun: false, reason: 'no-arming' }
   const wantsReal = raw !== undefined && FALSY.test(raw)
   if (!wantsReal) return { dryRun: true, reason: 'startup' }
   if (opts.isPackaged) {
@@ -60,11 +71,14 @@ export interface SafetyModeOptions {
 /**
  * The single source of truth for dry-run vs real delete. Lives only in
  * process memory: there is no file, setting, registry key or storage behind
- * it, so closing the app always returns to Safe Mode.
+ * it, so closing the Store edition always returns it to Safe Mode.
  *
  * It only flips `dryRun`. Every other guard (plan ID/hash/expiry, identity,
  * path validation, workspace protection, link checks, process guard, typed
  * DELETE confirmation) stays in the delete pipeline and is never bypassed.
+ *
+ * In a build without Safe Mode (reason 'no-arming') the state never changes:
+ * deletion is always real, nothing expires and nothing can be armed or disarmed.
  */
 export class SafetyModeController extends EventEmitter {
   private state: SafetyModeState
@@ -77,6 +91,10 @@ export class SafetyModeController extends EventEmitter {
     this.armDurationMs = opts.armDurationMs ?? ARM_DURATION_MS
     this.now = opts.now ?? Date.now
     const t = this.now()
+    if (opts.initial.reason === 'no-arming') {
+      this.state = { dryRun: false, reason: 'no-arming', changedAt: t, armDurationMs: this.armDurationMs }
+      return
+    }
     this.state = {
       dryRun: true,
       reason: 'startup',
@@ -101,6 +119,10 @@ export class SafetyModeController extends EventEmitter {
 
   /** Arm real deletion: exact "ENABLE DELETE" and no process condition that blocks mutations. */
   async arm(confirmation: unknown): Promise<ArmResult> {
+    // The UI offers no arming in this mode, so this text is never shown there.
+    if (this.state.reason === 'no-arming') {
+      return { ok: false, code: 'NOT_SUPPORTED', message: 'This build has no Safe Mode: deletion does not need arming.', state: this.getState() }
+    }
     if (!isArmConfirmationValid(confirmation)) {
       return { ok: false, code: 'INVALID_INPUT', ...msg('safety.typeExactly', { phrase: ARM_CONFIRMATION_PHRASE }), state: this.getState() }
     }
@@ -113,6 +135,7 @@ export class SafetyModeController extends EventEmitter {
 
   /** Return to Safe Mode immediately (no restart needed). */
   disarm(reason: Extract<SafetyModeReason, 'returned-by-user' | 'expired' | 'after-delete'>): SafetyModeState {
+    if (this.state.reason === 'no-arming') return this.getState()
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
     const wasArmed = !this.state.dryRun

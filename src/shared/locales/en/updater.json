@@ -35,8 +35,7 @@
   "portableNote": "Portable builds are never replaced automatically. Download the new Setup (recommended) or Portable build from GitHub Releases.",
   "confirm": {
     "title": "Install the update?",
-    "text": "{{appName}} will close and restart to install version {{version}}.",
-    "safeModeNote": "The new version starts in Safe Mode, like every launch."
+    "text": "{{appName}} will close and restart to install version {{version}}."
   },
   "pillHint": "Open Settings → Updates",
   "toast": {

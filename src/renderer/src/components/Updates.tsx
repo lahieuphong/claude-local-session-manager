@@ -101,7 +101,6 @@ export function UpdatesSection(): ReactElement {
         </header>
         <div className="modal-body">
           <p>{t('updater:confirm.text', { appName: appInfo?.name ?? '', version: u.latestVersion ?? '' })}</p>
-          <p className="hint">{t('updater:confirm.safeModeNote')}</p>
         </div>
         <footer className="modal-footer">
           <div className="spacer" />

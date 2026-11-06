@@ -35,8 +35,7 @@
   "portableNote": "Bản Portable không bao giờ được tự động thay thế. Hãy tải bản Setup (khuyên dùng) hoặc bản Portable mới từ GitHub Releases.",
   "confirm": {
     "title": "Cài đặt bản cập nhật?",
-    "text": "{{appName}} sẽ đóng và khởi động lại để cài phiên bản {{version}}.",
-    "safeModeNote": "Phiên bản mới khởi động ở Chế độ an toàn như mọi lần mở."
+    "text": "{{appName}} sẽ đóng và khởi động lại để cài phiên bản {{version}}."
   },
   "pillHint": "Mở Cài đặt → Cập nhật",
   "toast": {

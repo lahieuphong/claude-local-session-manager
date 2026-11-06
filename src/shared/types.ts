@@ -516,7 +516,9 @@ export interface LogEntry {
 // ---------------------------------------------------------------------------
 
 export type SafetyModeReason =
-  /** Every launch starts here. */
+  /** GitHub and development builds: no Safe Mode, deletion is always real and never armed. */
+  | 'no-arming'
+  /** Every launch of the Microsoft Store edition starts here. */
   | 'startup'
   /** Development run started armed via an explicitly allowed env variable. */
   | 'env-dev'
@@ -527,7 +529,7 @@ export type SafetyModeReason =
   | 'after-delete'
 
 export interface SafetyModeState {
-  /** true = SAFE MODE (dry run). false = REAL DELETE ARMED. */
+  /** true = SAFE MODE (dry run). false = real deletion (armed, or a build with no arming step). */
   dryRun: boolean
   reason: SafetyModeReason
   changedAt: number

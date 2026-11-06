@@ -81,8 +81,8 @@ async function start(): Promise<void> {
   const logPath = path.join(userData, 'logs', 'main.log')
   await logger.setLogFile(logPath)
 
-  // Every launch starts in SAFE MODE (dry run); see safetyMode.ts. Kept in memory only.
-  const initialMode = resolveInitialMode({ isPackaged: app.isPackaged, env: process.env })
+  // Store edition: every launch starts in SAFE MODE (dry run). Other builds have no arming step. See safetyMode.ts.
+  const initialMode = resolveInitialMode({ channel: distribution.channel, isPackaged: app.isPackaged, env: process.env })
   const cachePath = path.join(userData, 'scan-cache', 'transcript-index.json')
   // What this build may write: the Store edition does not modify Claude Desktop's AppData files (packagingPolicy.ts).
   const discoveryEnv = envFromProcess()
@@ -124,7 +124,7 @@ async function start(): Promise<void> {
   const archive = new ArchiveService(repo, processes, hidden, () => safety.isDryRun(), policy)
   const deleter = new DeleteService(repo, processes, {
     dryRun: () => safety.isDryRun(),
-    // Arming is single-use: any real delete execution returns the app to Safe Mode.
+    // Store edition: arming is single-use, so a real delete returns it to Safe Mode. Does nothing in other builds.
     onRealDeleteExecuted: () => safety.disarm('after-delete'),
     policy,
     appName: brand.name

@@ -1,12 +1,12 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import { refreshProcess, returnToSafeMode, setView, useAppState } from '../stores/appStore'
+import { hasSafeMode, refreshProcess, returnToSafeMode, setView, useAppState } from '../stores/appStore'
 import { IconAlert, IconRefresh, IconShield, IconShieldAlert } from './Icons'
 import { useArmCountdown } from './SafetyMode'
 
 /**
- * Always-visible strip above the content: the deletion safety mode (left)
- * and whether Claude Desktop blocks modifying actions (right).
+ * Always-visible strip above the content: the deletion safety mode (left, only
+ * in builds that have one) and whether Claude Desktop blocks modifying actions (right).
  */
 export function StatusStrip(): ReactElement {
   const { t } = useTranslation()
@@ -16,15 +16,14 @@ export function StatusStrip(): ReactElement {
   // Microsoft Store edition: Archive / Restore do not exist, so the texts do not mention them.
   const storeEdition = useAppState((s) => s.appInfo?.desktopDataReadOnly ?? false)
   const remaining = useArmCountdown(safety)
-  const armed = !!safety && !safety.dryRun
+  const safeMode = hasSafeMode(safety)
+  const armed = safeMode && !safety.dryRun
   const claudeBlocks = !!process && (process.desktopRunning || !!process.error)
 
   return (
     <div className={`status-strip ${armed ? 'armed' : ''}`}>
-      <div className="strip-safety" role={armed ? 'alert' : 'status'}>
-        {!safety ? (
-          <span className="strip-muted">{t('safety:strip.reading')}</span>
-        ) : armed ? (
+      <div className="strip-safety" role={armed ? 'alert' : safeMode ? 'status' : undefined}>
+        {!safeMode ? null : armed ? (
           <>
             <span className="mode-chip armed">
               <IconShieldAlert size={14} />

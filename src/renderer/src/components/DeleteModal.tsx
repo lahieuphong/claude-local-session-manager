@@ -9,7 +9,7 @@ import type {
 } from '../../../shared/types'
 import { isConfirmationValid } from '../../../shared/confirm'
 import { useFmt, type Formatters } from '../i18n'
-import { closeDelete, copyToClipboard, errText, refreshProcess, setChecked, toast, useAppState, type DeleteRequest } from '../stores/appStore'
+import { closeDelete, copyToClipboard, errText, hasSafeMode, refreshProcess, setChecked, toast, useAppState, type DeleteRequest } from '../stores/appStore'
 import { IconAlert, IconCheck, IconCopy, IconMinus, IconRefresh, IconShield, IconShieldAlert, IconTrash, IconX } from './Icons'
 import { Modal } from './Modal'
 import { tCode } from './RichText'
@@ -166,7 +166,7 @@ export function DeleteModal(): ReactElement | null {
         ) : (
           plan && (
             <>
-              <ModeBar dryRun={plan.dryRun} />
+              {hasSafeMode(safety) && <ModeBar dryRun={plan.dryRun} />}
               {plan.globalBlockedReason && (
                 <div className="notice warn" role="alert">
                   <IconAlert size={14} />

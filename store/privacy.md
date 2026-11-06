@@ -1,6 +1,6 @@
 # Privacy policy — LHP Local Session Manager
 
-_Last updated: 8 October 2026_
+_Last updated: 7 November 2026_
 
 LHP Local Session Manager is an **unofficial, independent** desktop utility for
 Windows. It lets you browse, search, export and clean up the session history
@@ -87,6 +87,8 @@ you confirm.
 - The app starts in Safe Mode, where nothing can be deleted. Permanent deletion
   must be armed for the current run by typing `ENABLE DELETE`. It turns itself
   off after one delete or 10 minutes.
+- GitHub Setup and Portable builds only: these builds have no Safe Mode.
+  Permanent deletion works straight away, after the confirmation described below.
 - Every delete shows the exact files that will and will not be removed, and
   needs a typed confirmation. Every path is validated again right before it is
   removed. Project folders are never deleted.

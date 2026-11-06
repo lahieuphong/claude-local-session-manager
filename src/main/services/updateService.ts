@@ -222,8 +222,7 @@ export class UpdateService extends EventEmitter {
       return { ok: false, code: 'NOT_SUPPORTED', ...msg('update.noDownloaded') }
     }
     logger.info(`Installing update ${this.latestVersion} (user confirmed)`)
-    // Runs the verified NSIS installer silently and relaunches the app. The
-    // new process starts in Safe Mode like every launch.
+    // Runs the verified NSIS installer silently and relaunches the app.
     setImmediate(() => u.quitAndInstall(true, true))
     return { ok: true, ...msg('update.restarting') }
   }

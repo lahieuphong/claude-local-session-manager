@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboard
 import { useTranslation } from 'react-i18next'
 import type { ClaudeSession, ExportFormat, RawTitle, SessionDetails } from '../../../shared/types'
 import { useFmt } from '../i18n'
-import { archive, copyToClipboard, errText, exportOne, hideInManager, openDelete, runAction, useAppState } from '../stores/appStore'
+import { archive, copyToClipboard, errText, exportOne, hasSafeMode, hideInManager, openDelete, runAction, useAppState } from '../stores/appStore'
 import { displayPath } from '../utils/paths'
 import { SessionBadges } from './Badges'
 import { EmptyState } from './EmptyState'
@@ -150,7 +150,7 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
             <span>{t('inspector:note.storeDesktop')}</span>
           </div>
         )}
-        {safety && !safety.dryRun && (
+        {hasSafeMode(safety) && !safety.dryRun && (
           <div className="notice danger small" role="note">
             <IconAlert size={14} />
             <span>{t('inspector:note.armed')}</span>

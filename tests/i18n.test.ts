@@ -108,11 +108,11 @@ describe('language and motion preferences are saved', () => {
     }
   })
 
-  it('the UI language never changes how the app starts: always Safe Mode', () => {
+  it('the UI language never changes how the Store edition starts: always Safe Mode', () => {
     for (const isPackaged of [true, false]) {
-      expect(resolveInitialMode({ isPackaged, env: {} })).toMatchObject({ dryRun: true, reason: 'startup' })
+      expect(resolveInitialMode({ channel: 'store', isPackaged, env: {} })).toMatchObject({ dryRun: true, reason: 'startup' })
     }
-    expect(resolveInitialMode({ isPackaged: true, env: { CLAUDE_SESSION_MANAGER_DRY_RUN: 'false', LANG: 'vi_VN' } }).dryRun).toBe(true)
+    expect(resolveInitialMode({ channel: 'store', isPackaged: true, env: { CLAUDE_SESSION_MANAGER_DRY_RUN: 'false', LANG: 'vi_VN' } }).dryRun).toBe(true)
   })
 })
 

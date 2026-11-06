@@ -21,32 +21,124 @@ function fakeProcesses(list: RawProcess[] = [], error?: string): { getStatus(): 
 
 function safeController(opts: { now?: () => number; processes?: ReturnType<typeof fakeProcesses> } = {}): SafetyModeController {
   return new SafetyModeController({
-    initial: resolveInitialMode({ isPackaged: true, env: {} }),
+    initial: resolveInitialMode({ channel: 'store', isPackaged: true, env: {} }),
     processes: opts.processes ?? fakeProcesses(),
     now: opts.now
   })
 }
 
-describe('startup mode', () => {
+describe('GitHub and development builds have no arming step', () => {
+  let fake: FakeClaude
+  let safety: SafetyModeController
+  let h: Harness
+  let procs: RawProcess[]
+  let transcriptA: string
+  let transcriptB: string
+  const idOf = (uuid: string): string => h.repo.getSnapshot()!.sessions.find((s) => s.cliSessionId === uuid)!.id
+
+  beforeEach(async () => {
+    fake = await createFakeClaude()
+    h = createHarness(fake, { dryRun: () => safety.isDryRun(), onRealDeleteExecuted: () => safety.disarm('after-delete') })
+    procs = h.processes
+    safety = new SafetyModeController({
+      initial: resolveInitialMode({ channel: 'github', isPackaged: true, env: {} }),
+      processes: h.processService
+    })
+    transcriptA = await fake.writeTranscript('C--Work-demo', U.A, [userLine(U.A, 'first', '2026-09-29T01:00:00Z')])
+    transcriptB = await fake.writeTranscript('C--Work-demo', U.B, [userLine(U.B, 'second', '2026-09-29T01:00:00Z')])
+    await h.repo.scan()
+  })
+  afterEach(async () => {
+    safety.dispose()
+    await fake.cleanup()
+  })
+
+  it('a packaged GitHub build starts in real-delete mode, whatever the environment says', () => {
+    for (const env of [{}, { [DRY_RUN_ENV]: 'true' }, { [DRY_RUN_ENV]: 'false', [DEV_ALLOW_ENV_ARM]: '1' }]) {
+      expect(resolveInitialMode({ channel: 'github', isPackaged: true, env })).toEqual({ dryRun: false, reason: 'no-arming' })
+    }
+  })
+
+  it('a development run starts in real-delete mode unless it explicitly asks for a dry run', () => {
+    for (const env of [{}, { [DRY_RUN_ENV]: '' }, { [DRY_RUN_ENV]: 'false' }, { [DRY_RUN_ENV]: 'false', [DEV_ALLOW_ENV_ARM]: '1' }]) {
+      expect(resolveInitialMode({ channel: 'development', isPackaged: false, env })).toEqual({ dryRun: false, reason: 'no-arming' })
+    }
+    for (const value of ['true', '1', ' yes ']) {
+      expect(resolveInitialMode({ channel: 'development', isPackaged: false, env: { [DRY_RUN_ENV]: value } })).toMatchObject({ dryRun: true, reason: 'startup' })
+    }
+  })
+
+  it('never expires and cannot be armed or returned to Safe Mode', async () => {
+    let t = 1_000
+    const c = new SafetyModeController({ initial: resolveInitialMode({ channel: 'github', isPackaged: true, env: {} }), processes: fakeProcesses(), now: () => t })
+    const events: SafetyModeState[] = []
+    c.on('changed', (s: SafetyModeState) => events.push(s))
+    expect(c.getState()).toMatchObject({ dryRun: false, reason: 'no-arming' })
+    expect(c.getState().expiresAt).toBeUndefined()
+
+    t += ARM_DURATION_MS * 10
+    expect(c.isDryRun()).toBe(false)
+    for (const reason of ['returned-by-user', 'expired', 'after-delete'] as const) {
+      expect(c.disarm(reason)).toMatchObject({ dryRun: false, reason: 'no-arming' })
+    }
+    expect(await c.arm('ENABLE DELETE')).toMatchObject({ ok: false, code: 'NOT_SUPPORTED', state: { dryRun: false, reason: 'no-arming' } })
+    expect(c.getState().expiresAt).toBeUndefined()
+    expect(c.isDryRun()).toBe(false)
+    expect(events).toEqual([])
+    c.dispose()
+  })
+
+  it('deletes for real right away, and again without any new step', async () => {
+    const first = await h.deleter.createPlan([idOf(U.A)], false)
+    expect(first.dryRun).toBe(false)
+    expect(await h.deleter.execute([idOf(U.A)], 'DELETE', first.planId, false)).toMatchObject({ ok: true, dryRun: false })
+    expect(await lstatOrNull(transcriptA)).toBeNull()
+
+    const second = await h.deleter.createPlan([idOf(U.B)], false)
+    expect(second.dryRun).toBe(false)
+    expect(await h.deleter.execute([idOf(U.B)], 'DELETE', second.planId, false)).toMatchObject({ ok: true, dryRun: false })
+    expect(await lstatOrNull(transcriptB)).toBeNull()
+  })
+
+  it('keeps every other guard: the typed confirmation, a fresh plan and the process check', async () => {
+    const id = idOf(U.A)
+
+    let plan = await h.deleter.createPlan([id], false)
+    expect(await h.deleter.execute([id], 'delete', plan.planId, false)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+
+    plan = await h.deleter.createPlan([id], false)
+    await appendFile(transcriptA, JSON.stringify(userLine(U.A, 'more', '2026-09-30T00:00:00Z')) + '\n')
+    expect(await h.deleter.execute([id], 'DELETE', plan.planId, false)).toMatchObject({ ok: false, code: 'STALE_PLAN' })
+
+    procs.push({ pid: 9, name: 'claude.exe', executablePath: DESKTOP_EXE })
+    plan = await h.deleter.createPlan([id], false)
+    expect(plan.globalBlockedReason).toMatch(/Close Claude Desktop/)
+    expect(await h.deleter.execute([id], 'DELETE', plan.planId, false)).toMatchObject({ ok: false, code: 'CLAUDE_RUNNING' })
+
+    expect(await lstatOrNull(transcriptA)).not.toBeNull()
+  })
+})
+
+describe('Store edition: startup mode', () => {
   it('every fresh launch defaults to dry run (packaged and development)', () => {
-    expect(resolveInitialMode({ isPackaged: true, env: {} })).toMatchObject({ dryRun: true, reason: 'startup' })
-    expect(resolveInitialMode({ isPackaged: false, env: {} })).toMatchObject({ dryRun: true, reason: 'startup' })
-    expect(resolveInitialMode({ isPackaged: false, env: { [DRY_RUN_ENV]: 'true' } }).dryRun).toBe(true)
+    expect(resolveInitialMode({ channel: 'store', isPackaged: true, env: {} })).toMatchObject({ dryRun: true, reason: 'startup' })
+    expect(resolveInitialMode({ channel: 'store', isPackaged: false, env: {} })).toMatchObject({ dryRun: true, reason: 'startup' })
+    expect(resolveInitialMode({ channel: 'store', isPackaged: false, env: { [DRY_RUN_ENV]: 'true' } }).dryRun).toBe(true)
     expect(safeController().isDryRun()).toBe(true)
   })
 
   it('a packaged production app ignores a stale real-delete environment variable', () => {
     for (const value of ['false', 'FALSE', '0', 'no', 'off']) {
-      const m = resolveInitialMode({ isPackaged: true, env: { [DRY_RUN_ENV]: value, [DEV_ALLOW_ENV_ARM]: '1' } })
+      const m = resolveInitialMode({ channel: 'store', isPackaged: true, env: { [DRY_RUN_ENV]: value, [DEV_ALLOW_ENV_ARM]: '1' } })
       expect(m.dryRun).toBe(true)
       expect(m.notice).toMatch(/ignored/)
     }
   })
 
   it('development needs an explicit opt-in flag before the env variable can arm at startup', () => {
-    expect(resolveInitialMode({ isPackaged: false, env: { [DRY_RUN_ENV]: 'false' } })).toMatchObject({ dryRun: true })
-    expect(resolveInitialMode({ isPackaged: false, env: { [DRY_RUN_ENV]: 'false', [DEV_ALLOW_ENV_ARM]: 'yes' } }).dryRun).toBe(true)
-    const armed = resolveInitialMode({ isPackaged: false, env: { [DRY_RUN_ENV]: 'false', [DEV_ALLOW_ENV_ARM]: '1' } })
+    expect(resolveInitialMode({ channel: 'store', isPackaged: false, env: { [DRY_RUN_ENV]: 'false' } })).toMatchObject({ dryRun: true })
+    expect(resolveInitialMode({ channel: 'store', isPackaged: false, env: { [DRY_RUN_ENV]: 'false', [DEV_ALLOW_ENV_ARM]: 'yes' } }).dryRun).toBe(true)
+    const armed = resolveInitialMode({ channel: 'store', isPackaged: false, env: { [DRY_RUN_ENV]: 'false', [DEV_ALLOW_ENV_ARM]: '1' } })
     expect(armed).toMatchObject({ dryRun: false, reason: 'env-dev' })
     // Even then the arm is time-limited like a UI arm.
     let t = 1_000
@@ -154,7 +246,7 @@ describe('delete pipeline with the in-app safety switch', () => {
     h = createHarness(fake, { dryRun: () => safety.isDryRun(), onRealDeleteExecuted: () => safety.disarm('after-delete') })
     procs = h.processes // one process source for both the arm check and the delete guard
     safety = new SafetyModeController({
-      initial: resolveInitialMode({ isPackaged: true, env: {} }),
+      initial: resolveInitialMode({ channel: 'store', isPackaged: true, env: {} }),
       processes: h.processService
     })
     transcript = await fake.writeTranscript('C--Work-demo', U.A, [userLine(U.A, 'disposable', '2026-09-29T01:00:00Z')])
@@ -243,7 +335,7 @@ describe('delete pipeline with the in-app safety switch', () => {
   it('a plan expires with the arm: an arm that times out before execution cannot delete', async () => {
     let t = Date.now()
     const timed = new SafetyModeController({
-      initial: resolveInitialMode({ isPackaged: true, env: {} }),
+      initial: resolveInitialMode({ channel: 'store', isPackaged: true, env: {} }),
       processes: { getStatus: async () => buildProcessStatus([], []) },
       now: () => t
     })
