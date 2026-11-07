@@ -424,7 +424,8 @@ async function runVariant(channel) {
     const processStatus = await page.evaluate('window.sessionManager.getClaudeProcessStatus(true)')
     const canChange = !processStatus.desktopRunning && !processStatus.error
     const isStore = info.distribution === 'store'
-    console.log(`channel=${info.distribution} version=${info.version} claudeDesktopRunning=${processStatus.desktopRunning}`)
+    const updateState = await page.evaluate('window.sessionManager.getUpdateState()')
+    console.log(`channel=${info.distribution} version=${info.version} claudeDesktopRunning=${processStatus.desktopRunning} updates=${updateState.mode}/${updateState.status}`)
     if (!canChange) console.log('Claude Desktop is running on this PC (or cannot be checked): archive and delete steps are skipped.')
 
     const frame = await page.evaluate(`({ width: window.outerWidth - window.innerWidth, height: window.outerHeight - window.innerHeight })`)

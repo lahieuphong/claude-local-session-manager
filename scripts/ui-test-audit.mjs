@@ -15,7 +15,7 @@
 //   page-overflow  the whole window scrolls (the app is laid out to fit it)
 //   cramped        a scrolling area too short to use
 //   modal          a dialog (or its buttons) outside the window
-//   raw-text       untranslated keys, {{placeholders}}, undefined, NaN...
+//   raw-text       untranslated keys, {{placeholders}}, undefined, NaN, raw system errors...
 //   no-name        a control a screen reader cannot name
 //   dup-id, aria-ref  broken IDs and ARIA references
 //   broken-image   an image that did not load
@@ -202,7 +202,7 @@ export function auditPage() {
     const technical = !!el.closest('pre, code, .mono, kbd, .row-title, .inspector-title, .row-model, .row-project, .preview, .path-value')
     if (!technical) {
       if (new RegExp(`^(${NS}):`).test(text) || /^[a-z][A-Za-z]*(\.[A-Za-z0-9_-]+)+$/.test(text)) add('raw-text', el, `looks like an untranslated key: "${text}"`)
-      if (/\{\{|\}\}|\bundefined\b|\bNaN\b|\[object Object\]|Invalid Date/.test(text)) add('raw-text', el, `"${text.slice(0, 60)}"`)
+      if (/\{\{|\}\}|\bundefined\b|\bNaN\b|\[object Object\]|Invalid Date|\b(ENOENT|EACCES|EPERM|EBUSY)\b/.test(text)) add('raw-text', el, `"${text.slice(0, 60)}"`)
       if (!el.closest('.row, .nav-project, .ranked-row, dd, .plan-path, .plan-session-head, .result-session, .inspector-sub-text, .group-name, .page-title, .root-entry, .candidate code, .plain-list .strong')) strings.push(text)
     }
 
