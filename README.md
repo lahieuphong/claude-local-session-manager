@@ -17,10 +17,8 @@ export or permanently delete sessions.
 - Automatic discovery of Claude storage. Nothing is hard-coded: everything comes from `USERPROFILE` / `APPDATA` / `LOCALAPPDATA` (and `CLAUDE_CONFIG_DIR` if set).
 - Session list with search (title, prompts, project, paths, IDs, accent-insensitive: `nha hat` finds `Nhà hát`), sorting, grouping by date or project, and filters (All / Active / Archived / Transcript only / Metadata only & problems / per project).
 - Details panel:
-  - display title vs. **raw** metadata title (`null`, `""` and a missing field are shown separately)
-  - IDs, dates, model, message counts and size breakdown
-  - every file path, with reveal in Explorer
-  - first and last prompt preview
+  - what you need to recognise a session: project path, dates, model, message counts, first and last message
+  - technical details (collapsed): IDs, every file path with reveal in Explorer, where the disk space goes, and the **raw** metadata title (`null`, `""` and a missing field are shown separately)
   - raw metadata JSON (collapsed)
 - **Archive / Restore** (Claude Desktop's own `isArchived` flag, atomic metadata writes) for Desktop sessions;
   **Hide / Show session** for Claude Code transcript-only sessions (this app's list only, never Claude's files).

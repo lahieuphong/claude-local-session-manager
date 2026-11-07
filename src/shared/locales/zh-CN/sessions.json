@@ -21,6 +21,8 @@
   "badge": {
     "hidden": "已隐藏",
     "hiddenHint": "仅在本管理器中隐藏；Claude 自身状态不变",
+    "transcriptOnlyHint": "此会话没有 Claude Desktop 元数据，因此无法归档。“隐藏会话”只会更改本应用自己的列表，该会话仍会在 Claude 中显示。",
+    "orphanHint": "此会话文件夹既没有会话记录也没有 Claude Desktop 元数据。“隐藏会话”只会更改本应用自己的列表。",
     "issues_other": "{{count}} 个问题",
     "issuesHint": "请查看详情面板中的“问题”"
   },

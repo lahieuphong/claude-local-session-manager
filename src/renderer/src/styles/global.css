@@ -196,7 +196,6 @@ pre,
 
 code.wrap,
 .wrap {
-  word-break: break-all;
   overflow-wrap: anywhere;
 }
 
@@ -1520,13 +1519,10 @@ html[lang='zh-CN'] .group-label {
   overflow-wrap: anywhere;
   line-height: 1.45;
 }
-.path-row.missing .path-label {
-  color: var(--text-muted);
-}
 
 .metric-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -1551,13 +1547,15 @@ html[lang='zh-CN'] .group-label {
 }
 
 .preview-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   margin: var(--space-3) 0 4px;
   font-size: 12px;
   color: var(--text-muted);
 }
 .preview {
-  max-height: 132px;
-  overflow: auto;
   padding: 8px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -1567,6 +1565,17 @@ html[lang='zh-CN'] .group-label {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--text-secondary);
+}
+.preview-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.preview-text.expanded {
+  display: block;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 .collapsible > summary,
@@ -2767,15 +2776,6 @@ body:has(.modal-backdrop) .toasts {
   }
   .scan-stat:nth-last-child(-n + 2) {
     border-bottom: none;
-  }
-  .metric-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .metric:nth-child(3) {
-    border-left: none;
-  }
-  .metric:nth-child(n + 3) {
-    border-top: 1px solid var(--border-default);
   }
   .setting-row {
     flex-direction: column;

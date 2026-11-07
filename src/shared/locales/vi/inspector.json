@@ -20,24 +20,19 @@
     "openProjectHint": "Mở thư mục dự án trong Explorer"
   },
   "note": {
-    "transcriptOnly": "Chỉ có bản ghi hội thoại: phiên Claude Code này không có siêu dữ liệu Claude Desktop nên Claude không có trạng thái lưu trữ cho nó. Ẩn phiên chỉ thay đổi danh sách của ứng dụng này; tệp của Claude không bị thay đổi và phiên vẫn hiện trong Claude.",
-    "orphan": "Thư mục phiên mồ côi: không có bản ghi hội thoại hay siêu dữ liệu Claude Desktop. Ẩn phiên chỉ thay đổi danh sách của ứng dụng này; tệp của Claude không bị thay đổi.",
     "storeDesktop": "Bản Microsoft Store: phiên này có siêu dữ liệu Claude Desktop nên ở đây chỉ xem và xuất được, không lưu trữ, khôi phục hay xóa được. Cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData, và Claude Desktop sẽ không thấy các thay đổi đó.",
     "armed": "Đã bật xóa thật — Xóa vĩnh viễn sẽ xóa thật các tệp của phiên này."
   },
   "section": {
     "problems": "Vấn đề",
     "overview": "Tổng quan",
-    "project": "Dự án",
-    "session": "Phiên",
-    "storage": "Dung lượng",
     "files": "Tệp",
     "activity": "Hoạt động",
+    "technical": "Chi tiết kỹ thuật",
     "rawMetadata": "Siêu dữ liệu gốc",
     "debug": "Gỡ lỗi: đối tượng phiên đã chuẩn hóa"
   },
   "field": {
-    "displayTitle": "Tiêu đề hiển thị",
     "titleSource": "Nguồn tiêu đề",
     "rawTitle": "Tiêu đề trong siêu dữ liệu",
     "customTitle": "Tiêu đề tự đặt",
@@ -48,22 +43,19 @@
     "project": "Dự án",
     "projectPath": "Đường dẫn dự án",
     "projectSource": "Nguồn dự án",
-    "storageFolder": "Thư mục lưu của Claude",
     "cliSessionId": "ID phiên CLI",
     "desktopSessionId": "ID phiên Desktop",
     "priorIds": "ID CLI trước đó",
     "internalId": "ID trong trình quản lý",
     "model": "Mô hình",
     "claudeCode": "Claude Code",
-    "gitBranch": "Nhánh Git",
-    "totalSize": "Tổng"
+    "gitBranch": "Nhánh Git"
   },
   "hint": {
     "rawTitle": "Giá trị chính xác của trường title trong tệp siêu dữ liệu Claude Desktop",
     "projectPath": "Thư mục dự án thật (cwd). Không bao giờ nằm trong kế hoạch xóa.",
-    "storageFolder": "Thư mục mã hóa trong ~/.claude/projects (chỉ dùng để định vị dữ liệu)",
     "internalId": "ID nội bộ do ứng dụng này gán",
-    "messages": "Câu lệnh = câu hỏi thật của người dùng. Tin nhắn trợ lý = các phản hồi riêng biệt của mô hình (mỗi bước một phản hồi; một câu lệnh thường tạo nhiều phản hồi vì mỗi lần gọi công cụ là một phản hồi riêng). Lệnh gọi công cụ = các khối tool_use. Bản ghi = các dòng JSONL không rỗng."
+    "messages": "Câu lệnh = câu hỏi thật của người dùng. Tin nhắn trợ lý = các phản hồi riêng biệt của mô hình (mỗi bước một phản hồi; một câu lệnh thường tạo nhiều phản hồi vì mỗi lần gọi công cụ là một phản hồi riêng). Lệnh gọi công cụ = các khối tool_use."
   },
   "value": {
     "unknown": "không rõ"
@@ -86,9 +78,6 @@
     "unresolved": "Chưa xác định"
   },
   "size": {
-    "transcript": "Bản ghi hội thoại",
-    "sessionData": "Dữ liệu phiên",
-    "metadata": "Siêu dữ liệu",
     "other": "Khác (lịch sử, môi trường, nhật ký)"
   },
   "file": {
@@ -103,25 +92,23 @@
     "copyPath": "Sao chép đường dẫn đầy đủ",
     "copyPathOf": "Sao chép đường dẫn đầy đủ của {{label}}",
     "reveal": "Mở trong Explorer",
-    "revealOf": "Mở {{label}} trong Explorer",
-    "notPresent": "không có"
+    "revealOf": "Mở {{label}} trong Explorer"
   },
   "metric": {
     "prompts": "Câu lệnh",
     "assistant": "Tin nhắn trợ lý",
-    "tools": "Lệnh gọi công cụ",
-    "records": "Bản ghi"
+    "tools": "Lệnh gọi công cụ"
   },
   "preview": {
-    "first": "Tin nhắn đầu tiên của người dùng",
-    "last": "Tin nhắn gần nhất của người dùng"
+    "first": "Tin nhắn đầu tiên",
+    "last": "Tin nhắn gần nhất",
+    "more": "Xem hết",
+    "less": "Thu gọn"
   },
   "raw": {
-    "none": "Không có tệp siêu dữ liệu Claude Desktop — đây là phiên Claude Code chỉ có bản ghi hội thoại.",
     "tombstones": "Có dấu xóa (tombstone):"
   },
   "rawTitle": {
-    "noFile": "(không có tệp siêu dữ liệu)",
     "missing": "(thiếu trường)",
     "empty": "(chuỗi rỗng)",
     "whitespace": "(chỉ có khoảng trắng)",

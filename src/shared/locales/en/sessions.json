@@ -21,6 +21,8 @@
   "badge": {
     "hidden": "Hidden",
     "hiddenHint": "Hidden in this manager only; Claude's own state is unchanged",
+    "transcriptOnlyHint": "This session has no Claude Desktop metadata, so it cannot be archived. Hide session only changes this app's own list; the session still appears in Claude.",
+    "orphanHint": "Session folder without a transcript or Claude Desktop metadata. Hide session only changes this app's own list.",
     "issues_one": "{{count}} issue",
     "issues_other": "{{count}} issues",
     "issuesHint": "See Problems in the details panel"

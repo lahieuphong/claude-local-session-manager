@@ -536,6 +536,10 @@ async function runVariant(channel) {
     // 2. Layout: every screen × language × window size.
     // -----------------------------------------------------------------------
     const scrollToEnd = (selector) => page.evaluate(`document.querySelector(${quote(selector)}).scrollTop = 1e9`)
+    const openTechnical = async () => {
+      await click('details.technical summary')
+      await page.waitFor(`document.querySelector('details.technical').open`, 'the technical details')
+    }
     const openBulk = async () => {
       await reset()
       for (const uuid of [roles.longEn, roles.desktopActive[1], roles.desktopActive[2]]) {
@@ -548,12 +552,13 @@ async function runVariant(channel) {
       { name: 'sidebar-scrolled-to-end', enter: async () => { await reset(); await scrollToEnd('.nav') } },
       { name: 'sidebar-projects-collapsed', enter: async () => { await reset(); await click('.nav-label-button') } },
       { name: 'details-long-title', enter: async () => { await reset(); await selectRow(roles.longEn) } },
-      { name: 'details-long-title-end', enter: async () => { await reset(); await selectRow(roles.longEn); await scrollToEnd('.inspector-scroll') } },
+      { name: 'details-long-title-end', enter: async () => { await reset(); await selectRow(roles.longEn); await openTechnical(); await scrollToEnd('.inspector-scroll') } },
+      { name: 'details-message-opened', enter: async () => { await reset(); await selectRow(roles.longEn); await click('.preview-label .link-btn'); await page.waitFor(`document.querySelector('.preview-text.expanded')`, 'the full message') } },
       { name: 'details-vietnamese-title', enter: async () => { await reset(); await selectRow(roles.longVi) } },
-      { name: 'details-unbroken-title', enter: async () => { await reset(); await selectRow(roles.unbroken); await scrollToEnd('.inspector-scroll') } },
+      { name: 'details-unbroken-title', enter: async () => { await reset(); await selectRow(roles.unbroken); await openTechnical(); await scrollToEnd('.inspector-scroll') } },
       { name: 'details-untitled', enter: async () => { await reset(); await selectRow(roles.untitled) } },
       { name: 'details-running-session', enter: async () => { await reset(); await selectRow(roles.live) } },
-      { name: 'details-desktop-raw-metadata', enter: async () => { await reset(); await selectRow(roles.desktopActive[0]); await click('details.collapsible summary'); await page.waitFor(`document.querySelector('details.collapsible .code-block')`, 'the raw metadata'); await scrollToEnd('.inspector-scroll') } },
+      { name: 'details-desktop-raw-metadata', enter: async () => { await reset(); await selectRow(roles.desktopActive[0]); await click('details.raw-metadata summary'); await page.waitFor(`document.querySelector('details.raw-metadata .code-block')`, 'the raw metadata'); await scrollToEnd('.inspector-scroll') } },
       { name: 'details-export-menu', enter: async () => { await reset(); await selectRow(roles.longEn); await click('.menu-trigger'); await page.waitFor(`document.querySelector('.menu')`, 'the export menu') } },
       { name: 'filter-active', enter: async () => { await reset(); await clickEl(filterEl('active')) } },
       { name: 'filter-archived', enter: async () => { await reset(); await selectRow(roles.desktopArchived[0], 'archived') } },
@@ -870,11 +875,54 @@ async function runVariant(channel) {
     // Details panel.
     await reset()
     await selectRow(roles.desktopActive[0])
-    await click('details.collapsible summary')
-    await page.waitFor(`document.querySelector('details.collapsible .code-block')`, 'the raw metadata')
-    check('details: raw metadata opens and shows the file', (await text('details.collapsible .code-block')).includes('Desktop session 1'))
+    await click('details.raw-metadata summary')
+    await page.waitFor(`document.querySelector('details.raw-metadata .code-block')`, 'the raw metadata')
+    check('details: raw metadata opens and shows the file', (await text('details.raw-metadata .code-block')).includes('Desktop session 1'))
+
+    // The panel shows the essentials; the rest waits behind "Technical details".
+    await reset()
+    await selectRow(roles.longEn)
+    const panel = () =>
+      page.evaluate(`(() => {
+        const inspector = document.querySelector('.inspector')
+        return {
+          rows: [...inspector.querySelectorAll('section.inspector-section .kv dt')].length,
+          note: !!inspector.querySelector('.notice.subtle'),
+          technicalOpen: inspector.querySelector('details.technical').open,
+          rawMetadata: !!inspector.querySelector('details.raw-metadata'),
+          badgeHint: !!inspector.querySelector('.inspector-sub .badge-transcript-only')?.title,
+          metrics: inspector.querySelectorAll('.metric').length,
+          previewLines: [...inspector.querySelectorAll('.preview-text')].map((p) => Math.round(p.getBoundingClientRect().height / parseFloat(getComputedStyle(p).lineHeight))),
+          paths: [...inspector.querySelectorAll('details.technical .path-row')].length,
+          copyId: !!inspector.querySelector('details.technical .copy-code'),
+          text: inspector.textContent
+        }
+      })()`)
+    const essentials = await panel()
+    check('details: at most five rows until Technical details is opened', essentials.rows <= 5, `${essentials.rows} rows`)
+    check('details: Technical details starts closed', !essentials.technicalOpen)
+    check('details: a transcript-only session has no note box; the badge explains it on hover', !essentials.note && essentials.badgeHint)
+    check('details: no raw metadata section without a metadata file', !essentials.rawMetadata)
+    check('details: three activity numbers, messages of at most three lines', essentials.metrics === 3 && essentials.previewLines.length === 2 && essentials.previewLines.every((n) => n <= 3), essentials.previewLines.join(','))
+    await openTechnical()
+    const technical = await panel()
+    check('details: Technical details has the session ID and the files that exist', technical.copyId && technical.paths >= 3, `${technical.paths} paths`)
+    check('details: rows that only repeated something are gone', !/not present|Display title/i.test(technical.text))
+    await reset()
+    await selectRow(roles.longEn)
+    const fullMessage = LONG_TITLE_EN + ' (step 1)'
+    check('details: a long message starts cut, with a way to read all of it', (await has('.preview-label .link-btn')) && (await page.evaluate(`(() => { const p = document.querySelector('.preview-text'); return p.scrollHeight > p.clientHeight })()`)))
+    await click('.preview-label .link-btn')
+    await page.waitFor(`document.querySelector('.preview-text.expanded')`, 'the full message')
+    await settle()
+    check('details: opened, the whole message can be read', await page.evaluate(`(() => { const p = document.querySelector('.preview-text.expanded'); return p.textContent.split(${quote(fullMessage)}).length === 9 && p.clientHeight > 80 })()`))
+    await click('.preview-label .link-btn')
+    await page.waitFor(`!document.querySelector('.preview-text.expanded')`, 'the message to close')
+    check('details: and it closes again', true)
 
     // Claude Desktop metadata: archive and restore, on the throw-away profile.
+    await reset()
+    await selectRow(roles.desktopActive[0])
     const metaFile = roles.metadataFiles[roles.desktopActive[0]]
     const isArchivedOnDisk = () => JSON.parse(readFileSync(metaFile, 'utf8')).isArchived
     if (isStore) {

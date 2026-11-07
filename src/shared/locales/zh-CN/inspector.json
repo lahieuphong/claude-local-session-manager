@@ -20,24 +20,19 @@
     "openProjectHint": "在资源管理器中打开工作区文件夹"
   },
   "note": {
-    "transcriptOnly": "仅有会话记录：此 Claude Code 会话没有 Claude Desktop 元数据，因此 Claude 没有它的归档状态。“隐藏会话”只会更改本应用自己的列表，不会修改 Claude 的文件，该会话仍会在 Claude 中显示。",
-    "orphan": "孤立的会话文件夹：既没有会话记录也没有 Claude Desktop 元数据。“隐藏会话”只会更改本应用自己的列表，不会修改 Claude 的文件。",
     "storeDesktop": "Microsoft Store 版：此会话带有 Claude Desktop 元数据，在这里只能查看和导出，不能归档、恢复或删除。Windows 应用商店的打包机制会隔离部分 AppData 写入，Claude Desktop 看不到这类更改。",
     "armed": "已启用永久删除 — “永久删除”将真正删除此会话的文件。"
   },
   "section": {
     "problems": "问题",
     "overview": "概览",
-    "project": "项目",
-    "session": "会话",
-    "storage": "存储",
     "files": "文件",
     "activity": "活动",
+    "technical": "技术详情",
     "rawMetadata": "原始元数据",
     "debug": "调试：规范化的会话对象"
   },
   "field": {
-    "displayTitle": "显示标题",
     "titleSource": "标题来源",
     "rawTitle": "元数据中的标题",
     "customTitle": "自定义标题",
@@ -48,22 +43,19 @@
     "project": "项目",
     "projectPath": "项目路径",
     "projectSource": "项目来源",
-    "storageFolder": "Claude 存储文件夹",
     "cliSessionId": "CLI 会话 ID",
     "desktopSessionId": "Desktop 会话 ID",
     "priorIds": "之前的 CLI ID",
     "internalId": "管理器 ID",
     "model": "模型",
     "claudeCode": "Claude Code",
-    "gitBranch": "Git 分支",
-    "totalSize": "总计"
+    "gitBranch": "Git 分支"
   },
   "hint": {
     "rawTitle": "Claude Desktop 元数据文件中 title 字段的原始值",
     "projectPath": "实际工作区（真实 cwd）。永远不会进入删除计划。",
-    "storageFolder": "~/.claude/projects 下的编码文件夹（仅用于定位存储）",
     "internalId": "本应用分配的内部 ID",
-    "messages": "提示词 = 有意义的用户提问。助手消息 = 不同的模型响应（每一步一个；一个提示词通常会产生多个，因为每次工具调用都是单独的响应）。工具调用 = tool_use 块。记录 = 非空的 JSONL 行。"
+    "messages": "提示词 = 有意义的用户提问。助手消息 = 不同的模型响应（每一步一个；一个提示词通常会产生多个，因为每次工具调用都是单独的响应）。工具调用 = tool_use 块。"
   },
   "value": {
     "unknown": "未知"
@@ -86,9 +78,6 @@
     "unresolved": "无法确定"
   },
   "size": {
-    "transcript": "会话记录",
-    "sessionData": "会话数据",
-    "metadata": "元数据",
     "other": "其他（历史、环境、日志）"
   },
   "file": {
@@ -103,25 +92,23 @@
     "copyPath": "复制完整路径",
     "copyPathOf": "复制 {{label}} 的完整路径",
     "reveal": "在资源管理器中显示",
-    "revealOf": "在资源管理器中显示 {{label}}",
-    "notPresent": "不存在"
+    "revealOf": "在资源管理器中显示 {{label}}"
   },
   "metric": {
     "prompts": "提示词",
     "assistant": "助手消息",
-    "tools": "工具调用",
-    "records": "记录"
+    "tools": "工具调用"
   },
   "preview": {
-    "first": "第一条用户消息",
-    "last": "最后一条用户消息"
+    "first": "第一条消息",
+    "last": "最后一条消息",
+    "more": "查看全部",
+    "less": "收起"
   },
   "raw": {
-    "none": "没有 Claude Desktop 元数据文件 — 这是仅有会话记录的 Claude Code 会话。",
     "tombstones": "存在删除标记 (tombstone)："
   },
   "rawTitle": {
-    "noFile": "（没有元数据文件）",
     "missing": "（缺少字段）",
     "empty": "（空字符串）",
     "whitespace": "（只有空白）",

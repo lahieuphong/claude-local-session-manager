@@ -21,6 +21,8 @@
   "badge": {
     "hidden": "Đã ẩn",
     "hiddenHint": "Chỉ ẩn trong trình quản lý này; trạng thái của Claude không đổi",
+    "transcriptOnlyHint": "Phiên này không có siêu dữ liệu Claude Desktop nên không lưu trữ được. Ẩn phiên chỉ thay đổi danh sách của ứng dụng này; phiên vẫn hiện trong Claude.",
+    "orphanHint": "Thư mục phiên không có bản ghi hội thoại hay siêu dữ liệu Claude Desktop. Ẩn phiên chỉ thay đổi danh sách của ứng dụng này.",
     "issues_other": "{{count}} vấn đề",
     "issuesHint": "Xem mục Vấn đề trong khung chi tiết"
   },

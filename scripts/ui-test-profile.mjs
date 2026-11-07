@@ -83,13 +83,14 @@ function write(file, content, mtime) {
   utimesSync(file, mtime, mtime)
 }
 
-function transcript({ uuid, cwd, title, model, turns, bytes, first, last }) {
+function transcript({ uuid, cwd, title, model, turns, bytes, first, last, longPrompt }) {
   const base = { sessionId: uuid, ...(cwd ? { cwd, gitBranch: 'feature/ui-test', version: '2.1.295', entrypoint: 'cli' } : {}) }
   const lines = []
   for (let turn = 0; turn < turns; turn++) {
     const timestamp = new Date(first + ((last - first) * turn) / Math.max(1, turns - 1)).toISOString()
     // No prompt at all for a session without a title: otherwise the first prompt would become its title.
-    if (title) lines.push({ type: 'user', message: { role: 'user', content: `${title} (step ${turn + 1})` }, timestamp, ...base })
+    const prompt = `${title} (step ${turn + 1})`
+    if (title) lines.push({ type: 'user', message: { role: 'user', content: longPrompt ? Array(8).fill(prompt).join('\n') : prompt }, timestamp, ...base })
     lines.push({ type: 'assistant', message: { id: `msg_ui_${uuid}_${turn}`, model, role: 'assistant', content: [{ type: 'text', text: filler(bytes / turns) }] }, timestamp, ...base })
   }
   if (title) lines.push({ type: 'ai-title', aiTitle: title, sessionId: uuid })
@@ -116,14 +117,14 @@ export function writeUiTestProfile(home, { now = Date.now(), livePid } = {}) {
   const roles = { metadataFiles: {} }
   let n = 0
   /** Sessions are at least 10 minutes old: the delete guard refuses files written in the last 30 seconds. */
-  const addTranscript = ({ project, title, turns = 3, bytes = 40 * KB, ageMin, withData = false }) => {
+  const addTranscript = ({ project, title, turns = 3, bytes = 40 * KB, ageMin, withData = false, longPrompt = false }) => {
     n += 1
     const uuid = uiUuid(n)
     const cwd = project === null ? undefined : project
     const last = now - (ageMin ?? 10 + n * 73) * MIN
     const mtime = new Date(last)
     const dir = path.join(projects, cwd ? projectDirName(cwd) : 'C--UiTest-unknown-folder')
-    write(path.join(dir, `${uuid}.jsonl`), transcript({ uuid, cwd, title, model: MODELS[n % MODELS.length], turns, bytes, first: last - 40 * MIN, last }), mtime)
+    write(path.join(dir, `${uuid}.jsonl`), transcript({ uuid, cwd, title, model: MODELS[n % MODELS.length], turns, bytes, first: last - 40 * MIN, last, longPrompt }), mtime)
     if (withData) {
       write(path.join(dir, uuid, 'tool-results', 'result-001.txt'), filler(12 * KB), mtime)
       write(path.join(dir, uuid, 'subagents', 'agent-a1.jsonl'), '{}\n', mtime)
@@ -144,7 +145,7 @@ export function writeUiTestProfile(home, { now = Date.now(), livePid } = {}) {
   }
 
   // The hard titles come first, with fixed roles.
-  roles.longEn = addTranscript({ project: PROJECT_PATHS[9], title: LONG_TITLE_EN, ageMin: 15, withData: true, bytes: 300 * KB }).uuid
+  roles.longEn = addTranscript({ project: PROJECT_PATHS[9], title: LONG_TITLE_EN, ageMin: 15, withData: true, bytes: 300 * KB, longPrompt: true }).uuid
   roles.longVi = addTranscript({ project: PROJECT_PATHS[19], title: LONG_TITLE_VI, ageMin: 25, withData: true }).uuid
   roles.longZh = addTranscript({ project: PROJECT_PATHS[20], title: LONG_TITLE_ZH, ageMin: 35 }).uuid
   roles.unbroken = addTranscript({ project: PROJECT_PATHS[21], title: UNBROKEN_TITLE, ageMin: 45, withData: true }).uuid

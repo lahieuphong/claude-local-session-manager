@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ClaudeSession, ExportFormat, RawTitle, SessionDetails } from '../../../shared/types'
 import { useFmt } from '../i18n'
@@ -31,11 +31,13 @@ export function DetailsPanel(): ReactElement {
   const session = snapshot?.sessions.find((s) => s.id === selectedId) ?? null
   const [details, setDetails] = useState<SessionDetails | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const hasMetadata = !!session?.hasMetadata
 
+  // Only the raw metadata section reads these, and a session without metadata does not have it.
   useEffect(() => {
     let cancelled = false
     setError(null)
-    if (!selectedId) {
+    if (!selectedId || !hasMetadata) {
       setDetails(null)
       return
     }
@@ -46,7 +48,7 @@ export function DetailsPanel(): ReactElement {
     return () => {
       cancelled = true
     }
-  }, [selectedId, snapshot])
+  }, [selectedId, hasMetadata, snapshot])
 
   if (!session) {
     return (
@@ -88,6 +90,9 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
       : null
 
   const problems = s.problems
+  const models = s.models.length > 1 ? s.models.join(', ') : s.model
+  const firstMessage = s.firstUserMessage
+  const lastMessage = s.lastUserMessage ?? s.lastPrompt
 
   return (
     <aside className="inspector" aria-label={t('inspector:label')}>
@@ -137,12 +142,6 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
             <span>{blockReason}</span>
           </div>
         )}
-        {!s.hasMetadata && (
-          <div className="notice subtle small" role="note">
-            <IconInfo size={14} />
-            <span>{t(s.kind === 'cli' ? 'inspector:note.transcriptOnly' : 'inspector:note.orphan')}</span>
-          </div>
-        )}
         {storeReadOnly && (
           <div className="notice subtle small" role="note">
             <IconInfo size={14} />
@@ -168,13 +167,14 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
 
         <Section title={t('inspector:section.overview')}>
           <dl className="kv">
-            <KV k={t('inspector:field.displayTitle')} v={title} />
-            <KV k={t('inspector:field.titleSource')} v={t(`inspector:titleSource.${s.titleSource}`)} />
-            <KV k={t('inspector:field.rawTitle')} v={<RawTitleValue raw={s.rawTitle} />} hint={t('inspector:hint.rawTitle')} />
-            {s.customTitle && <KV k={t('inspector:field.customTitle')} v={s.customTitle} />}
-            {s.aiTitle && <KV k={t('inspector:field.aiTitle')} v={s.aiTitle} />}
+            <KV
+              k={t('inspector:field.projectPath')}
+              v={s.projectPath ? <code className="wrap">{s.projectPath}</code> : <span className="muted">{t('inspector:value.unknown')}</span>}
+              hint={t('inspector:hint.projectPath')}
+            />
             <KV k={t('inspector:field.created')} v={fmt.dateTime(s.createdAt)} />
             <KV k={t('inspector:field.updated')} v={fmt.dateTime(s.updatedAt)} />
+            {models && <KV k={t('inspector:field.model')} v={<span className="mono">{models}</span>} />}
             {live && (
               <KV
                 k={t('inspector:field.process')}
@@ -189,91 +189,69 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
           </dl>
         </Section>
 
-        <Section title={t('inspector:section.project')}>
-          <dl className="kv">
-            <KV k={t('inspector:field.project')} v={project} />
-            <KV
-              k={t('inspector:field.projectPath')}
-              v={s.projectPath ? <code className="wrap">{s.projectPath}</code> : <span className="muted">{t('inspector:value.unknown')}</span>}
-              hint={t('inspector:hint.projectPath')}
-            />
-            <KV k={t('inspector:field.projectSource')} v={t(`inspector:projectSource.${s.projectSource}`)} />
-            {s.projectStorageDir && (
-              <KV k={t('inspector:field.storageFolder')} v={<code className="wrap">{displayPath(s.projectStorageDir, raw)}</code>} hint={t('inspector:hint.storageFolder')} />
-            )}
-          </dl>
-        </Section>
-
-        <Section title={t('inspector:section.session')}>
-          <dl className="kv">
-            <KV k={t('inspector:field.cliSessionId')} v={s.cliSessionId ? <CopyCode value={s.cliSessionId} /> : '—'} />
-            {s.desktopSessionId && <KV k={t('inspector:field.desktopSessionId')} v={<CopyCode value={s.desktopSessionId} />} />}
-            {s.priorCliSessionIds.length > 0 && <KV k={t('inspector:field.priorIds')} v={<code className="wrap">{s.priorCliSessionIds.join(', ')}</code>} />}
-            <KV k={t('inspector:field.internalId')} v={<CopyCode value={s.id} />} hint={t('inspector:hint.internalId')} />
-            <KV k={t('inspector:field.model')} v={<span className="mono">{s.models.length > 1 ? s.models.join(', ') : s.model ?? '—'}</span>} />
-            {s.claudeVersion && <KV k={t('inspector:field.claudeCode')} v={<span className="mono">{`${s.claudeVersion}${s.entrypoint ? ` · ${s.entrypoint}` : ''}`}</span>} />}
-            {s.gitBranch && <KV k={t('inspector:field.gitBranch')} v={<span className="mono">{s.gitBranch}</span>} />}
-          </dl>
-        </Section>
-
-        <Section title={t('inspector:section.storage')}>
-          <dl className="kv">
-            <KV k={t('inspector:field.totalSize')} v={<strong>{fmt.bytes(s.totalSize)}</strong>} />
-            {s.transcriptSize !== undefined && <KV k={t('inspector:size.transcript')} v={fmt.bytes(s.transcriptSize)} />}
-            {s.sessionDataSize !== undefined && <KV k={t('inspector:size.sessionData')} v={fmt.bytes(s.sessionDataSize)} />}
-            {s.metadataSize !== undefined && <KV k={t('inspector:size.metadata')} v={fmt.bytes(s.metadataSize)} />}
-            {s.otherSize !== undefined && <KV k={t('inspector:size.other')} v={fmt.bytes(s.otherSize)} />}
-          </dl>
-        </Section>
-
-        <Section title={t('inspector:section.files')}>
-          <PathRow label={t('inspector:file.metadata')} path={s.metadataFile} raw={raw} size={s.metadataSize} onReveal={() => runAction(() => api().revealMetadata(s.id))} />
-          <PathRow label={t('inspector:file.transcript')} path={s.transcriptFile} raw={raw} size={s.transcriptSize} onReveal={() => runAction(() => api().revealTranscript(s.id))} />
-          <PathRow label={t('inspector:file.sessionData')} path={s.sessionDataDirectory} raw={raw} size={s.sessionDataSize} onReveal={() => runAction(() => api().revealSessionData(s.id))} />
-          {s.extraSessionDataDirectories.map((p) => (
-            <PathRow key={p} label={t('inspector:file.sessionDataOther')} path={p} raw={raw} />
-          ))}
-          {s.extraTranscriptFiles.map((p) => (
-            <PathRow key={p} label={t('inspector:file.priorTranscript')} path={p} raw={raw} />
-          ))}
-          {s.legacySubagentLogs.map((p) => (
-            <PathRow key={p} label={t('inspector:file.subagentLog')} path={p} raw={raw} />
-          ))}
-          {s.fileHistoryDirectory && <PathRow label={t('inspector:file.fileHistory')} path={s.fileHistoryDirectory} raw={raw} />}
-          {s.sessionEnvDirectory && <PathRow label={t('inspector:file.sessionEnv')} path={s.sessionEnvDirectory} raw={raw} />}
-        </Section>
-
         <Section title={t('inspector:section.activity')}>
           <div className="metric-row" title={t('inspector:hint.messages')}>
             <Metric label={t('inspector:metric.prompts')} value={fmt.count(s.userMessageCount)} />
             <Metric label={t('inspector:metric.assistant')} value={fmt.count(s.assistantMessageCount)} />
             <Metric label={t('inspector:metric.tools')} value={fmt.count(s.toolUseCount)} />
-            <Metric label={t('inspector:metric.records')} value={fmt.count(s.transcriptRecordCount)} />
           </div>
-          <div className="preview-label">{t('inspector:preview.first')}</div>
-          <div className="preview">{s.firstUserMessage ?? <span className="muted">—</span>}</div>
-          <div className="preview-label">{t('inspector:preview.last')}</div>
-          <div className="preview">{s.lastUserMessage ?? s.lastPrompt ?? <span className="muted">—</span>}</div>
+          {firstMessage && <MessagePreview label={t('inspector:preview.first')} text={firstMessage} />}
+          {lastMessage && lastMessage !== firstMessage && <MessagePreview label={t('inspector:preview.last')} text={lastMessage} />}
         </Section>
 
-        <Collapsible title={t('inspector:section.rawMetadata')}>
-          {error && <div className="notice error small">{error}</div>}
-          {!s.hasMetadata ? (
-            <div className="hint">{t('inspector:raw.none')}</div>
-          ) : !details ? (
-            <div className="hint">{t('common:loading')}</div>
-          ) : (
-            <>
-              {details.rawMetadataError && <div className="notice error small">{details.rawMetadataError}</div>}
-              {details.tombstones.length > 0 && (
-                <div className="notice subtle small">
-                  {t('inspector:raw.tombstones')} <span className="mono">{details.tombstones.join(', ')}</span>
-                </div>
-              )}
-              <pre className="code-block">{details.rawMetadata}</pre>
-            </>
-          )}
+        <Collapsible className="technical" title={t('inspector:section.technical')}>
+          <dl className="kv">
+            {s.cliSessionId && <KV k={t('inspector:field.cliSessionId')} v={<CopyCode value={s.cliSessionId} />} />}
+            {s.desktopSessionId && <KV k={t('inspector:field.desktopSessionId')} v={<CopyCode value={s.desktopSessionId} />} />}
+            {s.priorCliSessionIds.length > 0 && <KV k={t('inspector:field.priorIds')} v={<code className="wrap">{s.priorCliSessionIds.join(', ')}</code>} />}
+            <KV k={t('inspector:field.internalId')} v={<CopyCode value={s.id} />} hint={t('inspector:hint.internalId')} />
+            <KV k={t('inspector:field.titleSource')} v={t(`inspector:titleSource.${s.titleSource}`)} />
+            {s.rawTitle && <KV k={t('inspector:field.rawTitle')} v={<RawTitleValue raw={s.rawTitle} />} hint={t('inspector:hint.rawTitle')} />}
+            {s.customTitle && s.customTitle !== title && <KV k={t('inspector:field.customTitle')} v={s.customTitle} />}
+            {s.aiTitle && s.aiTitle !== title && <KV k={t('inspector:field.aiTitle')} v={s.aiTitle} />}
+            <KV k={t('inspector:field.projectSource')} v={t(`inspector:projectSource.${s.projectSource}`)} />
+            {s.claudeVersion && <KV k={t('inspector:field.claudeCode')} v={<span className="mono">{`${s.claudeVersion}${s.entrypoint ? ` · ${s.entrypoint}` : ''}`}</span>} />}
+            {s.gitBranch && <KV k={t('inspector:field.gitBranch')} v={<span className="mono">{s.gitBranch}</span>} />}
+            {/* The file rows below show the transcript and session data; this is where the rest of the total goes. */}
+            {s.otherSize !== undefined && <KV k={t('inspector:size.other')} v={fmt.bytes(s.otherSize)} />}
+          </dl>
+          <div className="preview-label">{t('inspector:section.files')}</div>
+          <div className="path-list">
+            <PathRow label={t('inspector:file.metadata')} path={s.metadataFile} raw={raw} size={s.metadataSize} onReveal={() => runAction(() => api().revealMetadata(s.id))} />
+            <PathRow label={t('inspector:file.transcript')} path={s.transcriptFile} raw={raw} size={s.transcriptSize} onReveal={() => runAction(() => api().revealTranscript(s.id))} />
+            <PathRow label={t('inspector:file.sessionData')} path={s.sessionDataDirectory} raw={raw} size={s.sessionDataSize} onReveal={() => runAction(() => api().revealSessionData(s.id))} />
+            {s.extraSessionDataDirectories.map((p) => (
+              <PathRow key={p} label={t('inspector:file.sessionDataOther')} path={p} raw={raw} />
+            ))}
+            {s.extraTranscriptFiles.map((p) => (
+              <PathRow key={p} label={t('inspector:file.priorTranscript')} path={p} raw={raw} />
+            ))}
+            {s.legacySubagentLogs.map((p) => (
+              <PathRow key={p} label={t('inspector:file.subagentLog')} path={p} raw={raw} />
+            ))}
+            <PathRow label={t('inspector:file.fileHistory')} path={s.fileHistoryDirectory} raw={raw} />
+            <PathRow label={t('inspector:file.sessionEnv')} path={s.sessionEnvDirectory} raw={raw} />
+          </div>
         </Collapsible>
+
+        {s.hasMetadata && (
+          <Collapsible className="raw-metadata" title={t('inspector:section.rawMetadata')}>
+            {error && <div className="notice error small">{error}</div>}
+            {!details ? (
+              <div className="hint">{t('common:loading')}</div>
+            ) : (
+              <>
+                {details.rawMetadataError && <div className="notice error small">{details.rawMetadataError}</div>}
+                {details.tombstones.length > 0 && (
+                  <div className="notice subtle small">
+                    {t('inspector:raw.tombstones')} <span className="mono">{details.tombstones.join(', ')}</span>
+                  </div>
+                )}
+                <pre className="code-block">{details.rawMetadata}</pre>
+              </>
+            )}
+          </Collapsible>
+        )}
 
         {settings?.debugMode && (
           <Collapsible title={t('inspector:section.debug')}>
@@ -297,9 +275,9 @@ function Section({ title, children, tone }: { title: string; children: ReactNode
   )
 }
 
-function Collapsible({ title, children }: { title: string; children: ReactNode }): ReactElement {
+function Collapsible({ title, className, children }: { title: string; className?: string; children: ReactNode }): ReactElement {
   return (
-    <details className="inspector-section collapsible">
+    <details className={`inspector-section collapsible ${className ?? ''}`}>
       <summary className="section-label">
         <IconChevron size={12} className="chev" />
         {title}
@@ -318,6 +296,40 @@ function KV({ k, v, hint }: { k: string; v: ReactNode; hint?: string }): ReactEl
   )
 }
 
+/** Enough of a message to recognise the session, and a way to read all of it. */
+function MessagePreview({ label, text }: { label: string; text: string }): ReactElement {
+  const { t } = useTranslation()
+  const [expanded, setExpanded] = useState(false)
+  const [cut, setCut] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || expanded) return
+    const measure = (): void => setCut(el.scrollHeight > el.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [text, expanded])
+  return (
+    <>
+      <div className="preview-label">
+        <span>{label}</span>
+        {(cut || expanded) && (
+          <button className="link-btn" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+            {t(expanded ? 'inspector:preview.less' : 'inspector:preview.more')}
+          </button>
+        )}
+      </div>
+      <div className="preview">
+        <div ref={ref} className={`preview-text ${expanded ? 'expanded' : ''}`}>
+          {text}
+        </div>
+      </div>
+    </>
+  )
+}
+
 function Metric({ label, value }: { label: string; value: string }): ReactElement {
   return (
     <div className="metric">
@@ -328,9 +340,8 @@ function Metric({ label, value }: { label: string; value: string }): ReactElemen
 }
 
 /** Raw `title` field of Claude Desktop metadata. JSON values are shown as-is (never translated). */
-function RawTitleValue({ raw }: { raw: RawTitle | undefined }): ReactElement {
+function RawTitleValue({ raw }: { raw: RawTitle }): ReactElement {
   const { t } = useTranslation()
-  if (!raw) return <span className="muted">{t('inspector:rawTitle.noFile')}</span>
   switch (raw.kind) {
     case 'missing':
       return <span className="muted">{t('inspector:rawTitle.missing')}</span>
@@ -361,30 +372,27 @@ function CopyCode({ value }: { value: string }): ReactElement {
   )
 }
 
-function PathRow({ label, path, raw, size, onReveal }: { label: string; path?: string; raw: boolean; size?: number; onReveal?: () => void }): ReactElement {
+function PathRow({ label, path, raw, size, onReveal }: { label: string; path?: string; raw: boolean; size?: number; onReveal?: () => void }): ReactElement | null {
   const { t } = useTranslation()
   const fmt = useFmt()
+  if (!path) return null
   return (
-    <div className={`path-row ${path ? '' : 'missing'}`}>
+    <div className="path-row">
       <div className="path-head">
         <span className="path-label">{label}</span>
-        {size !== undefined && path && <span className="path-size">{fmt.bytes(size)}</span>}
+        {size !== undefined && <span className="path-size">{fmt.bytes(size)}</span>}
         <div className="spacer" />
-        {path && (
-          <>
-            <button className="icon-btn" title={t('inspector:file.copyPath')} aria-label={t('inspector:file.copyPathOf', { label })} onClick={() => void copyToClipboard(path)}>
-              <IconCopy size={14} />
-            </button>
-            {onReveal && (
-              <button className="icon-btn" title={t('inspector:file.reveal')} aria-label={t('inspector:file.revealOf', { label })} onClick={onReveal}>
-                <IconExternal size={14} />
-              </button>
-            )}
-          </>
+        <button className="icon-btn" title={t('inspector:file.copyPath')} aria-label={t('inspector:file.copyPathOf', { label })} onClick={() => void copyToClipboard(path)}>
+          <IconCopy size={14} />
+        </button>
+        {onReveal && (
+          <button className="icon-btn" title={t('inspector:file.reveal')} aria-label={t('inspector:file.revealOf', { label })} onClick={onReveal}>
+            <IconExternal size={14} />
+          </button>
         )}
       </div>
       <div className="path-value mono" title={path}>
-        {path ? displayPath(path, raw) : <span className="muted">{t('inspector:file.notPresent')}</span>}
+        {displayPath(path, raw)}
       </div>
     </div>
   )

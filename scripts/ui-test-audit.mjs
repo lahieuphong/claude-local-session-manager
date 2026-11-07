@@ -224,7 +224,7 @@ export function auditPage() {
       const ps = style(p)
       if (!clips(ps)) continue
       if (scrolls(ps)) break
-      if (ps.textOverflow === 'ellipsis') break // Cut on purpose, with a visible "…".
+      if (ps.textOverflow === 'ellipsis' || (ps.webkitLineClamp && ps.webkitLineClamp !== 'none')) break // Cut on purpose, with a visible "…".
       if (!/hidden|clip/.test(ps.overflowX)) continue
       const box = p.getBoundingClientRect()
       for (const r of rects) {

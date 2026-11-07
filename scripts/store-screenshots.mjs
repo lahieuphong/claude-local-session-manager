@@ -370,12 +370,14 @@ async function shoot(page, listingLocale, appLocale, claudeHome, audit) {
   await page.waitFor(`document.querySelector('.inspector-title')?.textContent.includes(${JSON.stringify(OVERVIEW_SESSION)})`, 'the inspector')
   await capture(page, path.join(outDir, '01-sessions.png'), audit)
 
-  // 2. Session details: grouped by project, one session, the inspector at project, IDs, model, storage and files.
+  // 2. Session details: grouped by project, one session, with Technical details open so the
+  //    picture shows what its caption promises: project, session ID, model, sizes and files.
   await page.evaluate(setValue(GROUP_SELECT, 'project', 'change'))
   await page.waitFor(`document.querySelector('.group-name')?.textContent === 'DemoWebApp'`, 'project grouping')
   await page.evaluate(`${rowByTitle(DETAIL_SESSION)}.querySelector('.row-main').click()`)
   await page.waitFor(`document.querySelector('.inspector-title')?.textContent.includes(${JSON.stringify(DETAIL_SESSION)})`, 'the selected session')
-  await page.evaluate(scrollToTop(`document.querySelectorAll('.inspector-section')[1]`, 20))
+  await page.evaluate(`document.querySelector('details.technical').open = true`)
+  await page.evaluate(scrollToTop(`document.querySelectorAll('.inspector-section')[0]`, 20))
   await capture(page, path.join(outDir, '02-session-details.png'), audit)
 
   // 3. Safe deletion preview of that transcript-only session: the app's own plan dialog in Safe Mode

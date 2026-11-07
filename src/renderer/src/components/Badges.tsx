@@ -6,7 +6,14 @@ import type { ClaudeSession, SessionStatus } from '../../../shared/types'
 export function StatusBadge({ status, quiet }: { status: SessionStatus; quiet?: boolean }): ReactElement | null {
   const { t } = useTranslation()
   if (quiet && status === 'active') return null
-  return <span className={`badge badge-${status}`}>{t(`sessions:status.${status}`)}</span>
+  const hint = status === 'transcript-only' ? t('sessions:badge.transcriptOnlyHint') : status === 'orphan' ? t('sessions:badge.orphanHint') : undefined
+  return (
+    <span className={`badge badge-${status}`} title={hint}>
+      {t(`sessions:status.${status}`)}
+      {/* A tooltip reaches neither the keyboard nor a screen reader. Not repeated for every row of the list. */}
+      {hint && !quiet && <span className="visually-hidden">. {hint}</span>}
+    </span>
+  )
 }
 
 export function LiveBadge({ session }: { session: ClaudeSession }): ReactElement | null {
