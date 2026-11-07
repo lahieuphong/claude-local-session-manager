@@ -49,7 +49,7 @@
     "alreadyActive": "会话已经是活动状态。",
     "archived": "会话已归档。",
     "restored": "会话已恢复。",
-    "notArchivable": "此 Claude Code 会话没有 Claude Desktop 元数据，因此 Claude 没有它的归档标志。请改用“在管理器中隐藏”（只会更改本应用的列表）。"
+    "notArchivable": "此 Claude Code 会话没有 Claude Desktop 元数据，因此 Claude 没有它的归档标志。请改用“隐藏会话”（只会更改本应用的列表）。"
   },
   "hide": {
     "desktopSession": "这是 Claude Desktop 会话：请使用“归档 / 恢复”，它会更改 Claude 自身的归档状态。",

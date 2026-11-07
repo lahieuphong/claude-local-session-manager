@@ -30,7 +30,7 @@
     "safeHint": "Every app launch starts here. Real deletion can be armed only for the current app session; it is never saved, and it returns to Safe Mode after one delete, after 10 minutes, or when the app closes.",
     "armedText": "Permanent deletion is enabled for this app session. Closing the app returns to Safe Mode.",
     "guardsNote": "Arming only switches dry run off. Every delete still needs a valid, unexpired, unchanged plan, exact paths inside approved Claude roots, no workspace or link escape, no running Claude Desktop or live session, and the typed DELETE confirmation.",
-    "hideNote": "Hide in manager never touches Claude files and works in both modes."
+    "hideNote": "Hide session never touches Claude files and works in both modes."
   },
   "arm": {
     "title": "Enable real deletion",

@@ -49,7 +49,7 @@
     "alreadyActive": "Phiên vốn đang hoạt động.",
     "archived": "Đã lưu trữ phiên.",
     "restored": "Đã khôi phục phiên.",
-    "notArchivable": "Phiên Claude Code này không có siêu dữ liệu Claude Desktop nên Claude không có cờ lưu trữ cho nó. Hãy dùng “Ẩn trong trình quản lý” (chỉ thay đổi danh sách của ứng dụng này)."
+    "notArchivable": "Phiên Claude Code này không có siêu dữ liệu Claude Desktop nên Claude không có cờ lưu trữ cho nó. Hãy dùng “Ẩn phiên” (chỉ thay đổi danh sách của ứng dụng này)."
   },
   "hide": {
     "desktopSession": "Đây là phiên Claude Desktop: hãy dùng Lưu trữ / Khôi phục, thao tác này thay đổi trạng thái lưu trữ của chính Claude.",

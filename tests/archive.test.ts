@@ -120,7 +120,7 @@ describe('manager-only hide for Claude Code transcript-only sessions', () => {
     const [s] = (await h.repo.scan()).sessions
     const r = await h.archive.setArchived(s.id, true)
     expect(r).toMatchObject({ ok: false, code: 'NOT_SUPPORTED' })
-    expect(r.message).toMatch(/Hide in manager/)
+    expect(r.message).toMatch(/Hide session/)
     expect(await readdir(fake.orgDir)).toEqual([]) // no local_*.json invented
     expect(await readFile(transcript, 'utf8')).toContain('"cli"')
   })

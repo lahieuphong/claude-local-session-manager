@@ -29,7 +29,6 @@
     "deletePermanently": "Delete permanently",
     "archive": "Archive",
     "restore": "Restore",
-    "hideInManager": "Hide in manager",
     "showInManager": "Show in manager"
   },
   "loading": "Loading…",

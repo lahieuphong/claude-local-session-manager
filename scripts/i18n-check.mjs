@@ -25,7 +25,8 @@ export const GLOSSARY = {
   'safety:mode.safe': { en: 'Safe Mode', vi: 'Chế độ an toàn', 'zh-CN': '安全模式' },
   'safety:mode.armed': { en: 'Real Delete Armed', vi: 'Đã bật xóa thật', 'zh-CN': '已启用永久删除' },
   'common:action.deletePermanently': { en: 'Delete permanently', vi: 'Xóa vĩnh viễn', 'zh-CN': '永久删除' },
-  'common:action.hideInManager': { en: 'Hide in manager', vi: 'Ẩn trong trình quản lý', 'zh-CN': '在管理器中隐藏' },
+  'inspector:action.hide': { en: 'Hide session', vi: 'Ẩn phiên', 'zh-CN': '隐藏会话' },
+  'sessions:filter.hidden': { en: 'Hidden in manager', vi: 'Ẩn trong trình quản lý', 'zh-CN': '在管理器中隐藏' },
   'sessions:status.transcript-only': { en: 'Transcript only', vi: 'Chỉ có bản ghi hội thoại', 'zh-CN': '仅有会话记录' }
 }
 

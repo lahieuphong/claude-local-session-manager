@@ -27,7 +27,6 @@
     "deletePermanently": "永久删除",
     "archive": "归档",
     "restore": "恢复",
-    "hideInManager": "在管理器中隐藏",
     "showInManager": "在管理器中显示"
   },
   "loading": "正在加载…",

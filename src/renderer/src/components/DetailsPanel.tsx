@@ -103,31 +103,30 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
         </header>
 
         <div className="actions" role="toolbar" aria-label={t('inspector:actions')}>
+          <button className="btn" disabled={!s.projectPath} onClick={() => void runAction(() => api().openProject(s.id))} title={t('inspector:action.openProjectHint')}>
+            <IconFolder size={14} /> {t('inspector:action.openProject')}
+          </button>
+          <ExportMenu session={s} disabled={busy} />
           {storeReadOnly ? null : s.hasMetadata ? (
             s.archived ? (
-              <button className="btn" disabled={busy || archiveBlock} onClick={() => void archive(s.id, false)} title={t('inspector:action.restoreHint')}>
+              <button className="btn state-action" disabled={busy || archiveBlock} onClick={() => void archive(s.id, false)} title={t('inspector:action.restoreHint')}>
                 <IconRestore size={14} /> {t('common:action.restore')}
               </button>
             ) : (
-              <button className="btn" disabled={busy || archiveBlock} onClick={() => void archive(s.id, true)} title={t('inspector:action.archiveHint')}>
+              <button className="btn state-action" disabled={busy || archiveBlock} onClick={() => void archive(s.id, true)} title={t('inspector:action.archiveHint')}>
                 <IconArchive size={14} /> {t('common:action.archive')}
               </button>
             )
           ) : s.hiddenInManager ? (
-            <button className="btn" disabled={busy} onClick={() => void hideInManager(s.id, false)}>
-              <IconEye size={14} /> {t('common:action.showInManager')}
+            <button className="btn state-action" disabled={busy} onClick={() => void hideInManager(s.id, false)} title={t('common:action.showInManager')}>
+              <IconEye size={14} /> {t('inspector:action.show')}
             </button>
           ) : (
-            <button className="btn" disabled={busy} onClick={() => void hideInManager(s.id, true)} title={t('inspector:action.hideHint')}>
-              <IconEyeOff size={14} /> {t('common:action.hideInManager')}
+            <button className="btn state-action" disabled={busy} onClick={() => void hideInManager(s.id, true)} title={t('sessions:bulk.hideHint')}>
+              <IconEyeOff size={14} /> {t('inspector:action.hide')}
             </button>
           )}
-          <ExportMenu session={s} disabled={busy} />
-          <button className="btn" disabled={!s.projectPath} onClick={() => void runAction(() => api().openProject(s.id))} title={t('inspector:action.openProjectHint')}>
-            <IconFolder size={14} /> {t('inspector:action.openProject')}
-          </button>
-          <div className="spacer" />
-          <button className="btn danger" disabled={busy || deleteBlock || storeReadOnly} onClick={() => openDelete([s.id], false)}>
+          <button className={`btn danger ${storeReadOnly ? 'wide' : ''}`} disabled={busy || deleteBlock || storeReadOnly} onClick={() => openDelete([s.id], false)}>
             <IconTrash size={14} /> {t('common:action.deletePermanently')}
           </button>
         </div>
@@ -427,7 +426,14 @@ function ExportMenu({ session: s, disabled }: { session: ClaudeSession; disabled
     items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus()
   }
   return (
-    <div className="menu-wrap" ref={ref}>
+    <div
+      className="menu-wrap"
+      ref={ref}
+      // The open menu covers the toolbar's bottom row: Tab must not reach a button the user cannot see.
+      onBlur={(e) => {
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false)
+      }}
+    >
       <button className="btn menu-trigger" disabled={disabled} onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}>
         <IconDownload size={14} /> {t('common:action.export')}
       </button>

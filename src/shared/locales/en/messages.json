@@ -49,7 +49,7 @@
     "alreadyActive": "Session was already active.",
     "archived": "Session archived.",
     "restored": "Session restored.",
-    "notArchivable": "This Claude Code session has no Claude Desktop metadata, so Claude has no archive flag for it. Use \"Hide in manager\" instead (it only changes this app’s list)."
+    "notArchivable": "This Claude Code session has no Claude Desktop metadata, so Claude has no archive flag for it. Use \"Hide session\" instead (it only changes this app’s list)."
   },
   "hide": {
     "desktopSession": "This is a Claude Desktop session: use Archive / Restore, which changes Claude's own archive state.",

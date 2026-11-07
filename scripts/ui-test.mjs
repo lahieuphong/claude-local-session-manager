@@ -7,6 +7,7 @@
 //            --locale vi --size 984x581    only those (both can be repeated)
 //            --port 9333                   fixed DevTools port (needed for the Portable launcher)
 //            --keep                        keep the throw-away profile afterwards
+//            --shots                       a screenshot of every screen in every language and size
 //
 // Three passes:
 //   1. Self-check: known defects are injected to prove the audit still notices them.
@@ -40,6 +41,7 @@ const oneArg = (name) => allArgs(name)[0]
 const EXE = oneArg('--exe') ? path.resolve(oneArg('--exe')) : null
 const QUICK = argv.includes('--quick')
 const KEEP = argv.includes('--keep')
+const ALL_SHOTS = argv.includes('--shots')
 const PORT = oneArg('--port') ? Number(oneArg('--port')) : 0
 const CHANNELS = EXE ? ['packaged'] : oneArg('--channel') ? [oneArg('--channel')] : ['development', 'store']
 const LOCALES = allArgs('--locale').length ? allArgs('--locale') : QUICK ? ['vi'] : ['en', 'vi', 'zh-CN']
@@ -309,6 +311,8 @@ async function runVariant(channel) {
   }
 
   const filterEl = (id) => `document.querySelectorAll('.nav > .nav-item')[${FILTERS.indexOf(id)}]`
+  /** Archive, Restore, Hide or Show. */
+  const STATE_BUTTON = `document.querySelector('.inspector .actions .state-action')`
   const STORAGE_EL = `document.querySelectorAll('.sidebar-bottom .nav-item')[0]`
   const SETTINGS_EL = `document.querySelectorAll('.sidebar-bottom .nav-item')[1]`
   const closeToasts = async () => {
@@ -385,6 +389,22 @@ async function runVariant(channel) {
     })`)
     if (heights.filters.some((h) => h !== 32) || heights.bottom.some((h) => h !== 32) || heights.projects.some((h) => h !== 28)) {
       problems.push({ rule: 'sidebar-height', severity: 'error', where: '.nav-item', detail: `filters ${[...new Set(heights.filters)].join('/')}px, projects ${[...new Set(heights.projects)].join('/')}px, bottom ${[...new Set(heights.bottom)].join('/')}px (designed: 32, 28, 32)` })
+    }
+    // The toolbar of the details panel: a two-by-two grid, edge to edge, in every language and size.
+    const bar = await page.evaluate(`(() => {
+      const bar = document.querySelector('.inspector .actions')
+      if (!bar) return null
+      const box = bar.getBoundingClientRect()
+      return { left: box.left, right: box.right, cells: [...bar.children].map((c) => { const r = c.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, height: r.height } }) }
+    })()`)
+    if (bar) {
+      const same = (x, y) => Math.abs(x - y) <= 1
+      const [a, b, c, d] = bar.cells
+      const topRow = !!a && !!b && same(a.left, bar.left) && same(b.right, bar.right) && same(a.top, b.top)
+      const bottomRow = !!c && (d ? same(c.left, a.left) && same(c.right, a.right) && same(d.left, b.left) && same(d.right, b.right) && same(c.top, d.top) : same(c.left, bar.left) && same(c.right, bar.right))
+      if (!topRow || !bottomRow || bar.cells.length > 4 || bar.cells.some((cell) => !same(cell.height, 32))) {
+        problems.push({ rule: 'toolbar-grid', severity: 'error', where: '.inspector .actions', detail: `${bar.cells.length} cells: ${bar.cells.map((cell) => `${Math.round(cell.left)}-${Math.round(cell.right)}@${Math.round(cell.top)} h${Math.round(cell.height)}`).join(', ')} in ${Math.round(bar.left)}-${Math.round(bar.right)}` })
+      }
     }
     const key = `${channel}/${state}`
     if (!strings.has(key)) strings.set(key, new Map())
@@ -628,7 +648,7 @@ async function runVariant(channel) {
             await state.enter()
             await settle()
             await audit(state.name)
-            if (l === 'vi' && (size.name === 'default' || size.name === 'min')) await shot(`state-${channel}-${size.name}-${state.name}`).catch(() => {})
+            if ((l === 'vi' && (size.name === 'default' || size.name === 'min')) || ALL_SHOTS) await shot(`state-${channel}-${l}-${size.name}-${state.name}`).catch(() => {})
           } catch (err) {
             check(`layout: ${state.name} (${l}, ${size.name})`, false, err.message)
             await shot(`error-${state.name}-${l}-${size.name}`).catch(() => {})
@@ -816,6 +836,15 @@ async function runVariant(channel) {
     await page.waitFor(`document.querySelector('.menu')`, 'the export menu')
     await settle()
     check('export menu: focus moves to its first item', await page.evaluate(`document.activeElement === document.querySelector('.menu [role=menuitem]')`))
+    check(
+      'export menu: opens right below its button, across the toolbar',
+      await page.evaluate(`(() => {
+        const menu = document.querySelector('.menu').getBoundingClientRect()
+        const button = document.querySelector('.menu-trigger').getBoundingClientRect()
+        const bar = document.querySelector('.inspector .actions').getBoundingClientRect()
+        return menu.top >= button.bottom && menu.top - button.bottom <= 8 && Math.abs(menu.left - bar.left) <= 1 && Math.abs(menu.right - bar.right) <= 1
+      })()`)
+    )
     await press('ArrowDown')
     await settle()
     check('export menu: arrow keys move inside it', await page.evaluate(`document.activeElement === document.querySelectorAll('.menu [role=menuitem]')[1]`))
@@ -827,6 +856,16 @@ async function runVariant(channel) {
     await click('.inspector-title')
     await settle()
     check('export menu: clicking outside closes it', !(await has('.menu')))
+    // The open menu covers the bottom row: Tab must never land on a button behind it.
+    await click('.menu-trigger')
+    await page.waitFor(`document.querySelector('.menu')`, 'the export menu')
+    await settle()
+    let focusBehindMenu = false
+    for (let i = 0; i < 5; i++) {
+      await press('Tab')
+      if (await page.evaluate(`!!document.querySelector('.menu') && !document.activeElement.closest('.menu-wrap')`)) focusBehindMenu = true
+    }
+    check('export menu: Tab closes it on the way out, so focus never lands behind it', !focusBehindMenu && !(await has('.menu')))
 
     // Details panel.
     await reset()
@@ -844,7 +883,7 @@ async function runVariant(channel) {
       check('Store edition: the read-only note is shown', await has('.inspector .notice.subtle'))
     } else if (canChange) {
       const archivedBefore = await page.evaluate(`Number(${filterEl('archived')}.querySelector('.nav-count').textContent)`)
-      await clickEl(`document.querySelector('.inspector .actions .btn')`, 'Archive')
+      await clickEl(STATE_BUTTON, 'Archive')
       check('archive: writes to the metadata file at once', await until(() => isArchivedOnDisk() === true, 'the archived flag'))
       await page.waitFor(`document.querySelector('.toast')`, 'the archive confirmation')
       await sleep(400)
@@ -853,7 +892,7 @@ async function runVariant(channel) {
       check('archive: the archived counter goes up', (await page.evaluate(`Number(${filterEl('archived')}.querySelector('.nav-count').textContent)`)) === archivedBefore + 1)
       await closeToasts()
       await selectRow(roles.desktopActive[0], 'archived')
-      await clickEl(`document.querySelector('.inspector .actions .btn')`, 'Restore')
+      await clickEl(STATE_BUTTON, 'Restore')
       check('restore: writes to the metadata file at once', await until(() => isArchivedOnDisk() === false, 'the archived flag'))
       await page.waitFor(`document.querySelector('.toast')`, 'the restore confirmation')
       await closeToasts()
@@ -863,12 +902,12 @@ async function runVariant(channel) {
     await reset()
     await selectRow(roles.disposable)
     const hiddenBefore = await page.evaluate(`Number(${filterEl('hidden')}.querySelector('.nav-count').textContent)`)
-    await clickEl(`document.querySelector('.inspector .actions .btn')`, 'Hide')
+    await clickEl(STATE_BUTTON, 'Hide')
     await page.waitFor(`${filterEl('hidden')}.querySelector('.nav-count').textContent === ${quote(String(hiddenBefore + 1))}`, 'the hidden counter')
     check('hide: the session leaves the list', !(await page.evaluate(`!!${rowEl(roles.disposable)}`)))
     await closeToasts()
     await selectRow(roles.disposable, 'hidden')
-    await clickEl(`document.querySelector('.inspector .actions .btn')`, 'Show')
+    await clickEl(STATE_BUTTON, 'Show')
     await page.waitFor(`${filterEl('hidden')}.querySelector('.nav-count').textContent === ${quote(String(hiddenBefore))}`, 'the hidden counter')
     check('show: it comes back', true)
     await closeToasts()

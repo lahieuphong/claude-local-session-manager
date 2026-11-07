@@ -1354,16 +1354,25 @@ html[lang='zh-CN'] .group-label {
   overflow-wrap: anywhere;
 }
 
+/* Two by two, edge to edge: using the session on top, tidying it away below. */
 .actions {
-  /* The export menu hangs from the whole toolbar, so it always fits the panel. */
+  --action-height: 32px;
   position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   padding: var(--space-3) 0;
   border-top: 1px solid var(--border-subtle);
   border-bottom: 1px solid var(--border-subtle);
+}
+.actions .btn {
+  width: 100%;
+  height: var(--action-height);
+  padding: 0 8px;
+}
+/* Store edition, Claude Desktop session: there is no third action, so delete takes the whole row. */
+.actions .btn.wide {
+  grid-column: 1 / -1;
 }
 
 .notice {
@@ -1606,12 +1615,13 @@ html[lang='zh-CN'] .group-label {
   max-height: 300px;
 }
 
+/* The export menu opens under the top row, across the whole toolbar, so it always fits the panel. */
 .menu {
   position: absolute;
   z-index: 20;
-  top: calc(100% + 4px);
+  top: calc(var(--space-3) + var(--action-height) + 4px);
+  right: 0;
   left: 0;
-  width: min(100%, 340px);
   padding: 4px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -2665,6 +2675,10 @@ body:has(.modal-backdrop) .toasts {
   :root {
     --inspector-w: 368px;
   }
+  /* English only: "Delete permanently" sits on the right and needs more room. */
+  html[lang='en'] .actions {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  }
 }
 @media (max-width: 1279px) {
   :root {
@@ -2712,6 +2726,14 @@ body:has(.modal-backdrop) .toasts {
   /* Too narrow for project, model and badges on one line; the details panel shows the model. */
   .row-model {
     display: none;
+  }
+  .actions {
+    gap: 6px;
+  }
+  .actions .btn {
+    gap: 5px;
+    padding: 0 6px;
+    font-size: 12px;
   }
   .page-title {
     font-size: 20px;

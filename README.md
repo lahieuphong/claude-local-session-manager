@@ -23,7 +23,7 @@ export or permanently delete sessions.
   - first and last prompt preview
   - raw metadata JSON (collapsed)
 - **Archive / Restore** (Claude Desktop's own `isArchived` flag, atomic metadata writes) for Desktop sessions;
-  **Hide / Show in manager** for Claude Code transcript-only sessions (this app's list only, never Claude's files).
+  **Hide / Show session** for Claude Code transcript-only sessions (this app's list only, never Claude's files).
 - **Permanent delete**:
   - an exact preview of every path that will be removed
   - typed confirmation
@@ -370,7 +370,7 @@ is not used. The Details panel always shows the raw value as well.
   reverses it.
 - **Claude Code transcript-only sessions** have no archive flag on disk,
   so the app does **not** offer "Archive" for them and never invents Claude
-  metadata. Instead there is **Hide in manager / Show in manager**: an entry in
+  metadata. Instead there is **Hide session / Show session**: an entry in
   `manager-hidden.json` in this app's data folder. It changes only this app's
   list; Claude's files and archive state are untouched and the session still
   appears in Claude. Hidden sessions appear only under "Hidden in manager".
@@ -593,7 +593,7 @@ GitHub Pages is enabled for `main` / `docs`.
 - Claude Desktop metadata handling follows Claude Desktop 2.16120's code
   (field names, `archived-sessions.idx`, `deleted_*` tombstones). It was
   verified with fixtures; the test machine had no Desktop "Code" sessions.
-- Claude Code transcript-only sessions have no on-disk archive flag; "Hide in manager" lives only in this app.
+- Claude Code transcript-only sessions have no on-disk archive flag; hiding a session lives only in this app.
 - Remote (SSH/WSL) Desktop sessions: only the local metadata can be managed.
 - Executables are not code-signed yet: SmartScreen may warn on first run, and
   electron-updater can verify downloads only by the SHA-512 in `latest.yml`

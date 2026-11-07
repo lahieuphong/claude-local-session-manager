@@ -14,13 +14,14 @@
   "action": {
     "restoreHint": "清除 Claude Desktop 的 isArchived 标志",
     "archiveHint": "设置 Claude Desktop 的 isArchived 标志",
-    "hideHint": "仅在本管理器中隐藏。不会修改 Claude 的文件和归档状态。",
+    "hide": "隐藏会话",
+    "show": "显示会话",
     "openProject": "打开项目",
     "openProjectHint": "在资源管理器中打开工作区文件夹"
   },
   "note": {
-    "transcriptOnly": "仅有会话记录：此 Claude Code 会话没有 Claude Desktop 元数据，因此 Claude 没有它的归档状态。“在管理器中隐藏”只会更改本应用自己的列表，不会修改 Claude 的文件，该会话仍会在 Claude 中显示。",
-    "orphan": "孤立的会话文件夹：既没有会话记录也没有 Claude Desktop 元数据。“在管理器中隐藏”只会更改本应用自己的列表，不会修改 Claude 的文件。",
+    "transcriptOnly": "仅有会话记录：此 Claude Code 会话没有 Claude Desktop 元数据，因此 Claude 没有它的归档状态。“隐藏会话”只会更改本应用自己的列表，不会修改 Claude 的文件，该会话仍会在 Claude 中显示。",
+    "orphan": "孤立的会话文件夹：既没有会话记录也没有 Claude Desktop 元数据。“隐藏会话”只会更改本应用自己的列表，不会修改 Claude 的文件。",
     "storeDesktop": "Microsoft Store 版：此会话带有 Claude Desktop 元数据，在这里只能查看和导出，不能归档、恢复或删除。Windows 应用商店的打包机制会隔离部分 AppData 写入，Claude Desktop 看不到这类更改。",
     "armed": "已启用永久删除 — “永久删除”将真正删除此会话的文件。"
   },
