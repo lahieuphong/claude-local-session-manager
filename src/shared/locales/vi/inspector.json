@@ -48,6 +48,7 @@
     "priorIds": "ID CLI trước đó",
     "internalId": "ID trong trình quản lý",
     "model": "Mô hình",
+    "accounts": "Tài khoản",
     "claudeCode": "Claude Code",
     "gitBranch": "Nhánh Git"
   },

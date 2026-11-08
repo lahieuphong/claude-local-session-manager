@@ -1,12 +1,14 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { hasSafeMode, refreshProcess, returnToSafeMode, setView, useAppState } from '../stores/appStore'
+import { AccountMenu } from './AccountMenu'
 import { IconAlert, IconRefresh, IconShield, IconShieldAlert } from './Icons'
 import { useArmCountdown } from './SafetyMode'
 
 /**
  * Always-visible strip above the content: the deletion safety mode (left, only
- * in builds that have one) and whether Claude Desktop blocks modifying actions (right).
+ * in builds that have one), whether Claude Desktop blocks modifying actions, and
+ * which Claude account is on screen (right).
  */
 export function StatusStrip(): ReactElement {
   const { t } = useTranslation()
@@ -77,6 +79,8 @@ export function StatusStrip(): ReactElement {
           <IconRefresh size={14} className={checking ? 'spin' : ''} />
         </button>
       </div>
+
+      <AccountMenu />
     </div>
   )
 }

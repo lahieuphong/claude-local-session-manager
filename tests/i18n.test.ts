@@ -359,7 +359,7 @@ describe('UI source hygiene', () => {
     for (const f of files) {
       const text = fs.readFileSync(f, 'utf8')
       for (const tag of openingTags(text, 'button')) {
-        if (!/className="icon-btn"/.test(tag)) continue
+        if (!/className="icon-btn[\s"]/.test(tag)) continue
         iconButtons++
         if (!/aria-label=/.test(tag)) problems.push(`${path.basename(f)}: icon button without aria-label`)
       }
@@ -375,7 +375,8 @@ describe('UI source hygiene', () => {
     expect(modal).toMatch(/'Escape'/)
     expect(modal).toMatch(/'Tab'/)
     expect(problems).toEqual([])
-    expect(iconButtons).toBeGreaterThanOrEqual(8)
+    // The two dialogs share one close button (ModalClose).
+    expect(iconButtons).toBeGreaterThanOrEqual(7)
   })
 
   it('bundles no font files; type uses system font stacks only', () => {

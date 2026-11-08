@@ -32,6 +32,11 @@ behave differently, this page says so.
   the project folder path, the model name, dates and the archive flag.
 - **Running processes** named `claude`, `node` or `bun`: name, executable path,
   command line and start time. This is a local, read-only Windows query.
+- **The name and plan of each Claude sign-in**, if you have more than one on this
+  PC: the email address, display name and plan name (such as "Max 20x") from each
+  account's `.claude.json` file. The app reads that file, keeps only these three
+  values and uses them only to label the account switcher on your screen. It never
+  opens `.credentials.json`, the file with your sign-in tokens.
 - **The paths of your project folders**, as recorded in the session files. The
   app does not read the files inside your projects.
 

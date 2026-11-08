@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
+import { IconX } from './Icons'
 
 /** Matches --dur-modal in global.css. */
 const EXIT_MS = 200
@@ -42,6 +44,16 @@ function setAppInert(inert: boolean): void {
   if (!root) return
   if (inert) root.setAttribute('inert', '')
   else root.removeAttribute('inert')
+}
+
+/** The close button of every dialog header: its icon is as big as the title icon next to it. */
+export function ModalClose({ onClose, disabled }: { onClose: () => void; disabled?: boolean }): ReactElement {
+  const { t } = useTranslation()
+  return (
+    <button className="icon-btn modal-close" onClick={onClose} disabled={disabled} title={t('common:action.closeEsc')} aria-label={t('common:action.closeEsc')}>
+      <IconX size={18} />
+    </button>
+  )
 }
 
 export interface ModalProps {

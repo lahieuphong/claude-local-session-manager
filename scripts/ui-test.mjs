@@ -29,7 +29,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AUDIT_SCRIPT } from './ui-test-audit.mjs'
-import { LONG_TITLE_EN, UI_UUID_RE, writeUiTestProfile } from './ui-test-profile.mjs'
+import { LONG_TITLE_EN, UI_TEST_SECRET, UI_UUID_RE, writeUiTestProfile } from './ui-test-profile.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const WORK = path.join(ROOT, '.ui-test')
@@ -283,7 +283,7 @@ async function runVariant(channel) {
     await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...mouse })
   }
   const click = (selector) => clickEl(`document.querySelector(${quote(selector)})`, selector)
-  const KEY_CODES = { Escape: 27, Tab: 9, ArrowDown: 40, ArrowUp: 38, Home: 36, End: 35, Enter: 13, k: 75, '/': 191 }
+  const KEY_CODES = { Escape: 27, Tab: 9, ArrowDown: 40, ArrowUp: 38, ArrowRight: 39, Home: 36, End: 35, Enter: 13, k: 75, '/': 191 }
   const press = async (key, modifiers = 0) => {
     const common = { key, code: key.length === 1 ? `Key${key.toUpperCase()}` : key, windowsVirtualKeyCode: KEY_CODES[key], nativeVirtualKeyCode: KEY_CODES[key], modifiers }
     await page.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...common })
@@ -295,12 +295,27 @@ async function runVariant(channel) {
       Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value').set.call(el, ${quote(value)})
       el.dispatchEvent(new Event('input', { bubbles: true }))
     })()`)
-  const setSelect = (index, value) =>
-    page.evaluate(`(() => {
-      const el = document.querySelectorAll('.select-wrap select')[${index}]
-      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, ${quote(value)})
-      el.dispatchEvent(new Event('change', { bubbles: true }))
-    })()`)
+  /** The app's dropdowns (components/Select.tsx), by their stable name. */
+  const selectEl = (name) => `document.querySelector('.select[data-name="${name}"]')`
+  const optionEl = (value) => `document.querySelector('.select-menu [role="option"][data-value="${value}"]')`
+  const openSelect = async (name) => {
+    if (!(await page.evaluate(`${selectEl(name)}.classList.contains('open')`))) await clickEl(selectEl(name), `the ${name} dropdown`)
+    await page.waitFor(`document.querySelector('.select-menu')`, `the ${name} list`)
+    // It slides in: measure where it ends up, not halfway.
+    await page.evaluate(`Promise.all(document.querySelector('.select-menu').getAnimations().map((a) => a.finished)).then(() => true)`)
+  }
+  /** Choose with the mouse, as a person would. */
+  const setSelect = async (name, value) => {
+    if ((await page.evaluate(`${selectEl(name)}.dataset.value`)) === String(value)) return
+    await openSelect(name)
+    await clickEl(optionEl(value), `${value} in the ${name} list`)
+    await page.waitFor(`!document.querySelector('.select-menu') && ${selectEl(name)}.dataset.value === ${quote(String(value))}`, `${name}: ${value}`)
+  }
+  /** One typed character, as the keyboard sends it. */
+  const typeChar = async (ch) => {
+    await page.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, text: ch, unmodifiedText: ch })
+    await page.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ch })
+  }
   const setSize = async ({ width, height }) => {
     await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false })
     await settle()
@@ -329,7 +344,27 @@ async function runVariant(channel) {
     return false
   }
 
-  /** Back to a known place: the full session list with nothing open or checked. */
+  const ACCOUNT_LABELS = ['first.account', 'second.account', 'third.account']
+  const accountItem = (i) => `document.querySelectorAll('.account-menu [role="menuitemradio"]')[${i}]`
+  const accountOnScreen = () => text('.account-trigger-name')
+  const openAccounts = async () => {
+    if (!(await has('.account-menu'))) await click('.account-trigger')
+    await page.waitFor(`document.querySelector('.account-menu')`, 'the list of accounts')
+  }
+  const selectAccount = async (i) => {
+    await openAccounts()
+    await clickEl(accountItem(i), `account ${i} in the list`)
+    await page.waitFor(`!document.querySelector('.account-menu') && document.querySelector('.account-trigger-name').textContent === ${quote(ACCOUNT_LABELS[i])}`, `account ${i} on screen`)
+    await settle()
+  }
+  /** Enter as a keyboard really sends it: a control only reacts to the character, not to the bare key press. */
+  const pressEnter = async () => {
+    const common = { key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }
+    await page.send('Input.dispatchKeyEvent', { type: 'keyDown', text: '\r', unmodifiedText: '\r', ...common })
+    await page.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common })
+  }
+
+  /** Back to a known place: the first account's full session list with nothing open or checked. */
   const reset = async () => {
     for (let i = 0; i < 3 && (await has('.modal-backdrop')); i++) {
       await press('Escape')
@@ -337,12 +372,13 @@ async function runVariant(channel) {
     }
     if (await has('.menu')) await press('Escape')
     await closeToasts()
+    if ((await has('.account-trigger')) && (await accountOnScreen()) !== ACCOUNT_LABELS[0]) await selectAccount(0)
     await clickEl(filterEl('all'), 'the All sessions filter')
     await page.waitFor(`document.querySelector('.list-pane')`, 'the session list')
     if (await has('.bulk-bar')) await click('.bulk-bar .btn.quiet')
     if (await page.evaluate(`document.querySelector('.search input').value !== ''`)) await setInput('.search input', '')
-    await setSelect(0, 'updated-desc')
-    await setSelect(1, 'date')
+    await setSelect('sort', 'updated-desc')
+    await setSelect('group', 'date')
     if ((await page.evaluate(`document.querySelector('.nav-label-button').getAttribute('aria-expanded')`)) !== 'true') await click('.nav-label-button')
     await page.evaluate(`for (const s of document.querySelectorAll('.nav, .list-scroll, .inspector-scroll')) s.scrollTop = 0`)
     await settle()
@@ -435,7 +471,11 @@ async function runVariant(channel) {
     // -----------------------------------------------------------------------
     const snap = await page.evaluate('window.sessionManager.scanSessions()')
     const inSandbox = (p) => p.toLowerCase().startsWith(home.toLowerCase() + path.sep)
-    const safe = inSandbox(snap.roots.claudeHome) && snap.roots.desktopRoots.every((d) => inSandbox(d.path)) && snap.sessions.every((s) => !s.cliSessionId || UI_UUID_RE.test(s.cliSessionId))
+    const safe =
+      inSandbox(snap.roots.claudeHome) &&
+      snap.roots.accounts.every((a) => inSandbox(a.path)) &&
+      snap.roots.desktopRoots.every((d) => inSandbox(d.path)) &&
+      snap.sessions.every((s) => !s.cliSessionId || UI_UUID_RE.test(s.cliSessionId))
     if (!safe) throw new Error(`NOT IN THE THROW-AWAY FOLDER, stopping before any click: ${snap.roots.claudeHome}`)
     check(`${channel}: the app reads only the throw-away profile`, true, `${snap.sessions.length} sessions`)
     ids = Object.fromEntries(snap.sessions.filter((s) => s.cliSessionId).map((s) => [s.cliSessionId, s.id]))
@@ -551,6 +591,11 @@ async function runVariant(channel) {
       { name: 'list', enter: reset },
       { name: 'sidebar-scrolled-to-end', enter: async () => { await reset(); await scrollToEnd('.nav') } },
       { name: 'sidebar-projects-collapsed', enter: async () => { await reset(); await click('.nav-label-button') } },
+      { name: 'account-menu', enter: async () => { await reset(); await openAccounts() } },
+      { name: 'account-menu-over-details', enter: async () => { await reset(); await selectRow(roles.longEn); await openAccounts() } },
+      { name: 'account-menu-on-settings', enter: async () => { await reset(); await goSettings(); await openAccounts() } },
+      { name: 'account-second', enter: async () => { await reset(); await selectAccount(1); await selectRow(roles.inBoth) } },
+      { name: 'account-third', enter: async () => { await reset(); await selectAccount(2); await selectRow(roles.third[0]) } },
       { name: 'details-long-title', enter: async () => { await reset(); await selectRow(roles.longEn) } },
       { name: 'details-long-title-end', enter: async () => { await reset(); await selectRow(roles.longEn); await openTechnical(); await scrollToEnd('.inspector-scroll') } },
       { name: 'details-message-opened', enter: async () => { await reset(); await selectRow(roles.longEn); await click('.preview-label .link-btn'); await page.waitFor(`document.querySelector('.preview-text.expanded')`, 'the full message') } },
@@ -566,7 +611,19 @@ async function runVariant(channel) {
       { name: 'filter-transcript-only', enter: async () => { await reset(); await clickEl(filterEl('transcript-only')) } },
       { name: 'filter-problems', enter: async () => { await reset(); await selectRow(roles.metadataOnly, 'problems') } },
       { name: 'project-long-name', enter: async () => { await reset(); await clickEl(`[...document.querySelectorAll('.nav-project')].find((b) => b.textContent.includes('very-long-folder-name'))`, 'the long project') ; await settle() } },
-      { name: 'group-by-project', enter: async () => { await reset(); await setSelect(1, 'project') } },
+      { name: 'sort-dropdown-open', enter: async () => { await reset(); await openSelect('sort') } },
+      { name: 'group-dropdown-open', enter: async () => { await reset(); await openSelect('group') } },
+      {
+        name: 'settings-interval-dropdown-open',
+        enter: async () => {
+          await reset()
+          await goSettings()
+          await clickEl(`document.querySelectorAll('.radio-list input')[2]`, 'the interval refresh option')
+          await page.waitFor(selectEl('refresh-interval'), 'the interval field')
+          await openSelect('refresh-interval')
+        }
+      },
+      { name: 'group-by-project', enter: async () => { await reset(); await setSelect('group', 'project') } },
       { name: 'search-no-match', enter: async () => { await reset(); await setInput('.search input', LONG_TITLE_EN + LONG_TITLE_EN) } },
       { name: 'bulk-bar', enter: openBulk },
       { name: 'storage', enter: async () => { await reset(); await goStorage() } },
@@ -578,7 +635,7 @@ async function runVariant(channel) {
           await reset()
           await goSettings()
           await clickEl(`document.querySelectorAll('.radio-list input')[2]`, 'the interval refresh option')
-          await page.waitFor(`document.querySelector('.inline-field select')`, 'the interval field')
+          await page.waitFor(`document.querySelector('.inline-field .select')`, 'the interval field')
           await page.evaluate(`document.querySelectorAll('.settings details').forEach((d) => { d.open = true })`)
           await clickEl(`[...document.querySelectorAll('.row-actions .btn')].at(-1)`, 'the Show logs button')
           await page.waitFor(`document.querySelector('.code-block.log')`, 'the log')
@@ -721,6 +778,94 @@ async function runVariant(channel) {
     await setSize(allSizes[2])
     await reset()
 
+    // Claude accounts: a dropdown in the top right corner, and everything on screen follows it.
+    const focusedItem = () => page.evaluate(`[...document.querySelectorAll('.account-menu [role="menuitemradio"]')].indexOf(document.activeElement)`)
+    const triggerFocused = () => page.evaluate(`document.activeElement === document.querySelector('.account-trigger')`)
+    check('accounts: the dropdown is on the top strip, last on the right, on the main account', (await page.evaluate(`document.querySelector('.status-strip').lastElementChild.contains(document.querySelector('.account-trigger'))`)) && (await accountOnScreen()) === ACCOUNT_LABELS[0] && !(await has('.account-menu')))
+    await openAccounts()
+    const tabs = await page.evaluate(`[...document.querySelectorAll('.account-menu [role="menuitemradio"]')].map((t) => ({ name: t.querySelector('.account-item-name').textContent, tag: t.querySelector('.account-item-tag')?.textContent ?? '', email: t.querySelector('.account-item-email')?.textContent ?? '', plan: t.querySelector('.account-item-plan')?.textContent ?? '', count: Number(t.querySelector('.account-item-count').textContent.replace(/\\D/g, '')), on: t.getAttribute('aria-checked') === 'true', mark: !!t.querySelector('.account-item-check'), title: t.title }))`)
+    check('accounts: one row each, with the name and the whole email, the main account first and ticked', tabs.map((x) => x.name).join() === 'First Account,Second Account,Third Account' && tabs.map((x) => x.email).join() === 'first.account@example.com,second.account@example.com,third.account@example.com' && tabs.map((x) => x.on).join() === 'true,false,false' && tabs.map((x) => x.mark).join() === 'true,false,false', tabs.map((x) => `${x.name} ${x.count}`).join(', '))
+    check('accounts: the labels say who shares a store, and an account with its own has none', !!tabs[0].tag && !!tabs[1].tag && tabs[0].tag !== tabs[1].tag && tabs[2].tag === '', tabs.map((x) => x.tag).join(' | '))
+    check('accounts: the plan as Claude Code names it, and none where the file has none', tabs.map((x) => x.plan).join() === 'Max 20x,Pro,', tabs.map((x) => x.plan).join(' | '))
+    check('accounts: the tooltip has the folder', tabs[1].title.includes('second-account'))
+    const menuBox = await page.evaluate(`(() => { const r = document.querySelector('.account-menu').getBoundingClientRect(); const c = ${accountItem(2)}.getBoundingClientRect(); const hit = document.elementFromPoint(c.left + c.width / 2, c.top + c.height / 2); return { inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, onTop: ${accountItem(2)}.contains(hit), underStrip: r.top >= document.querySelector('.status-strip').getBoundingClientRect().bottom - 1 } })()`)
+    check('accounts: the list opens under the strip, inside the window and above everything', menuBox.inside && menuBox.onTop && menuBox.underStrip, JSON.stringify(menuBox))
+    check('accounts: opening starts on the account on screen', (await focusedItem()) === 0)
+    await press('ArrowDown')
+    check('accounts: the arrow keys move down the list', (await focusedItem()) === 1)
+    await press('End')
+    check('accounts: End goes to the last', (await focusedItem()) === 2)
+    await press('ArrowDown')
+    check('accounts: past the last goes back to the first', (await focusedItem()) === 0)
+    await press('ArrowUp')
+    check('accounts: before the first goes to the last', (await focusedItem()) === 2)
+    await press('Home')
+    check('accounts: Home goes to the first', (await focusedItem()) === 0)
+    await press('ArrowDown')
+    await press('Escape')
+    await settle()
+    check('accounts: Esc closes without switching and goes back to the button', !(await has('.account-menu')) && (await triggerFocused()) && (await accountOnScreen()) === ACCOUNT_LABELS[0])
+    await press('ArrowDown')
+    await settle()
+    check('accounts: the arrow key opens it from the button', (await has('.account-menu')) && (await focusedItem()) === 0)
+    await press('Tab')
+    await settle()
+    check('accounts: Tab closes it and moves on', !(await has('.account-menu')) && !(await triggerFocused()))
+    await click('.account-trigger')
+    await page.waitFor(`document.querySelector('.account-menu')`, 'the list of accounts')
+    await click('.account-trigger')
+    await settle()
+    check('accounts: a second click on the button closes it', !(await has('.account-menu')))
+    await openAccounts()
+    await click('.account-menu .menu-note')
+    await settle()
+    check('accounts: a click on the note leaves it open and the keys still work', (await has('.account-menu')) && (await focusedItem()) === 0)
+    await click('.page-title')
+    await settle()
+    check('accounts: a click elsewhere closes it without switching', !(await has('.account-menu')) && (await accountOnScreen()) === ACCOUNT_LABELS[0])
+    await openAccounts()
+    await press('k', 2)
+    await settle()
+    check('accounts: the search shortcut closes it and takes the focus', !(await has('.account-menu')) && (await page.evaluate(`document.activeElement === document.querySelector('.search input')`)))
+    const rowIdsNow = () => page.evaluate(`[...document.querySelectorAll('.row-main')].map((r) => r.dataset.id).sort()`)
+    const sameIds = (actual, uuids) => actual.join() === uuids.map(idOf).sort().join()
+    await selectRow(roles.longEn)
+    await selectAccount(1)
+    check('accounts: switching clears what was selected in the other account', await has('.inspector-empty'))
+    check('accounts: the second lists what it used, not the whole shared store', sameIds(await rowIdsNow(), [roles.onlySecond, roles.inBoth, roles.liveSecond]))
+    check('accounts: the number in the list matches', tabs[1].count === 3 && (await page.evaluate(`${filterEl('all')}.querySelector('.nav-count').textContent`)) === '3')
+    check('accounts: the projects follow', (await count('.nav-project')) === 1)
+    const secondTotal = await page.evaluate(`document.querySelector('.sidebar-bottom .nav-count').textContent`)
+    await goStorage()
+    await page.waitFor(`document.querySelector('.hero-value')?.textContent === ${quote(secondTotal)}`, 'the storage page of the second account')
+    check('accounts: the storage page follows', true, secondTotal)
+    await selectRow(roles.inBoth)
+    check('accounts: a session used by both says so', (await text('.inspector .kv')).includes('first.account, second.account'))
+    await selectRow(roles.liveSecond)
+    check(
+      'accounts: a session running under the second account cannot be deleted',
+      (await page.evaluate(`document.querySelector('.inspector .actions .btn.danger').disabled`)) && (await has('.inspector .notice.warn')) && (await has('.inspector-sub .badge-live'))
+    )
+    await selectAccount(2)
+    check('accounts: the third, with its own store, lists its own sessions', sameIds(await rowIdsNow(), roles.third))
+    await clickEl(`document.querySelector('.nav-project')`, 'the project of the third account')
+    await settle()
+    const thirdProject = await text('.page-title')
+    await selectAccount(0)
+    check('accounts: a project of another account does not stay open', (await text('.page-title')) !== thirdProject && (await count('.row')) === tabs[0].count, thirdProject)
+    await selectAccount(1)
+    const chosen = (await page.evaluate('window.sessionManager.scanSessions()')).roots.accounts[1].id
+    check('accounts: the choice is remembered for the next start', (await page.evaluate(`localStorage.getItem('account')`)) === chosen)
+    await openAccounts()
+    check('accounts: the list ticks the account chosen and starts there', (await focusedItem()) === 1 && (await page.evaluate(`[...document.querySelectorAll('.account-menu [role="menuitemradio"]')].map((t) => t.getAttribute('aria-checked') + !!t.querySelector('.account-item-check')).join()`)) === 'falsefalse,truetrue,falsefalse')
+    await press('ArrowDown')
+    await pressEnter()
+    await settle()
+    check('accounts: Enter switches, closes and goes back to the button', (await accountOnScreen()) === ACCOUNT_LABELS[2] && !(await has('.account-menu')) && (await triggerFocused()))
+    const leakCheck = JSON.stringify(await page.evaluate('window.sessionManager.scanSessions()')) + (await page.evaluate('document.body.innerText')) + (await page.evaluate(`window.sessionManager.getLogs().then(JSON.stringify)`))
+    check('accounts: nothing but the name and plan is read from the sign-in files', !leakCheck.includes(UI_TEST_SECRET))
+    await reset()
+
     // Every filter shows as many rows as its counter says.
     for (const f of FILTERS) {
       await clickEl(filterEl(f), `the ${f} filter`)
@@ -765,28 +910,118 @@ async function runVariant(channel) {
 
     // Sorting and grouping.
     await reset()
-    await setSelect(1, 'none')
+    await setSelect('group', 'none')
     const orderBy = (field) => page.evaluate(`window.sessionManager.scanSessions().then((snap) => {
       const byId = new Map(snap.sessions.map((s) => [s.id, s]))
       return [...document.querySelectorAll('.row-main')].map((r) => byId.get(r.dataset.id)?.[${quote(field)}] ?? 0)
     })`)
     const monotonic = (values, dir) => values.every((v, i) => i === 0 || (dir > 0 ? v >= values[i - 1] : v <= values[i - 1]))
-    await setSelect(0, 'size-desc')
+    await setSelect('sort', 'size-desc')
     await settle()
     check('sort: largest first', monotonic(await orderBy('totalSize'), -1))
-    await setSelect(0, 'size-asc')
+    await setSelect('sort', 'size-asc')
     await settle()
     check('sort: smallest first', monotonic(await orderBy('totalSize'), 1))
-    await setSelect(0, 'updated-desc')
+    await setSelect('sort', 'updated-desc')
     await settle()
     check('sort: newest first', monotonic(await orderBy('updatedAt'), -1))
-    await setSelect(1, 'project')
+    await setSelect('group', 'project')
     await settle()
     check('group: by project shows group headings', (await count('.group-label')) >= 25)
 
+    // Dropdowns: the app's own list, never the one Windows draws, and they work like a native one.
+    await reset()
+    const sortSel = selectEl('sort')
+    const sortValue = () => page.evaluate(`${sortSel}.dataset.value`)
+    const listShown = () => has('.select-menu')
+    const onSort = () => page.evaluate(`document.activeElement === ${sortSel}`)
+    const activeOption = () => page.evaluate(`[...document.querySelectorAll('.select-menu [role="option"]')].findIndex((o) => o.classList.contains('active'))`)
+    check('dropdowns: none is a native one', (await count('select, datalist')) === 0 && (await count('.select')) === 2)
+    const widthBefore = await page.evaluate(`${sortSel}.getBoundingClientRect().width`)
+    await openSelect('sort')
+    const opened = await page.evaluate(`(() => {
+      const t = ${sortSel}.getBoundingClientRect()
+      const m = document.querySelector('.select-menu').getBoundingClientRect()
+      const options = [...document.querySelectorAll('.select-menu [role="option"]')]
+      const on = options.filter((o) => o.getAttribute('aria-selected') === 'true')
+      return {
+        gap: Math.round(m.top - t.bottom), dx: Math.round(m.left - t.left), widths: [Math.round(t.width), Math.round(m.width)],
+        under: m.top >= t.bottom && m.top - t.bottom < 10 && Math.abs(m.left - t.left) < 1 && m.width >= t.width - 0.5,
+        inside: m.left >= 0 && m.top >= 0 && m.right <= innerWidth && m.bottom <= innerHeight,
+        count: options.length,
+        ticked: on.length === 1 && on[0].dataset.value === ${sortSel}.dataset.value && !!on[0].querySelector('svg') && on[0].classList.contains('active'),
+        style: (() => { const c = getComputedStyle(document.querySelector('.select-menu')); return [c.backgroundColor, c.borderTopColor, c.borderTopLeftRadius, c.boxShadow].join(' | ') })()
+      }
+    })()`)
+    check('dropdowns: the list opens right under it, at least as wide, inside the window', opened.under && opened.inside, JSON.stringify(opened))
+    check('dropdowns: every choice is there, the current one ticked and highlighted', opened.count === 5 && opened.ticked)
+    check('dropdowns: the focus stays on the dropdown', await onSort())
+    await press('Escape')
+    await openAccounts()
+    const accountLook = await page.evaluate(`(() => { const c = getComputedStyle(document.querySelector('.account-menu')); return [c.backgroundColor, c.borderTopColor, c.borderTopLeftRadius, c.boxShadow].join(' | ') })()`)
+    await press('Escape')
+    check('dropdowns: the list looks like the other menus of the app', opened.style === accountLook, opened.style)
+    await openSelect('sort')
+    const hoverAt = await page.evaluate(`(() => { const r = document.querySelectorAll('.select-menu [role="option"]')[2].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hoverAt.x, y: hoverAt.y })
+    await settle()
+    check('dropdowns: the mouse highlights what it points at', (await activeOption()) === 2)
+    await clickEl(optionEl('size-desc'), 'Largest first')
+    await settle()
+    check('dropdowns: a click chooses, closes and keeps the focus', (await sortValue()) === 'size-desc' && !(await listShown()) && (await onSort()))
+    check('dropdowns: the width does not jump with the choice', Math.abs((await page.evaluate(`${sortSel}.getBoundingClientRect().width`)) - widthBefore) < 0.5)
+    await press('ArrowDown')
+    await settle()
+    check('dropdowns: the arrow key opens it on the current choice', (await listShown()) && (await activeOption()) === 3)
+    await press('ArrowDown')
+    await press('ArrowDown')
+    await settle()
+    check('dropdowns: the arrow keys move and stop at the end', (await activeOption()) === 4)
+    await press('Home')
+    await settle()
+    check('dropdowns: Home goes to the first', (await activeOption()) === 0)
+    await press('Escape')
+    await settle()
+    check('dropdowns: Esc closes without changing anything', !(await listShown()) && (await sortValue()) === 'size-desc' && (await onSort()))
+    await press('Enter')
+    await press('End')
+    await press('Enter')
+    await settle()
+    check('dropdowns: Enter opens, and Enter chooses', !(await listShown()) && (await sortValue()) === 'size-asc')
+    const typed = await page.evaluate(`(() => {
+      const fold = (t) => t.normalize('NFD').replace(/\\p{M}/gu, '').toLocaleLowerCase()
+      const labels = [...${sortSel}.querySelectorAll('.select-value > span')].map((x) => x.textContent)
+      const ch = fold(labels[2])[0]
+      const from = labels.findIndex((_, i) => ${sortSel}.querySelectorAll('.select-value > span')[i].classList.contains('on'))
+      const expected = labels.map((_, i) => (from + 1 + i) % labels.length).find((i) => fold(labels[i]).startsWith(ch))
+      return { ch: labels[2][0], expected }
+    })()`)
+    await typeChar(typed.ch)
+    await settle()
+    check('dropdowns: typing a letter finds the choice that starts with it', (await listShown()) && (await activeOption()) === typed.expected, JSON.stringify(typed))
+    await press('ArrowUp')
+    await press('Tab')
+    await settle()
+    check('dropdowns: Tab leaves without changing anything', !(await listShown()) && (await sortValue()) === 'size-asc' && !(await onSort()))
+    await openSelect('sort')
+    await click('.page-title')
+    await settle()
+    check('dropdowns: a click elsewhere closes it without changing anything', !(await listShown()) && (await sortValue()) === 'size-asc')
+    await openSelect('sort')
+    await clickEl(sortSel, 'the sort dropdown again')
+    await settle()
+    check('dropdowns: a second click on it closes it', !(await listShown()))
+    await openSelect('sort')
+    const listTopBefore = await page.evaluate(`document.querySelector('.select-menu').getBoundingClientRect().top`)
+    await page.evaluate(`document.querySelector('.list-scroll').scrollTop += 60`)
+    await settle()
+    check('dropdowns: scrolling the list below leaves it open, still under the dropdown', (await listShown()) && (await page.evaluate(`document.querySelector('.select-menu').getBoundingClientRect().top`)) === listTopBefore)
+    await press('Escape')
+    await setSelect('sort', 'updated-desc')
+
     // Keyboard in the list.
     await reset()
-    await setSelect(1, 'none')
+    await setSelect('group', 'none')
     await settle()
     const rowIds = await page.evaluate(`[...document.querySelectorAll('.row-main')].map((r) => r.dataset.id)`)
     await page.evaluate(`document.querySelector('.row-main').focus()`)
@@ -981,11 +1216,26 @@ async function runVariant(channel) {
     await clickEl(`document.querySelector('.settings .segmented:not(:has([lang])) label:first-child')`, 'the system motion option')
     await settle()
     await clickEl(`document.querySelectorAll('.radio-list input')[2]`, 'the interval option')
-    await page.waitFor(`document.querySelector('.inline-field select')`, 'the interval field')
+    await page.waitFor(`document.querySelector('.inline-field .select')`, 'the interval field')
     check('settings: the interval option shows its field and is saved', (await settings()).refreshMode === 'interval')
+    await setSelect('refresh-interval', '300')
+    await page.waitFor(`window.sessionManager.getSettings().then((s) => s.refreshIntervalSec === 300)`, 'the interval to be saved').catch(() => {})
+    check('settings: the interval is chosen in the app\'s own dropdown and saved', (await settings()).refreshIntervalSec === 300)
+    // In the smallest window the field is low on a page that scrolls: the list must open whole, and go when the page moves it.
+    await setSize(allSizes[0])
+    await page.evaluate(`document.querySelector('.page').scrollTop = 0; document.querySelector('.page').parentElement.scrollTop = 0`)
+    await settle()
+    await openSelect('refresh-interval')
+    await settle()
+    const low = await page.evaluate(`(() => { const m = document.querySelector('.select-menu'); const r = m?.getBoundingClientRect(); return r ? { side: m.dataset.side, inside: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth } : null })()`)
+    check('settings: in the smallest window the interval list opens whole, even after scrolling to it', !!low?.inside, JSON.stringify(low))
+    await page.evaluate(`(() => { let box = ${selectEl('refresh-interval')}.parentElement; while (box && !(box.scrollHeight > box.clientHeight && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement; box.scrollTop -= 40 })()`)
+    await settle()
+    check('settings: scrolling the page closes the list', !(await has('.select-menu')))
+    await setSize(allSizes[2])
     await clickEl(`document.querySelectorAll('.radio-list input')[0]`, 'the manual option')
     await settle()
-    check('settings: the manual option hides the field', !(await has('.inline-field select')))
+    check('settings: the manual option hides the field', !(await has('.inline-field .select')))
     await closeToasts()
     await clickEl(`[...document.querySelectorAll('.setting-control .btn')][0]`, 'Clear cache')
     await page.waitFor(`document.querySelector('.toast')`, 'the cache confirmation')
@@ -1029,6 +1279,15 @@ async function runVariant(channel) {
       keptInside.push(await page.evaluate(`!!document.activeElement.closest('.modal')`))
     }
     check('delete dialog: Tab stays inside it', keptInside.every(Boolean))
+    const closeLook = await page.evaluate(`(() => {
+      const head = document.querySelector('.modal-header')
+      const size = (el) => Math.round(el.getBoundingClientRect().width)
+      const close = head.querySelector('.modal-close')
+      const title = head.querySelector(':scope > svg').getBoundingClientRect()
+      const x = close.querySelector('svg').getBoundingClientRect()
+      return { titleIcon: size(head.querySelector(':scope > svg')), closeIcon: size(close.querySelector('svg')), button: size(close), offset: Math.round((x.top + x.height / 2) - (title.top + title.height / 2)) }
+    })()`)
+    check('delete dialog: the close icon is as big as the title icon, level with it', closeLook.closeIcon === closeLook.titleIcon && closeLook.button >= 30 && Math.abs(closeLook.offset) <= 1, JSON.stringify(closeLook))
     check('delete dialog: the app behind it cannot be used', await page.evaluate(`document.getElementById('root').hasAttribute('inert')`))
     // A message can appear while a dialog is open (copying the plan, for one). It must leave the dialog's controls free.
     for (const size of [allSizes[0], allSizes[2]]) {
@@ -1152,14 +1411,27 @@ async function runVariant(channel) {
       check('delete: a second one straight after also deletes, with no new step', second.length > 0 && second.every((p) => !existsSync(p)), `${second.length} paths`)
       await closeResult()
 
+      await openDeleteFor(roles.inBoth)
+      await setInput('.confirm-input', 'DELETE')
+      await page.waitFor(`!document.querySelector(${quote(realButton)}).disabled`, 'the delete button')
+      const inBoth = await planPaths()
+      check('delete: a session used by two accounts lists its folder in each', inBoth.filter((p) => /session-env/.test(p)).length === 2, `${inBoth.length} paths`)
+      await click(realButton)
+      await page.waitFor(`document.querySelector('.result-session')`, 'the result')
+      check('delete: and removes them all', inBoth.every((p) => !existsSync(p)))
+      await closeResult()
+
       // The last screens: delete everything, one view at a time, to see the empty app.
       rmSync(roles.liveFile, { force: true })
+      rmSync(roles.liveSecondFile, { force: true })
       await refreshSnapshot()
       await settle()
       let bulkPhraseOk = true
       let lastResultShown = false
-      for (const f of ['all', 'archived', 'hidden', 'problems']) {
+      const eachView = tabs.flatMap((_, account) => ['all', 'archived', 'hidden', 'problems'].map((f) => [account, f]))
+      for (const [account, f] of eachView) {
         await reset()
+        await selectAccount(account)
         await clickEl(filterEl(f), `the ${f} filter`)
         await settle()
         if (!(await has('.row'))) continue

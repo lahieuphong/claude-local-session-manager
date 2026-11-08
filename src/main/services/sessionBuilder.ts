@@ -39,6 +39,9 @@ export interface SessionRecord {
   legacySubagentLogs: LegacySubagentLog[]
   fileHistoryDir?: UuidDirEntry
   sessionEnvDir?: UuidDirEntry
+  /** The same session's folders in another account. */
+  extraFileHistoryDirs: UuidDirEntry[]
+  extraSessionEnvDirs: UuidDirEntry[]
   /** Claude Code session UUIDs owned by this session. */
   ownedUuids: string[]
   /** UUIDs checked against running Claude Code processes. */
@@ -54,6 +57,9 @@ export interface BuildInput {
   projects: ProjectsScan | null
   fileHistory: Map<string, UuidDirEntry>
   sessionEnv: Map<string, UuidDirEntry>
+  /** The same folders in the other accounts. */
+  extraFileHistory?: Array<Map<string, UuidDirEntry>>
+  extraSessionEnv?: Array<Map<string, UuidDirEntry>>
   /** Manager-only hidden keys. */
   hidden: Set<string>
   liveSessions: LiveCliSession[]
@@ -97,6 +103,8 @@ function newRecord(partial: Partial<SessionRecord> & { problems: string[] }): Se
     extraTranscripts: [],
     sharedTranscripts: [],
     extraDataDirs: [],
+    extraFileHistoryDirs: [],
+    extraSessionEnvDirs: [],
     legacySubagentLogs: [],
     ownedUuids: [],
     guardUuids: [],
@@ -257,11 +265,14 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
   }
 
   // 5. file-history / session-env: only when exactly one owner ------------
+  const warned = new Set<string>()
   const attach = (map: Map<string, UuidDirEntry>, assign: (r: SessionRecord, e: UuidDirEntry) => void, label: string): void => {
     for (const [uuid, entry] of map) {
       const owner = owners.get(uuid)
       if (owner) assign(owner, entry)
-      else if (owner === null) {
+      else if (owner === null && !warned.has(`${label}|${uuid}`)) {
+        // Once, however many accounts have the folder.
+        warned.add(`${label}|${uuid}`)
         for (const r of records) {
           if (r.ownedUuids.includes(uuid)) r.session.problems.push(problem('problem.sharedFolder', { label, uuid }))
         }
@@ -270,6 +281,26 @@ export function buildSessions(input: BuildInput): { sessions: ClaudeSession[]; r
   }
   attach(input.fileHistory, (r, e) => (r.fileHistoryDir = e), 'file-history')
   attach(input.sessionEnv, (r, e) => (r.sessionEnvDir = e), 'session-env')
+  for (const other of input.extraFileHistory ?? []) {
+    attach(
+      other,
+      (r, e) => {
+        if (r.fileHistoryDir) r.extraFileHistoryDirs.push(e)
+        else r.fileHistoryDir = e
+      },
+      'file-history'
+    )
+  }
+  for (const other of input.extraSessionEnv ?? []) {
+    attach(
+      other,
+      (r, e) => {
+        if (r.sessionEnvDir) r.extraSessionEnvDirs.push(e)
+        else r.sessionEnvDir = e
+      },
+      'session-env'
+    )
+  }
 
   // 6. Normalize -----------------------------------------------------------
   const map = new Map<string, SessionRecord>()
@@ -328,7 +359,10 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
 
   const transcriptSize = [t, ...r.extraTranscripts].reduce((n, x) => n + (x?.size ?? 0), 0)
   const otherSize =
-    (r.fileHistoryDir?.bytes ?? 0) + (r.sessionEnvDir?.bytes ?? 0) + r.legacySubagentLogs.reduce((n, l) => n + l.size, 0)
+    (r.fileHistoryDir?.bytes ?? 0) +
+    (r.sessionEnvDir?.bytes ?? 0) +
+    [...r.extraFileHistoryDirs, ...r.extraSessionEnvDirs].reduce((n, d) => n + d.bytes, 0) +
+    r.legacySubagentLogs.reduce((n, l) => n + l.size, 0)
   const sessionDataSize = (r.dataDir?.bytes ?? 0) + r.extraDataDirs.reduce((n, d) => n + d.bytes, 0)
   const metadataSize = meta?.size ?? 0
   const hasDataDirs = !!r.dataDir || r.extraDataDirs.length > 0
@@ -361,7 +395,10 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
     extraSessionDataDirectories: r.extraDataDirs.map((d) => d.dirPath),
     fileHistoryDirectory: r.fileHistoryDir?.dirPath,
     sessionEnvDirectory: r.sessionEnvDir?.dirPath,
+    extraFileHistoryDirectories: r.extraFileHistoryDirs.map((d) => d.dirPath),
+    extraSessionEnvDirectories: r.extraSessionEnvDirs.map((d) => d.dirPath),
     legacySubagentLogs: r.legacySubagentLogs.map((l) => l.filePath),
+    accountIds: [],
     archived: meta?.isArchived === true,
     hiddenInManager: !!r.managerKey && input.hidden.has(r.managerKey),
     createdAt: meta?.createdAt ?? s?.firstTimestamp ?? r.dataDir?.mtimeMs,

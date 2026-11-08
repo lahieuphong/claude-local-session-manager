@@ -5,7 +5,7 @@ import type { SafetyModeState } from '../../../shared/types'
 import { useFmt } from '../i18n'
 import { armRealDelete, openArmModal, refreshProcess, refreshSafetyMode, returnToSafeMode, useAppState } from '../stores/appStore'
 import { IconAlert, IconCheck, IconRefresh, IconShield, IconShieldAlert, IconX } from './Icons'
-import { Modal } from './Modal'
+import { Modal, ModalClose } from './Modal'
 import { tCode } from './RichText'
 
 /** mm:ss until the armed mode expires; ticks every second while armed. */
@@ -126,9 +126,7 @@ export function ArmModal(): ReactElement | null {
         <IconAlert size={18} className="danger-text" />
         <h2 id={titleId}>{t('safety:arm.title')}</h2>
         <div className="spacer" />
-        <button className="icon-btn" onClick={() => openArmModal(false)} disabled={busy} aria-label={t('common:action.closeEsc')} title={t('common:action.closeEsc')}>
-          <IconX size={16} />
-        </button>
+        <ModalClose onClose={() => openArmModal(false)} disabled={busy} />
       </header>
       <div className="modal-body">
         <div className="danger-box" id={descId}>

@@ -164,16 +164,23 @@ export function buildProcessStatus(
 export class ProcessService {
   private cached: ProcessStatus | null = null
   private inflight: Promise<ProcessStatus> | null = null
-  private inflightDir: string | null = null
+  private inflightDirs = ''
+  private liveSessionsDirs: string[]
 
   constructor(
-    private liveSessionsDir: string | null,
+    liveSessionsDir: string | string[] | null,
     private runner: Runner = process.platform === 'win32' ? windowsRunner : posixRunner,
     private maxAgeMs = 10_000
-  ) {}
+  ) {
+    this.liveSessionsDirs = [liveSessionsDir ?? []].flat()
+  }
 
-  setLiveSessionsDir(dir: string | null): void {
-    this.liveSessionsDir = dir
+  /**
+   * Every account's registry, whichever account is on screen: accounts can share
+   * one session store, so a session running under one can be listed under another.
+   */
+  setLiveSessionsDir(dir: string | string[] | null): void {
+    this.liveSessionsDirs = [dir ?? []].flat()
     this.cached = null
   }
 
@@ -181,11 +188,13 @@ export class ProcessService {
     if (!force && this.cached && Date.now() - this.cached.checkedAt < this.maxAgeMs) return this.cached
     // Reuse a running query only if it reads the same registry folder; a
     // query started before discovery set the folder would miss live sessions.
-    if (this.inflight && this.inflightDir === this.liveSessionsDir) return this.inflight
-    const dir = this.liveSessionsDir
-    this.inflightDir = dir
+    const dirs = this.liveSessionsDirs
+    const key = dirs.join('|')
+    if (this.inflight && this.inflightDirs === key) return this.inflight
+    this.inflightDirs = key
     const run = (async () => {
-      const registry = await readLiveSessionRegistry(dir).catch(() => [])
+      const registries = await Promise.all(dirs.map(async (dir) => (await readLiveSessionRegistry(dir).catch(() => [])).map((r) => ({ ...r, registryDir: dir }))))
+      const registry = registries.flat()
       let processes: RawProcess[] = []
       let error: string | undefined
       try {
@@ -195,7 +204,7 @@ export class ProcessService {
         logger.warn(error)
       }
       const status = buildProcessStatus(processes, registry, error)
-      if (dir === this.liveSessionsDir) this.cached = status
+      if (key === this.liveSessionsDirs.join('|')) this.cached = status
       return status
     })().finally(() => {
       if (this.inflight === run) this.inflight = null

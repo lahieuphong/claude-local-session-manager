@@ -4,7 +4,7 @@ import type { StorageInfo } from '../../../shared/types'
 import { EmptyState } from '../components/EmptyState'
 import { IconAlert, IconChevron, IconDatabase } from '../components/Icons'
 import { useFmt } from '../i18n'
-import { errText, select, setView, useAppState } from '../stores/appStore'
+import { activeAccountId, errText, select, setView, useAppState } from '../stores/appStore'
 import { localTitle } from '../utils/titles'
 
 const api = (): Window['sessionManager'] => window.sessionManager
@@ -13,15 +13,21 @@ export function StoragePage(): ReactElement {
   const { t } = useTranslation()
   const fmt = useFmt()
   const snapshot = useAppState((s) => s.snapshot)
+  const accountId = useAppState(activeAccountId)
   const [info, setInfo] = useState<StorageInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let current = true
+    setError(null)
     api()
-      .getStorageInfo()
-      .then(setInfo)
-      .catch((err) => setError(errText(err)))
-  }, [snapshot])
+      .getStorageInfo(accountId ?? undefined)
+      .then((next) => current && setInfo(next))
+      .catch((err) => current && setError(errText(err)))
+    return () => {
+      current = false
+    }
+  }, [snapshot, accountId])
 
   if (error) {
     return (

@@ -37,6 +37,7 @@
     "minutes_other": "{{count}} minutes"
   },
   "roots": {
+    "accounts": "Claude accounts",
     "label": "Storage roots",
     "hint": "Detected from USERPROFILE, APPDATA and LOCALAPPDATA on every scan. They cannot be edited: the app only modifies files inside these roots, and only paths the scanner attributed to a session.",
     "claudeHome": "Claude Code home",

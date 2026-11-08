@@ -137,7 +137,9 @@ export function buildPlanItems(
   }
   for (const [kind, dir] of [
     ['file-history', record.fileHistoryDir],
-    ['session-env', record.sessionEnvDir]
+    ['session-env', record.sessionEnvDir],
+    ...record.extraFileHistoryDirs.map((d) => ['file-history', d] as const),
+    ...record.extraSessionEnvDirs.map((d) => ['session-env', d] as const)
   ] as const) {
     if (!dir) continue
     items.push({ kind, action: 'delete-directory', path: dir.dirPath, sizeBytes: dir.bytes, fileCount: dir.files, dirCount: dir.dirs + 1 })
@@ -259,6 +261,7 @@ export class DeleteService {
       roots?.sessionEnvRoot,
       roots?.liveSessionsDir,
       ...(roots?.desktopRoots.map((d) => d.path) ?? []),
+      ...(roots?.accounts.flatMap((a) => [a.path, a.projectsRoot, a.fileHistoryRoot, a.sessionEnvRoot, a.liveSessionsDir]) ?? []),
       os.homedir(),
       process.env.USERPROFILE
     ]

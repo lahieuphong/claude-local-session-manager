@@ -35,6 +35,7 @@
     "minutes_other": "{{count}} phút"
   },
   "roots": {
+    "accounts": "Tài khoản Claude",
     "label": "Thư mục dữ liệu",
     "hint": "Được dò từ USERPROFILE, APPDATA và LOCALAPPDATA mỗi lần quét và không chỉnh sửa được: ứng dụng chỉ thay đổi tệp bên trong các thư mục này, và chỉ những đường dẫn đã được gán cho một phiên.",
     "claudeHome": "Thư mục Claude Code",

@@ -111,7 +111,12 @@ export interface ClaudeSession {
   extraSessionDataDirectories: string[]
   fileHistoryDirectory?: string
   sessionEnvDirectory?: string
+  /** The same session's folders in another account (accounts can share one session store). */
+  extraFileHistoryDirectories: string[]
+  extraSessionEnvDirectories: string[]
   legacySubagentLogs: string[]
+  /** The Claude accounts this session is listed under (see accountAttribution.ts). */
+  accountIds: string[]
 
   /** Claude Desktop's own archive flag (`isArchived` in metadata). */
   archived: boolean
@@ -194,7 +199,25 @@ export interface CandidatePath {
   noteKey?: 'claudeHome' | 'transcripts' | 'fileHistory' | 'sessionEnv' | 'running'
 }
 
+/** A Claude sign-in on this PC: one Claude config folder. */
+export interface ClaudeAccount {
+  /** Opaque ID (12 hex), derived from the folder; the only thing the renderer sends back. */
+  id: string
+  /** Short name for the switcher. */
+  label: string
+  email?: string
+  displayName?: string
+  /** The plan, named as Claude Code's own account picker names it ("Max 20x"). */
+  plan?: string
+  /** Set when accounts share one session store: `original` holds it, `shared` reaches it through a link. */
+  storeRole?: 'original' | 'shared'
+  /** The account's Claude config folder. */
+  path: string
+}
+
 export interface StorageRoots {
+  /** Every Claude account found on this PC, the main folder first. */
+  accounts: ClaudeAccount[]
   claudeHome: string
   projectsRoot: string | null
   fileHistoryRoot: string | null
@@ -285,6 +308,8 @@ export interface LiveCliSession {
   entrypoint?: string
   /** Process start time recorded by Claude Code (Windows FILETIME), used to detect PID reuse. */
   procStart?: string
+  /** The account's registry folder this entry came from. */
+  registryDir?: string
   alive: boolean
 }
 

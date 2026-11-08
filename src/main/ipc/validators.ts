@@ -30,6 +30,13 @@ export function assertPlanId(v: unknown): string {
   return v
 }
 
+/** Account IDs are 12 lowercase hex characters, or absent for every session. */
+export function assertAccountId(v: unknown): string | undefined {
+  if (v === undefined || v === null) return undefined
+  if (typeof v !== 'string' || !/^[a-f0-9]{12}$/.test(v)) throw new Error('Invalid account id')
+  return v
+}
+
 export function assertString(v: unknown, max = 200): string {
   if (typeof v !== 'string' || v.length > max) throw new Error('Invalid argument')
   return v

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useFmt } from '../i18n'
-import { setView, useAppState, type SessionFilter } from '../stores/appStore'
+import { setView, useAppState, visibleSessions, type SessionFilter } from '../stores/appStore'
 import { UpdatePill } from './Updates'
 import { appBrand } from '../../../shared/appIdentity'
 import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
@@ -39,12 +39,14 @@ export function Sidebar(): ReactElement {
   // The product name depends on the distribution (the Microsoft Store edition has its own).
   const brand = appInfo ? appBrand(appInfo.distribution) : null
 
-  const sessions = useMemo(() => snapshot?.sessions ?? [], [snapshot])
+  const sessions = useAppState(visibleSessions)
   const counts = useMemo(() => filterCounts(sessions), [sessions])
   // One entry per canonical workspace; hidden sessions are not counted.
   const projects = useMemo(() => projectsOf(sessions.filter((s) => !s.hiddenInManager)), [sessions])
   const totalSize = useMemo(() => sessions.reduce((n, s) => n + s.totalSize, 0), [sessions])
-  const liveCount = process?.liveSessions.filter((l) => l.alive).length ?? 0
+  // With several accounts, like every other number here: the account on screen (as in its menu).
+  const severalAccounts = (snapshot?.roots.accounts.length ?? 0) > 1
+  const liveCount = severalAccounts ? sessions.filter((s) => s.live).length : (process?.liveSessions.filter((l) => l.alive).length ?? 0)
 
   const activeFilter = view.kind === 'sessions' && !view.project ? view.filter : null
   const activeProject = view.kind === 'sessions' ? view.project : undefined

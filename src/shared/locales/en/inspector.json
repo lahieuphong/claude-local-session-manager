@@ -48,6 +48,7 @@
     "priorIds": "Prior CLI IDs",
     "internalId": "Manager ID",
     "model": "Model",
+    "accounts": "Accounts",
     "claudeCode": "Claude Code",
     "gitBranch": "Git branch"
   },

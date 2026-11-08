@@ -109,7 +109,8 @@ export interface SessionManagerApi {
   openProject(id: string): Promise<ActionResult>
 
   getClaudeProcessStatus(force?: boolean): Promise<ProcessStatus>
-  getStorageInfo(): Promise<StorageInfo>
+  /** Totals of one Claude account, or of every session without an ID. */
+  getStorageInfo(accountId?: string): Promise<StorageInfo>
 
   getSettings(): Promise<AppSettings>
   updateSettings(patch: Partial<AppSettings>): Promise<AppSettings>

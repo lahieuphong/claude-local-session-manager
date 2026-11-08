@@ -1,7 +1,7 @@
 import { watch, type FSWatcher } from 'node:fs'
 import type { AppSettings } from '../../shared/types'
 import { errorMessage, logger } from '../util/logger'
-import type { DiscoveredRoots } from './claudeDiscovery'
+import { rootsOf, type DiscoveredRoots } from './claudeDiscovery'
 
 const SETTLE_MS = 2500
 const MIN_GAP_MS = 6000
@@ -22,9 +22,9 @@ export class WatchService {
 
   configure(settings: AppSettings, roots: DiscoveredRoots | null): void {
     const dirs = roots
-      ? [roots.projectsRoot, ...roots.desktopRoots.map((d) => d.path)].filter((d): d is string => !!d)
+      ? [...rootsOf(roots, 'projectsRoot'), ...roots.desktopRoots.map((d) => d.path)]
       : []
-    const shallow = roots?.liveSessionsDir ? [roots.liveSessionsDir] : []
+    const shallow = roots ? rootsOf(roots, 'liveSessionsDir') : []
     const signature = JSON.stringify([settings.refreshMode, settings.refreshIntervalSec, dirs, shallow])
     if (signature === this.signature) return
     this.stop()

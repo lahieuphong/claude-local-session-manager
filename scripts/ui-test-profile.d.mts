@@ -1,4 +1,5 @@
 export const UI_TEST_MARKER: string
+export const UI_TEST_SECRET: string
 export const UI_UUID_RE: RegExp
 export const LONG_TITLE_EN: string
 export const LONG_TITLE_VI: string
@@ -16,6 +17,11 @@ export interface UiTestRoles {
   desktopActive: string[]
   desktopArchived: string[]
   metadataOnly: string
+  onlySecond: string
+  inBoth: string
+  third: string[]
+  liveSecond?: string
+  liveSecondFile?: string
   metadataFiles: Record<string, string>
   live?: string
   liveFile?: string

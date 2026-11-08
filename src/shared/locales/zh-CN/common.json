@@ -10,7 +10,22 @@
     "projectTooltip_other": "{{count}} 个会话 · {{size}}",
     "noProjects": "未找到项目",
     "storage": "存储",
-    "settings": "设置"
+    "settings": "设置",
+    "accounts": "Claude 账户"
+  },
+  "account": {
+    "current": "正在查看的账户：{{name}}",
+    "sessions_other": "{{count}} 个会话",
+    "open_other": "{{count}} 个已打开",
+    "role": {
+      "original": "原始",
+      "shared": "共享"
+    },
+    "roleHint": {
+      "original": "此账户保存会话存储，另有账户共用。删除会话会对所有账户生效。",
+      "shared": "与其他账户共用会话存储。删除会话会对所有账户生效。"
+    },
+    "note": "只更改显示的会话，不会更改 Claude 的登录账户。"
   },
   "status": {
     "liveSessions_other": "{{count}} 个 Claude Code 会话已打开"

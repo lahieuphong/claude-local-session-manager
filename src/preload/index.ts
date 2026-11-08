@@ -38,7 +38,7 @@ const api: SessionManagerApi = {
   openProject: (id) => ipcRenderer.invoke(IPC.openProject, id),
 
   getClaudeProcessStatus: (force) => ipcRenderer.invoke(IPC.getClaudeProcessStatus, force === true),
-  getStorageInfo: () => ipcRenderer.invoke(IPC.getStorageInfo),
+  getStorageInfo: (accountId) => ipcRenderer.invoke(IPC.getStorageInfo, accountId),
 
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.updateSettings, patch),

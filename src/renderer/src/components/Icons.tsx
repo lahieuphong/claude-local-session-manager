@@ -119,14 +119,22 @@ export const IconExternal = (p: IconProps): ReactElement => (
     <path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
   </Icon>
 )
+export const IconUser = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9.25" />
+    <circle cx="12" cy="9.75" r="3.1" />
+    <path d="M6.1 18.9c1.15-2.55 3.3-3.85 5.9-3.85s4.75 1.3 5.9 3.85" />
+  </Icon>
+)
 export const IconCheck = (p: IconProps): ReactElement => (
   <Icon {...p}>
     <path d="m5 12 5 5 9-10" />
   </Icon>
 )
+/** As wide as IconCheck (5 to 19), which it often stands next to. */
 export const IconX = (p: IconProps): ReactElement => (
   <Icon {...p}>
-    <path d="M6 6l12 12M18 6 6 18" />
+    <path d="M5 5l14 14M19 5 5 19" />
   </Icon>
 )
 export const IconChevron = (p: IconProps): ReactElement => (

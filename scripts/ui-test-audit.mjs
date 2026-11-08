@@ -78,7 +78,7 @@ export function auditPage() {
   const scope = backdrops.length ? backdrops[backdrops.length - 1] : document.body
   const all = [...scope.querySelectorAll('*')].filter((el) => !el.closest('svg') && !/^(SCRIPT|STYLE|OPTION|NOSCRIPT)$/.test(el.tagName))
   const live = all.filter(rendered)
-  const INTERACTIVE = 'button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=menuitem], [role=radio], [role=switch], [role=tab]'
+  const INTERACTIVE = 'button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=combobox], [role=option], [role=menuitem], [role=menuitemradio], [role=radio], [role=switch], [role=tab]'
   const controls = live.filter((el) => el.matches(INTERACTIVE))
   /** Overlays float above the page on purpose; they are compared only with themselves. */
   const layerOf = (el) => el.closest('.toasts, .menu') ?? el.closest('.group-label, .list-columns') ?? scope
@@ -89,6 +89,22 @@ export function auditPage() {
   const doc = document.documentElement
   if (doc.scrollWidth > vw + 1) problems.push({ rule: 'page-overflow', severity: 'error', where: 'window', detail: `page is ${doc.scrollWidth}px wide in a ${vw}px window` })
   if (doc.scrollHeight > vh + 1) problems.push({ rule: 'page-overflow', severity: 'error', where: 'window', detail: `page is ${doc.scrollHeight}px tall in a ${vh}px window` })
+
+  // Every icon is drawn at the size it was given (layout size: a turning icon is not a squeezed one).
+  for (const svg of document.querySelectorAll('svg[width][height]')) {
+    if (!rendered(svg)) continue
+    const s = getComputedStyle(svg)
+    const want = [Number(svg.getAttribute('width')), Number(svg.getAttribute('height'))]
+    const got = [parseFloat(s.width), parseFloat(s.height)]
+    if (Math.abs(got[0] - want[0]) > 0.5 || Math.abs(got[1] - want[1]) > 0.5) add('squeezed-icon', svg, `${want.join('x')} drawn at ${got.map((n) => n.toFixed(1)).join('x')}`)
+  }
+  // Windows draws the list of a native dropdown in its own colours: the app uses components/Select.tsx.
+  for (const el of document.querySelectorAll('select, datalist')) add('native-dropdown', el, 'a native dropdown: its list ignores the app theme')
+  // An open menu or dropdown list must be whole, inside the window.
+  for (const el of document.querySelectorAll('.menu')) {
+    const r = el.getBoundingClientRect()
+    if (r.left < -0.5 || r.top < -0.5 || r.right > vw + 0.5 || r.bottom > vh + 0.5) add('menu-outside-window', el, `${Math.round(r.left)},${Math.round(r.top)} to ${Math.round(r.right)},${Math.round(r.bottom)} in a ${vw}x${vh} window`)
+  }
 
   // Boxes, scrollers and text clipping.
   for (const el of live) {
@@ -199,7 +215,7 @@ export function auditPage() {
     const rects = [...range.getClientRects()]
     if (!rects.length) continue
 
-    const technical = !!el.closest('pre, code, .mono, kbd, .row-title, .inspector-title, .row-model, .row-project, .preview, .path-value')
+    const technical = !!el.closest('pre, code, .mono, kbd, .row-title, .inspector-title, .row-model, .row-project, .preview, .path-value, .account-trigger-name, .account-item-name, .account-item-email, .account-item-plan')
     if (!technical) {
       if (new RegExp(`^(${NS}):`).test(text) || /^[a-z][A-Za-z]*(\.[A-Za-z0-9_-]+)+$/.test(text)) add('raw-text', el, `looks like an untranslated key: "${text}"`)
       if (/\{\{|\}\}|\bundefined\b|\bNaN\b|\[object Object\]|Invalid Date|\b(ENOENT|EACCES|EPERM|EBUSY)\b/.test(text)) add('raw-text', el, `"${text.slice(0, 60)}"`)

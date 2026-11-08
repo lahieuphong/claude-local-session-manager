@@ -15,11 +15,13 @@ import {
   setSort,
   toggleChecked,
   useAppState,
+  visibleSessions,
   type GroupBy,
   type SortKey
 } from '../stores/appStore'
 import { groupSessions, matchesFilter, matchesSearch, projectsOf, sortSessions, type SessionGroup } from '../../../shared/sessionQuery'
 import { SessionBadges } from './Badges'
+import { Select } from './Select'
 import { EmptyState, SkeletonRows } from './EmptyState'
 import {
   IconAlert,
@@ -71,7 +73,7 @@ export function SessionList(): ReactElement {
   const filter = view.kind === 'sessions' ? view.filter : 'all'
   const project = view.kind === 'sessions' ? view.project : undefined
 
-  const all = useMemo(() => snapshot?.sessions ?? [], [snapshot])
+  const all = useAppState(visibleSessions)
   const projectName = useMemo(() => {
     if (!project) return undefined
     return project === 'unresolved' ? t('sessions:unknownProject') : projectsOf(all).find((p) => p.key === project)?.label
@@ -177,26 +179,8 @@ export function SessionList(): ReactElement {
               </kbd>
             )}
           </div>
-          <label className="select-wrap">
-            <span className="visually-hidden">{t('sessions:sort.label')}</span>
-            <select className="select" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-              {SORTS.map((s) => (
-                <option key={s} value={s}>
-                  {t(`sessions:sort.${s}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="select-wrap">
-            <span className="visually-hidden">{t('sessions:group.label')}</span>
-            <select className="select" value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
-              {GROUPS.map((g) => (
-                <option key={g} value={g}>
-                  {t(`sessions:group.${g}`)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select name="sort" label={t('sessions:sort.label')} value={sort} onChange={setSort} options={SORTS.map((s) => ({ value: s, label: t(`sessions:sort.${s}`) }))} />
+          <Select name="group" label={t('sessions:group.label')} value={groupBy} onChange={setGroupBy} options={GROUPS.map((g) => ({ value: g, label: t(`sessions:group.${g}`) }))} />
         </div>
       </header>
 

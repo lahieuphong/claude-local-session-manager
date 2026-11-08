@@ -11,7 +11,7 @@ import { isConfirmationValid } from '../../../shared/confirm'
 import { useFmt, type Formatters } from '../i18n'
 import { closeDelete, copyToClipboard, errText, hasSafeMode, refreshProcess, setChecked, useAppState, type DeleteRequest } from '../stores/appStore'
 import { IconAlert, IconCheck, IconCopy, IconMinus, IconRefresh, IconShield, IconShieldAlert, IconTrash, IconX } from './Icons'
-import { Modal } from './Modal'
+import { Modal, ModalClose } from './Modal'
 import { tCode } from './RichText'
 import { localTitle } from '../utils/titles'
 
@@ -159,9 +159,7 @@ export function DeleteModal(): ReactElement | null {
           </div>
         </div>
         <div className="spacer" />
-        <button className="icon-btn" onClick={closeDelete} disabled={running} title={t('common:action.closeEsc')} aria-label={t('common:action.closeEsc')}>
-          <IconX size={16} />
-        </button>
+        <ModalClose onClose={closeDelete} disabled={running} />
       </header>
 
       {/* A new element for the result: it starts at the top, with the outcome in view, wherever the plan was scrolled to. */}

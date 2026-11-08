@@ -11,7 +11,7 @@ import type { ExportService } from '../services/exportService'
 import type { ProcessService } from '../services/processService'
 import type { SafetyModeController } from '../services/safetyMode'
 import type { UpdateService } from '../services/updateService'
-import { assertFormat, assertId, assertIds, assertPlanId, assertString } from './validators'
+import { assertFormat, assertId, assertIds, assertPlanId, assertString, assertAccountId } from './validators'
 import type { SessionRepository } from '../services/sessionRepository'
 import type { SettingsService } from '../services/settingsService'
 import { computeStorageInfo } from '../services/storageService'
@@ -95,9 +95,10 @@ export function registerIpc(ctx: IpcContext): void {
   })
 
   handle(IPC.getClaudeProcessStatus, (force) => ctx.processes.getStatus(force === true))
-  handle(IPC.getStorageInfo, async () => {
+  handle(IPC.getStorageInfo, async (accountId) => {
+    const id = assertAccountId(accountId)
     const snapshot = ctx.repo.getSnapshot() ?? (await ctx.repo.scan('storage'))
-    return computeStorageInfo(snapshot, ctx.appInfo.cachePath)
+    return computeStorageInfo(id ? { ...snapshot, sessions: snapshot.sessions.filter((s) => s.accountIds.includes(id)) } : snapshot, ctx.appInfo.cachePath)
   })
 
   handle(IPC.getSettings, () => ctx.settings.get())

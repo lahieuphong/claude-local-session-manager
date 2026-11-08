@@ -10,7 +10,22 @@
     "projectTooltip_other": "{{count}} phiên · {{size}}",
     "noProjects": "Không tìm thấy dự án nào",
     "storage": "Dung lượng",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "accounts": "Tài khoản Claude"
+  },
+  "account": {
+    "current": "Tài khoản đang xem: {{name}}",
+    "sessions_other": "{{count}} phiên",
+    "open_other": "{{count}} đang mở",
+    "role": {
+      "original": "gốc",
+      "shared": "dùng chung"
+    },
+    "roleHint": {
+      "original": "Kho phiên nằm ở tài khoản này và có tài khoản khác dùng chung. Xóa phiên sẽ xóa cho tất cả.",
+      "shared": "Dùng chung kho phiên với tài khoản khác. Xóa phiên sẽ xóa cho tất cả."
+    },
+    "note": "Chỉ đổi phiên đang xem, không đổi tài khoản đăng nhập của Claude."
   },
   "status": {
     "liveSessions_other": "{{count}} phiên Claude Code đang mở"

@@ -53,6 +53,14 @@ describe('UI test profile', () => {
     for (const uuid of roles.desktopArchived) expect(byCli.get(uuid)).toMatchObject({ hasMetadata: true, archived: true })
     expect(byCli.get(roles.metadataOnly)).toMatchObject({ hasMetadata: true, hasTranscript: false })
     expect(byCli.get(roles.metadataOnly)?.problems.length).toBeGreaterThan(0)
+
+    // Three accounts: the main one, one sharing its store through links, one with its own store.
+    const [first, second, third] = roots.accounts
+    expect(roots.accounts.map((a) => a.label)).toEqual(['first.account', 'second.account', 'third.account'])
+    expect(byCli.get(roles.longEn)?.accountIds).toEqual([first.id])
+    expect(byCli.get(roles.onlySecond)?.accountIds).toEqual([second.id])
+    expect(byCli.get(roles.inBoth)?.accountIds).toEqual([first.id, second.id])
+    for (const uuid of roles.third) expect(byCli.get(uuid)?.accountIds).toEqual([third.id])
   })
 
   it('registers a running session only when asked', () => {

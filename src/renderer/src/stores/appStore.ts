@@ -5,6 +5,7 @@ import type {
   AppSettings,
   ArmResult,
   BulkActionResult,
+  ClaudeSession,
   ExportFormat,
   ExportResult,
   MessageRef,
@@ -52,6 +53,8 @@ export interface AppState {
   updates: UpdateState | null
   settings: AppSettings | null
   snapshot: ScanSnapshot | null
+  /** The Claude account on screen, as last chosen. See activeAccountId(). */
+  accountId: string | null
   scanning: boolean
   loadError?: string
   process: ProcessStatus | null
@@ -86,6 +89,14 @@ function savePref(key: string, value: string): void {
   }
 }
 
+function loadAccount(): string | null {
+  try {
+    return localStorage.getItem('account')
+  } catch {
+    return null
+  }
+}
+
 let state: AppState = {
   appInfo: null,
   safety: null,
@@ -93,6 +104,7 @@ let state: AppState = {
   updates: null,
   settings: null,
   snapshot: null,
+  accountId: loadAccount(),
   scanning: false,
   process: null,
   processChecking: false,
@@ -193,12 +205,49 @@ export async function setMotion(motion: MotionPreference): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Claude accounts
+// ---------------------------------------------------------------------------
+
+const NO_SESSIONS: ClaudeSession[] = []
+
+/** The account on screen, or null when this PC has only one (there is nothing to switch). */
+export function activeAccountId(s: AppState): string | null {
+  const accounts = s.snapshot?.roots.accounts
+  if (!accounts || accounts.length < 2) return null
+  return accounts.some((a) => a.id === s.accountId) ? s.accountId : accounts[0].id
+}
+
+let visible: { snapshot: ScanSnapshot | null; accountId: string | null; sessions: ClaudeSession[] } = { snapshot: null, accountId: null, sessions: NO_SESSIONS }
+
+/** The sessions of the account on screen. The same array until something changes, so it can be a selector. */
+export function visibleSessions(s: AppState): ClaudeSession[] {
+  const accountId = activeAccountId(s)
+  if (visible.snapshot !== s.snapshot || visible.accountId !== accountId) {
+    const all = s.snapshot?.sessions ?? NO_SESSIONS
+    visible = { snapshot: s.snapshot, accountId, sessions: accountId ? all.filter((x) => x.accountIds.includes(accountId)) : all }
+  }
+  return visible.sessions
+}
+
+export function setAccount(accountId: string): void {
+  savePref('account', accountId)
+  setState((s) => ({
+    accountId,
+    // What was selected or open belongs to the other account.
+    selectedId: null,
+    checked: [],
+    view: s.view.kind === 'sessions' ? { kind: 'sessions', filter: s.view.filter } : s.view
+  }))
+}
+
+// ---------------------------------------------------------------------------
 // Data loading
 // ---------------------------------------------------------------------------
 
 function applySnapshot(snapshot: ScanSnapshot): void {
   setState((s) => {
-    const ids = new Set(snapshot.sessions.map((x) => x.id))
+    // A session can leave the account on screen, when it is resumed under another one.
+    const ids = new Set(visibleSessions({ ...s, snapshot }).map((x) => x.id))
     return {
       snapshot,
       loadError: undefined,

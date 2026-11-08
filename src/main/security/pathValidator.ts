@@ -22,6 +22,8 @@ export interface AllowedRoots {
   fileHistoryRoot: string | null
   sessionEnvRoot: string | null
   desktopRoots: string[]
+  /** The same kinds of folder of the other Claude accounts on this PC. */
+  otherRoots?: { projects: string[]; fileHistory: string[]; sessionEnv: string[]; homes: string[] }
 }
 
 export class PathRejectedError extends Error {
@@ -43,7 +45,7 @@ interface TargetRule {
   name: RegExp
 }
 
-const projects = (r: AllowedRoots): Array<string | null> => [r.projectsRoot]
+const projects = (r: AllowedRoots): Array<string | null> => [r.projectsRoot, ...(r.otherRoots?.projects ?? [])]
 const desktop = (r: AllowedRoots): Array<string | null> => r.desktopRoots
 
 /**
@@ -67,8 +69,8 @@ export const TARGET_RULES: Record<ClaudeTargetKind, TargetRule> = {
   metadata: { roots: desktop, type: 'file', depth: [3, 4], name: LOCAL_METADATA_RE },
   tombstone: { roots: desktop, type: 'file', depth: [3, 4], name: /^deleted_[A-Za-z0-9_-]{1,128}$/ },
   'archive-index': { roots: desktop, type: 'file', depth: [3, 4], name: /^archived-sessions\.idx$/ },
-  'file-history': { roots: (r) => [r.fileHistoryRoot], type: 'directory', depth: [1], name: UUID_RE },
-  'session-env': { roots: (r) => [r.sessionEnvRoot], type: 'directory', depth: [1], name: UUID_RE }
+  'file-history': { roots: (r) => [r.fileHistoryRoot, ...(r.otherRoots?.fileHistory ?? [])], type: 'directory', depth: [1], name: UUID_RE },
+  'session-env': { roots: (r) => [r.sessionEnvRoot, ...(r.otherRoots?.sessionEnv ?? [])], type: 'directory', depth: [1], name: UUID_RE }
 }
 
 /** True when `child` is strictly below `parent` (never equal to it). */
@@ -174,6 +176,7 @@ export function assertNotProtected(target: string, protectedPaths: Iterable<stri
 
 /** True if `p` is inside any Claude storage root (used to refuse export targets). */
 export function isInsideClaudeStorage(p: string, roots: AllowedRoots & { claudeHome?: string }): boolean {
-  const all = [roots.projectsRoot, roots.fileHistoryRoot, roots.sessionEnvRoot, roots.claudeHome, ...roots.desktopRoots]
+  const o = roots.otherRoots
+  const all = [roots.projectsRoot, roots.fileHistoryRoot, roots.sessionEnvRoot, roots.claudeHome, ...roots.desktopRoots, ...(o ? [...o.projects, ...o.fileHistory, ...o.sessionEnv, ...o.homes] : [])]
   return all.some((r) => !!r && isInsideOrEqual(p, r))
 }

@@ -405,6 +405,7 @@ export function buildScreenshotFixture(now: number): ScreenshotFixture {
     { path: win.join(APPDATA, 'Claude-3p', 'claude-code-sessions'), exists: false, note: 'Claude Desktop (Claude-3p, APPDATA)' }
   ]
   const roots: StorageRoots = {
+    accounts: [],
     claudeHome: CLAUDE_HOME,
     projectsRoot: PROJECTS_ROOT,
     fileHistoryRoot: FILE_HISTORY_ROOT,

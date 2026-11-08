@@ -35,6 +35,7 @@
     "minutes_other": "{{count}} 分钟"
   },
   "roots": {
+    "accounts": "Claude 账户",
     "label": "存储根目录",
     "hint": "每次扫描时根据 USERPROFILE、APPDATA 和 LOCALAPPDATA 检测，无法编辑：应用只会修改这些根目录内的文件，并且只修改扫描器归属到某个会话的路径。",
     "claudeHome": "Claude Code 主目录",

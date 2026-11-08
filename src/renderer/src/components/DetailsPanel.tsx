@@ -68,6 +68,7 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
   const busy = useAppState((st) => st.busy)
   const safety = useAppState((st) => st.safety)
   const appInfo = useAppState((st) => st.appInfo)
+  const accounts = useAppState((st) => st.snapshot?.roots.accounts)
   const raw = settings?.showRawPaths ?? false
   // Microsoft Store edition: Claude Desktop's data is read-only for this build (the main process enforces it).
   const storeReadOnly = s.hasMetadata && !!appInfo?.desktopDataReadOnly
@@ -175,6 +176,8 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
             <KV k={t('inspector:field.created')} v={fmt.dateTime(s.createdAt)} />
             <KV k={t('inspector:field.updated')} v={fmt.dateTime(s.updatedAt)} />
             {models && <KV k={t('inspector:field.model')} v={<span className="mono">{models}</span>} />}
+            {/* Accounts can share one session store: deleting this session removes it for all of them. */}
+            {s.accountIds.length > 1 && <KV k={t('inspector:field.accounts')} v={accounts?.filter((a) => s.accountIds.includes(a.id)).map((a) => a.label).join(', ')} />}
             {live && (
               <KV
                 k={t('inspector:field.process')}
@@ -230,7 +233,13 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
               <PathRow key={p} label={t('inspector:file.subagentLog')} path={p} raw={raw} />
             ))}
             <PathRow label={t('inspector:file.fileHistory')} path={s.fileHistoryDirectory} raw={raw} />
+            {s.extraFileHistoryDirectories.map((p) => (
+              <PathRow key={p} label={t('inspector:file.fileHistory')} path={p} raw={raw} />
+            ))}
             <PathRow label={t('inspector:file.sessionEnv')} path={s.sessionEnvDirectory} raw={raw} />
+            {s.extraSessionEnvDirectories.map((p) => (
+              <PathRow key={p} label={t('inspector:file.sessionEnv')} path={p} raw={raw} />
+            ))}
           </div>
         </Collapsible>
 

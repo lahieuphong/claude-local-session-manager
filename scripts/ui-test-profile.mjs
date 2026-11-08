@@ -4,11 +4,14 @@
 // Desktop's on-disk format, chosen to make the interface work hard: many projects
 // (the sidebar must scroll), long unbroken titles, Vietnamese and Chinese names,
 // sessions with and without Desktop metadata, archived sessions, broken metadata,
-// a running session. Nothing here comes from a real user:
+// a running session. Three Claude accounts: the main one, a second one that shares
+// its session store through folder links, and a third one with its own store.
+// Nothing here comes from a real user:
 //   sessions  c0ffee00-0000-4000-8000-0000000000NN
 //   projects  C:\UiTest\… (never created)
+//   accounts  first.account@example.com and so on
 // It refuses to write into a real profile.
-import { existsSync, mkdirSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -18,6 +21,8 @@ const KB = 1024
 /** Marker file: a folder with it was written by this script and may be replaced or removed by it. */
 export const UI_TEST_MARKER = '.ui-test-profile'
 export const uiUuid = (n) => `c0ffee00-0000-4000-8000-${String(n).padStart(12, '0')}`
+/** In the second account's private fields: it must never reach the app's screen or logs. */
+export const UI_TEST_SECRET = 'UI-TEST-SECRET-VALUE'
 /** Every session of the profile matches this; anything else means the app is reading real data. */
 export const UI_UUID_RE = /^c0ffee00-0000-4000-8000-\d{12}$/
 
@@ -115,6 +120,7 @@ export function writeUiTestProfile(home, { now = Date.now(), livePid } = {}) {
   writeFileSync(path.join(claudeHome, UI_TEST_MARKER), 'Synthetic data written by scripts/ui-test-profile.mjs. Safe to delete.\n')
 
   const roles = { metadataFiles: {} }
+  writeFileSync(path.join(root, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'first.account@example.com', displayName: 'First Account', planDisplayName: 'Ultra', organizationRateLimitTier: 'default_claude_max_20x' } }))
   let n = 0
   /** Sessions are at least 10 minutes old: the delete guard refuses files written in the last 30 seconds. */
   const addTranscript = ({ project, title, turns = 3, bytes = 40 * KB, ageMin, withData = false, longPrompt = false }) => {
@@ -184,8 +190,46 @@ export function writeUiTestProfile(home, { now = Date.now(), livePid } = {}) {
   addMetadata(roles.metadataOnly, { cwd: PROJECT_PATHS[1], title: 'Metadata without a transcript', archived: false, last: now - 500 * MIN })
   write(path.join(orgDir, 'local_dec0de00-0000-4000-8000-999999999999.json'), '{ this is not valid json', new Date(now - 600 * MIN))
 
+  // Second account: the same store through folder links (junctions), its own session-env and registry.
+  const second = path.join(root, '.claude-accounts', 'second-account')
+  const third = path.join(root, '.claude-accounts', 'third-account')
+  mkdirSync(path.join(second, 'session-env'), { recursive: true })
+  mkdirSync(path.join(second, 'sessions'), { recursive: true })
+  mkdirSync(path.join(claudeHome, 'file-history'), { recursive: true })
+  mkdirSync(path.join(claudeHome, 'session-env'), { recursive: true })
+  // The profile can be written again over itself.
+  if (!existsSync(path.join(second, 'projects'))) symlinkSync(projects, path.join(second, 'projects'), 'junction')
+  if (!existsSync(path.join(second, 'file-history'))) symlinkSync(path.join(claudeHome, 'file-history'), path.join(second, 'file-history'), 'junction')
+  writeFileSync(path.join(second, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'second.account@example.com', displayName: 'Second Account', planDisplayName: 'Pro', organizationName: UI_TEST_SECRET }, secretField: UI_TEST_SECRET }))
+  writeFileSync(path.join(second, '.credentials.json'), JSON.stringify({ token: UI_TEST_SECRET }))
+  const envIn = (accountHome, uuid) => write(path.join(accountHome, 'session-env', uuid, 'env.json'), JSON.stringify({ note: 'synthetic UI test data' }), new Date(now - 30 * MIN))
+  const secondProject = PROJECT_PATHS[5]
+  roles.onlySecond = addTranscript({ project: secondProject, title: 'Used only by the second account', ageMin: 18 }).uuid
+  envIn(second, roles.onlySecond)
+  roles.inBoth = addTranscript({ project: secondProject, title: 'Started in the first account, resumed in the second', ageMin: 19 }).uuid
+  envIn(claudeHome, roles.inBoth)
+  envIn(second, roles.inBoth)
+
+  // Third account: nothing shared, its own folders.
+  const thirdProjects = path.join(third, 'projects')
+  mkdirSync(path.join(third, 'sessions'), { recursive: true })
+  writeFileSync(path.join(third, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'third.account@example.com', displayName: 'Third Account' } }))
+  roles.third = []
+  for (let i = 0; i < 3; i++) {
+    n += 1
+    const uuid = uiUuid(n)
+    const cwd = 'C:\\UiTest\\only-in-the-third-account'
+    const last = now - (20 + i) * MIN
+    write(path.join(thirdProjects, projectDirName(cwd), `${uuid}.jsonl`), transcript({ uuid, cwd, title: `Third account session ${i + 1}`, model: MODELS[0], turns: 2, bytes: 8 * KB, first: last - 40 * MIN, last }), new Date(last))
+    roles.third.push(uuid)
+  }
+
   // A session that is running right now (registered to `livePid`).
   if (livePid) {
+    const liveSecond = addTranscript({ project: secondProject, title: 'Running under the second account', ageMin: 13 }).uuid
+    roles.liveSecond = liveSecond
+    roles.liveSecondFile = path.join(second, 'sessions', `${livePid}.json`)
+    writeFileSync(roles.liveSecondFile, JSON.stringify({ pid: livePid, sessionId: liveSecond, cwd: secondProject, status: 'idle', name: 'ui-test-second' }))
     const { uuid } = addTranscript({ project: PROJECT_PATHS[3], title: 'Session that is running right now', ageMin: 12 })
     roles.live = uuid
     roles.liveFile = path.join(liveDir, `${livePid}.json`)

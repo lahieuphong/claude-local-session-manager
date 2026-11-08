@@ -48,6 +48,7 @@
     "priorIds": "之前的 CLI ID",
     "internalId": "管理器 ID",
     "model": "模型",
+    "accounts": "账户",
     "claudeCode": "Claude Code",
     "gitBranch": "Git 分支"
   },

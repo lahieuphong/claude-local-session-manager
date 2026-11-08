@@ -4,6 +4,7 @@ import { LOCALE_LABELS, SUPPORTED_LOCALES, resolveLocale } from '../../../shared
 import type { LogEntry, MotionPreference, RefreshMode } from '../../../shared/types'
 import { IconCheck, IconChevron, IconX } from '../components/Icons'
 import { DeletionSafetySection } from '../components/SafetyMode'
+import { Select } from '../components/Select'
 import { AboutSection, UpdatesSection } from '../components/Updates'
 import { useFmt } from '../i18n'
 import { clearCache, errText, hasSafeMode, setLanguage, setMotion, toast, updateSettings, useAppState } from '../stores/appStore'
@@ -91,22 +92,35 @@ export function SettingsPage(): ReactElement {
             ))}
           </div>
           {settings?.refreshMode === 'interval' && (
-            <label className="inline-field">
-              <span>{t('settings:refresh.interval')}</span>
-              <select className="select" value={settings.refreshIntervalSec} onChange={(e) => void updateSettings({ refreshIntervalSec: Number(e.target.value) })}>
-                {INTERVALS.map((s) => (
-                  <option key={s} value={s}>
-                    {s < 60 ? t('settings:refresh.seconds', { count: s }) : t('settings:refresh.minutes', { count: s / 60 })}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="inline-field">
+              <span aria-hidden="true">{t('settings:refresh.interval')}</span>
+              <Select
+                name="refresh-interval"
+                label={t('settings:refresh.interval')}
+                value={settings.refreshIntervalSec}
+                onChange={(s) => void updateSettings({ refreshIntervalSec: s })}
+                options={INTERVALS.map((s) => ({ value: s, label: s < 60 ? t('settings:refresh.seconds', { count: s }) : t('settings:refresh.minutes', { count: s / 60 }) }))}
+              />
+            </div>
           )}
         </SettingRow>
 
         <SettingRow label={t('settings:roots.label')} hint={t('settings:roots.hint')} stacked>
           {roots ? (
             <dl className="kv roots">
+              {roots.accounts.length > 1 && (
+                <>
+                  <dt>{t('settings:roots.accounts')}</dt>
+                  <dd>
+                    {roots.accounts.map((a) => (
+                      <div key={a.id} className="root-entry">
+                        <code className="wrap">{a.path}</code>
+                        <div className="hint">{a.email ?? a.label}</div>
+                      </div>
+                    ))}
+                  </dd>
+                </>
+              )}
               <dt>{t('settings:roots.claudeHome')}</dt>
               <dd>
                 <code className="wrap">{roots.claudeHome}</code>

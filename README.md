@@ -15,6 +15,7 @@ export or permanently delete sessions.
 ## Features
 
 - Automatic discovery of Claude storage. Nothing is hard-coded: everything comes from `USERPROFILE` / `APPDATA` / `LOCALAPPDATA` (and `CLAUDE_CONFIG_DIR` if set).
+- **Several Claude accounts**: every sign-in on this PC (`~/.claude` and `~/.claude-accounts/<name>`) is listed in a dropdown at the top right, and the list, projects and storage follow it.
 - Session list with search (title, prompts, project, paths, IDs, accent-insensitive: `nha hat` finds `Nhà hát`), sorting, grouping by date or project, and filters (All / Active / Archived / Transcript only / Metadata only & problems / per project).
 - Details panel:
   - what you need to recognise a session: project path, dates, model, message counts, first and last message
@@ -308,6 +309,7 @@ private keys, passwords or tokens.
 | File-edit history per session | `%USERPROFILE%\.claude\file-history\<uuid>\` |
 | Session environment per session | `%USERPROFILE%\.claude\session-env\<uuid>\` |
 | Running Claude Code sessions | `%USERPROFILE%\.claude\sessions\<pid>.json` |
+| Other Claude sign-ins (the same folders, per account; `projects` and others may be links to `.claude`) | `%USERPROFILE%\.claude-accounts\<name>\` |
 | Claude Desktop "Code" session metadata (MSIX / Microsoft Store) | `%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude\claude-code-sessions\<accountId>\<orgId>\local_<id>.json` |
 | Claude Desktop metadata (classic installer) | `%APPDATA%\Claude\claude-code-sessions\<accountId>\<orgId>\local_<id>.json` |
 | Desktop archive hint / delete tombstones | `archived-sessions.idx`, `deleted_<id>` next to the `local_*.json` files |
@@ -318,6 +320,22 @@ reads the real project path from the transcript's `cwd` field instead of
 decoding the folder name.
 
 The Settings page lists every location that was checked and which ones exist.
+
+## Several Claude accounts
+
+Every Claude config folder found (`~/.claude`, `CLAUDE_CONFIG_DIR`, and each
+folder in `~/.claude-accounts` that has a `projects` folder) is one account. With
+two or more, a dropdown at the top right lists them, named from `oauthAccount` in the
+account's `.claude.json` (only the email, display name and plan are kept). With one, that file is not
+opened. `.credentials.json` is never opened.
+
+Accounts can share one session store through folder links, and a transcript does
+not say who wrote it. A session is listed under the accounts that left a trace of
+using it (`session-env/<uuid>`, the registry of running sessions), so it can appear
+under two. One with no trace goes under the account whose folder really holds the
+store. **This is only where a session is listed.** Safety does not depend on it: a
+session running under any account is protected in every view, and deleting a session
+removes it from the shared store, with its folders in every account.
 
 ## How sessions are recognised
 

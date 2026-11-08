@@ -5,13 +5,14 @@ import { errorMessage, logger } from '../util/logger'
 import { msg } from '../util/messages'
 import type { AllowedRoots } from '../security/pathValidator'
 import type { ScanCache } from './cacheService'
-import { discoverRoots, toAllowedRoots, toStorageRoots, type DiscoveredRoots, type DiscoveryEnv } from './claudeDiscovery'
+import { attributeSessions } from './accountAttribution'
+import { discoverRoots, rootsOf, toAllowedRoots, toStorageRoots, type DiscoveredRoots, type DiscoveryEnv } from './claudeDiscovery'
 import type { ManagerHiddenStore } from './managerHiddenStore'
 import { TOMBSTONE_PREFIX, scanDesktopRoot, stripBom, transcriptIdsOf, type DesktopRootScan } from './metadataParser'
 import type { ProcessService } from './processService'
 import { canonicalizeProjects, decodeProjectDirName, sanitizeProjectPath } from './projectResolver'
 import { buildSessions, knownWorkspacePaths, type SessionRecord } from './sessionBuilder'
-import { scanProjects, scanUuidDirs, type ProjectsScan, type ScanOptions } from './sessionScanner'
+import { scanProjects, scanUuidDirs, type ProjectsScan, type ScanOptions, type UuidDirEntry } from './sessionScanner'
 import { pathKey } from '../util/fsx'
 
 export interface RepositoryDeps {
@@ -100,34 +101,47 @@ export class SessionRepository extends EventEmitter {
     const issues: ScanIssue[] = []
     const roots = await discoverRoots(this.deps.env)
     this.roots = roots
-    this.deps.processService.setLiveSessionsDir(roots.liveSessionsDir)
+    this.deps.processService.setLiveSessionsDir(rootsOf(roots, 'liveSessionsDir'))
 
-    const [desktop, projects, fileHistory, sessionEnv, processStatus] = await Promise.all([
+    // Every account is scanned once; linked folders resolve to one location and count once.
+    const scanUuidRoot = (root: string): Promise<Map<string, UuidDirEntry>> =>
+      scanUuidDirs(root).catch((err) => {
+        issues.push({ path: root, message: errorMessage(err) })
+        return new Map<string, UuidDirEntry>()
+      })
+    const sessionEnvRoots = rootsOf(roots, 'sessionEnvRoot')
+    const [desktop, projectScans, fileHistoryScans, sessionEnvScans, processStatus] = await Promise.all([
       Promise.all(roots.desktopRoots.map((d) => scanDesktopRoot(d.path))),
-      roots.projectsRoot
-        ? scanProjects(roots.projectsRoot, this.deps.cache, this.deps.scanOptions)
-        : Promise.resolve(null),
-      scanUuidDirs(roots.fileHistoryRoot).catch((err) => {
-        issues.push({ path: roots.fileHistoryRoot ?? undefined, message: errorMessage(err) })
-        return new Map()
-      }),
-      scanUuidDirs(roots.sessionEnvRoot).catch((err) => {
-        issues.push({ path: roots.sessionEnvRoot ?? undefined, message: errorMessage(err) })
-        return new Map()
-      }),
+      Promise.all(
+        rootsOf(roots, 'projectsRoot').map((root) => {
+          const scan = scanProjects(root, this.deps.cache, this.deps.scanOptions)
+          // A problem in an extra account's store must not hide the main one's sessions.
+          return root === roots.projectsRoot
+            ? scan
+            : scan.catch((err): ProjectsScan | null => {
+                issues.push({ path: root, message: errorMessage(err) })
+                return null
+              })
+        })
+      ),
+      Promise.all(rootsOf(roots, 'fileHistoryRoot').map(scanUuidRoot)),
+      Promise.all(sessionEnvRoots.map(scanUuidRoot)),
       this.deps.processService.getStatus().catch(() => null)
     ])
+    const projects = mergeProjectScans(projectScans.filter((s): s is ProjectsScan => !!s))
 
     for (const d of desktop) issues.push(...d.issues)
     if (projects) issues.push(...projects.issues)
-    if (!roots.projectsRoot) issues.push(msg('scan.projectsRootMissing'))
+    if (!projects) issues.push(msg('scan.projectsRootMissing'))
 
     const decodedProjectDirs = await this.resolveFolderNames(projects, desktop)
     const { sessions, records } = buildSessions({
       desktop,
       projects,
-      fileHistory,
-      sessionEnv,
+      fileHistory: fileHistoryScans[0] ?? new Map<string, UuidDirEntry>(),
+      extraFileHistory: fileHistoryScans.slice(1),
+      sessionEnv: sessionEnvScans[0] ?? new Map<string, UuidDirEntry>(),
+      extraSessionEnv: sessionEnvScans.slice(1),
       hidden: this.deps.hidden.keys(),
       liveSessions: processStatus?.liveSessions ?? [],
       decodedProjectDirs
@@ -139,8 +153,15 @@ export class SessionRepository extends EventEmitter {
       if (p && !r.workspacePaths.some((w) => pathKey(w) === pathKey(p))) r.workspacePaths.push(p)
     }
     this.records = records
+    attributeSessions({
+      records: records.values(),
+      accounts: roots.accounts,
+      sessionEnvByRoot: new Map(sessionEnvRoots.map((root, i) => [pathKey(root), sessionEnvScans[i]])),
+      liveSessions: processStatus?.liveSessions ?? []
+    })
 
-    if (projects) {
+    // Only when every store was read: one that failed this time still has its files, and their cache.
+    if (projects && projectScans.every(Boolean)) {
       this.deps.cache.prune([...projects.transcripts.map((t) => t.filePath), ...projects.legacySubagentLogs.map((l) => l.filePath)])
     }
     await this.deps.cache.save()
@@ -229,6 +250,24 @@ export class SessionRepository extends EventEmitter {
     }
     return details
   }
+}
+
+/** One result from the session stores of every account. */
+function mergeProjectScans(scans: ProjectsScan[]): ProjectsScan | null {
+  if (scans.length <= 1) return scans[0] ?? null
+  const merged: ProjectsScan = { transcripts: [], dataDirs: [], legacySubagentLogs: [], stats: { parsed: 0, incremental: 0, fromCache: 0, subagentLogsExcluded: 0, ignoredEntries: 0 }, issues: [] }
+  for (const s of scans) {
+    merged.transcripts.push(...s.transcripts)
+    merged.dataDirs.push(...s.dataDirs)
+    merged.legacySubagentLogs.push(...s.legacySubagentLogs)
+    merged.issues.push(...s.issues)
+    merged.stats.parsed += s.stats.parsed
+    merged.stats.incremental += s.stats.incremental
+    merged.stats.fromCache += s.stats.fromCache
+    merged.stats.subagentLogsExcluded += s.stats.subagentLogsExcluded
+    merged.stats.ignoredEntries += s.stats.ignoredEntries
+  }
+  return merged
 }
 
 function desktopCounts(d: DesktopRootScan): { sessionFiles: number; tombstones: number; archiveIndexes: number } {

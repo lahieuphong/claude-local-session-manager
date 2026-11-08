@@ -290,7 +290,7 @@ const scrollToTop = (element, offset = 16) => `(() => {
   while (box && !(box.scrollHeight > box.clientHeight && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement
   if (box) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top - ${offset}
 })()`
-/** Set a React-controlled input or select (what typing / choosing does). */
+/** Set a React-controlled input (what typing does). */
 const setValue = (element, value, event = 'input') => `(() => {
   const el = ${element}
   Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value').set.call(el, ${JSON.stringify(value)})
@@ -350,12 +350,21 @@ async function showLanguage(page, appLocale) {
   }
   await page.evaluate(`document.querySelector('.nav .nav-item').click()`)
   await page.waitFor(`document.querySelectorAll('.row').length === ${DEMO_SESSIONS.length}`, 'the session list')
-  await page.evaluate(setValue(GROUP_SELECT, 'date', 'change'))
+  await choose(page, 'group', 'date')
   await page.waitFor(`document.querySelectorAll('.group').length > 1 && document.querySelector('.group-name')?.textContent !== 'DemoWebApp'`, 'date grouping')
   return viaSettings ? 'Settings → Language' : 'saved language setting at launch'
 }
 
-const GROUP_SELECT = `[...document.querySelectorAll('select.select')].find((s) => [...s.options].some((o) => o.value === 'project'))`
+/** Choose in one of the app's dropdowns (components/Select.tsx), as a click would. */
+async function choose(page, name, value) {
+  const trigger = `document.querySelector('.select[data-name=${JSON.stringify(name)}]')`
+  if ((await page.evaluate(`${trigger}.dataset.value`)) === value) return
+  await page.evaluate(`${trigger}.click()`)
+  const option = `document.querySelector('.select-menu [role=option][data-value=${JSON.stringify(value)}]')`
+  await page.waitFor(option, `the ${name} list`)
+  await page.evaluate(`${option}.click()`)
+  await page.waitFor(`${trigger}.dataset.value === ${JSON.stringify(value)} && !document.querySelector('.select-menu')`, `${name}: ${value}`)
+}
 
 /** The four screenshots of one language, in the running app. */
 async function shoot(page, listingLocale, appLocale, claudeHome, audit) {
@@ -372,7 +381,7 @@ async function shoot(page, listingLocale, appLocale, claudeHome, audit) {
 
   // 2. Session details: grouped by project, one session, with Technical details open so the
   //    picture shows what its caption promises: project, session ID, model, sizes and files.
-  await page.evaluate(setValue(GROUP_SELECT, 'project', 'change'))
+  await choose(page, 'group', 'project')
   await page.waitFor(`document.querySelector('.group-name')?.textContent === 'DemoWebApp'`, 'project grouping')
   await page.evaluate(`${rowByTitle(DETAIL_SESSION)}.querySelector('.row-main').click()`)
   await page.waitFor(`document.querySelector('.inspector-title')?.textContent.includes(${JSON.stringify(DETAIL_SESSION)})`, 'the selected session')

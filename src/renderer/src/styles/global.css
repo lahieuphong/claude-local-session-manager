@@ -182,6 +182,10 @@ textarea {
 button {
   cursor: pointer;
 }
+/* An icon keeps the size it was given: a narrow button must not squeeze it. */
+button > svg {
+  flex: none;
+}
 button:disabled {
   cursor: default;
 }
@@ -435,6 +439,8 @@ html[lang='zh-CN'] .btn.caps {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Without this the browser's own 6px on each side squeezed every icon in it. */
+  padding: 0;
   width: 26px;
   height: 26px;
   flex: none;
@@ -487,23 +493,25 @@ html[lang='zh-CN'] .btn.caps {
   white-space: nowrap;
 }
 
-/* Native select, integrated look. */
-.select-wrap {
-  position: relative;
-  display: inline-flex;
-}
+/*
+ * Dropdowns (components/Select.tsx). The list of a native <select> is drawn by
+ * Windows and ignores the theme, so the app has none; the list is a .menu.
+ */
 .select {
-  appearance: none;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
   height: 32px;
-  padding: 0 28px 0 10px;
+  padding: 0 9px 0 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-default);
-  background-color: var(--bg-input);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23878787' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
+  background: var(--bg-input);
   color: var(--text-secondary);
   font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
   transition:
     border-color var(--dur-hover) var(--ease),
     color var(--dur-hover) var(--ease);
@@ -512,9 +520,63 @@ html[lang='zh-CN'] .btn.caps {
   border-color: var(--border-strong);
   color: var(--text-primary);
 }
-.select option {
-  background: var(--bg-elevated);
+.select.open {
+  border-color: var(--accent-border);
   color: var(--text-primary);
+}
+/* Every choice takes the same cell, only the current one is seen: as wide as the longest. */
+.select-value {
+  display: grid;
+}
+.select-value > span {
+  grid-area: 1 / 1;
+  visibility: hidden;
+}
+.select-value > .on {
+  visibility: visible;
+}
+.select-chev {
+  flex: none;
+  color: var(--text-muted);
+  transform: rotate(90deg);
+  transition: transform var(--dur-hover) var(--ease);
+}
+.select.open .select-chev {
+  transform: rotate(-90deg);
+}
+/* Placed by the component (fixed, so no scrolling pane cuts it off). */
+.menu.select-menu {
+  position: fixed;
+  z-index: 40;
+  top: auto;
+  right: auto;
+  left: auto;
+  max-width: calc(100vw - 16px);
+  overflow-y: auto;
+}
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-hover) var(--ease);
+}
+.select-option.active {
+  background: var(--bg-surface-hover);
+}
+.select-option-label {
+  flex: 1;
+}
+.select-option-check {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
 }
 
 /* ---------------------------------------------------------------- layout */
@@ -760,12 +822,17 @@ details[open] > summary .chev {
   gap: 10px;
   min-width: 0;
 }
+/* When space runs out, the long sentence on the left gives way first. */
 .strip-safety {
-  flex: 1 1 auto;
+  flex: 1 4 auto;
 }
 .strip-claude {
   flex: 0 1 auto;
   color: var(--text-muted);
+}
+/* "Closed" is short and has no ellipsis: shrunk, it would push the button into the next control. */
+.strip-claude:not(.warn) {
+  flex: none;
 }
 .strip-claude.warn {
   color: var(--warning);
@@ -1664,6 +1731,153 @@ html[lang='zh-CN'] .group-label {
   font-size: 11.5px;
   color: var(--text-muted);
 }
+.menu-heading {
+  padding: 6px 10px 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* The Claude account on screen, in the top right corner: it decides everything listed below. */
+.account-menu-wrap {
+  position: relative;
+  flex: none;
+}
+.account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 190px;
+  height: 26px;
+  padding: 0 7px 0 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition:
+    background-color var(--dur-hover) var(--ease),
+    border-color var(--dur-hover) var(--ease);
+}
+.account-trigger:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+}
+.account-trigger[aria-expanded='true'] {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent-border);
+}
+.account-trigger-icon,
+.account-trigger-chev {
+  flex: none;
+  color: var(--text-muted);
+}
+.account-trigger-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-trigger-chev {
+  transform: rotate(90deg);
+  transition: transform var(--dur-hover) var(--ease);
+}
+.account-trigger[aria-expanded='true'] .account-trigger-chev {
+  transform: rotate(-90deg);
+}
+.menu.account-menu {
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  width: 440px;
+  max-width: calc(100vw - 2 * var(--space-4));
+}
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  /* Room for the top strip, the heading and the note, with any number of accounts. */
+  max-height: min(340px, calc(100vh - 140px));
+  overflow-y: auto;
+}
+.account-item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background-color var(--dur-hover) var(--ease);
+}
+.account-item:hover,
+.account-item:focus-visible {
+  background: var(--bg-surface-hover);
+  box-shadow: none;
+}
+.account-item-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+.account-item.on .account-item-icon,
+.account-item-check {
+  color: var(--accent);
+}
+.account-item-check {
+  flex: none;
+}
+.account-item-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.account-item-head,
+.account-item-meta {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.account-item-head {
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.account-item-name,
+.account-item-email {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-item-tag {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.account-item-meta {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.account-item-plan,
+.account-item-count,
+.account-item-open {
+  flex: none;
+  white-space: nowrap;
+}
+/* A dot between whichever of these are there. */
+.account-item-meta > * + *::before {
+  content: '·';
+  margin: 0 5px;
+  color: var(--text-muted);
+}
 
 /* ---------------------------------------------------------------- pages */
 .page {
@@ -2290,6 +2504,13 @@ html[lang='zh-CN'] .update-mode {
   flex: none;
   margin-top: 3px;
 }
+/* Centred on the first line of the title, its icon the size of the title icon. */
+.modal-close {
+  width: 30px;
+  height: 30px;
+  margin: -3px -6px -3px 0;
+  color: var(--text-secondary);
+}
 .modal-header h2 {
   font-size: 17px;
   font-weight: 650;
@@ -2786,6 +3007,9 @@ body:has(.modal-backdrop) .toasts {
   }
   .strip-claude .strip-text {
     max-width: 220px;
+  }
+  .account-trigger {
+    max-width: 150px;
   }
 }
 

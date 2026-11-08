@@ -11,7 +11,24 @@
     "projectTooltip_other": "{{count}} sessions · {{size}}",
     "noProjects": "No projects found",
     "storage": "Storage",
-    "settings": "Settings"
+    "settings": "Settings",
+    "accounts": "Claude accounts"
+  },
+  "account": {
+    "current": "Account on screen: {{name}}",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessions",
+    "open_one": "{{count}} open",
+    "open_other": "{{count}} open",
+    "role": {
+      "original": "original",
+      "shared": "shared store"
+    },
+    "roleHint": {
+      "original": "This account holds the session store, and another account shares it. Deleting a session deletes it for all of them.",
+      "shared": "Shares its session store with another account. Deleting a session deletes it for all of them."
+    },
+    "note": "This only changes which sessions you see. It does not change the account Claude is signed in to."
   },
   "status": {
     "liveSessions_one": "{{count}} Claude Code session open",
