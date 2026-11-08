@@ -1,6 +1,7 @@
 import { useEffect, type ReactElement } from 'react'
 import { DeleteModal } from './components/DeleteModal'
 import { DetailsPanel } from './components/DetailsPanel'
+import { ProviderPicker } from './components/ProviderPicker'
 import { ArmModal } from './components/SafetyMode'
 import { SessionList } from './components/SessionList'
 import { Sidebar } from './components/Sidebar'
@@ -14,6 +15,7 @@ const PROCESS_POLL_MS = 15_000
 
 export default function App(): ReactElement {
   const view = useAppState((s) => s.view)
+  const provider = useAppState((s) => s.provider)
 
   useEffect(() => {
     void init()
@@ -21,8 +23,18 @@ export default function App(): ReactElement {
     return () => window.clearInterval(t)
   }, [])
 
+  // Every start begins with the choice of tool: Claude or Codex.
+  if (!provider) {
+    return (
+      <div className="app picker-app">
+        <ProviderPicker />
+        <Toasts />
+      </div>
+    )
+  }
+
   return (
-    <div className="app">
+    <div className="app" data-provider={provider}>
       <Sidebar />
       <main className="main">
         <StatusStrip />

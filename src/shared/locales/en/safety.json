@@ -9,7 +9,9 @@
     "safeText": "Dry run — no Claude files can be deleted, archived or restored.",
     "safeTextStore": "Dry run — no Claude files can be deleted.",
     "armedText": "Permanent deletion is enabled for this app session. One delete, 10 minutes or closing the app returns to Safe Mode.",
-    "settingsLink": "Deletion safety"
+    "settingsLink": "Deletion safety",
+    "safeText_codex": "Dry run — Codex is not asked to delete, archive or restore anything.",
+    "safeTextStore_codex": "Dry run — Codex is not asked to delete anything."
   },
   "claude": {
     "running": "Claude Desktop is running — archive, restore and delete are disabled",
@@ -19,7 +21,9 @@
     "unknownHint": "Could not verify whether Claude Desktop is running.",
     "closed": "Claude Desktop closed",
     "checking": "Checking Claude…",
-    "recheck": "Re-check Claude processes"
+    "recheck": "Re-check Claude processes",
+    "recheck_codex": "Re-check Codex processes",
+    "checking_codex": "Checking Codex…"
   },
   "action": {
     "returnToSafe": "Return to Safe Mode",
@@ -48,5 +52,10 @@
   },
   "toast": {
     "returned": "Safe Mode restored. No Claude files can be deleted."
+  },
+  "codex": {
+    "running": "Codex app is running",
+    "closed": "Codex app closed",
+    "runningHint": "Codex changes its own data when this app asks it to, so the app can stay open. Sessions it is working in right now are blocked."
   }
 }

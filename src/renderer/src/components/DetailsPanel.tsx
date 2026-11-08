@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { useTranslation } from 'react-i18next'
 import type { ClaudeSession, ExportFormat, RawTitle, SessionDetails } from '../../../shared/types'
 import { useFmt } from '../i18n'
-import { archive, copyToClipboard, errText, exportOne, hasSafeMode, hideInManager, openDelete, runAction, useAppState } from '../stores/appStore'
+import { archive, copyToClipboard, errText, exportOne, hasSafeMode, hideInManager, openDelete, runAction, toolContext, useAppState } from '../stores/appStore'
 import { displayPath } from '../utils/paths'
 import { SessionBadges } from './Badges'
 import { EmptyState } from './EmptyState'
@@ -69,26 +69,36 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
   const safety = useAppState((st) => st.safety)
   const appInfo = useAppState((st) => st.appInfo)
   const accounts = useAppState((st) => st.snapshot?.roots.accounts)
+  const codexCli = useAppState((st) => st.snapshot?.roots.codexCli)
+  const context = useAppState(toolContext)
   const raw = settings?.showRawPaths ?? false
   // Microsoft Store edition: Claude Desktop's data is read-only for this build (the main process enforces it).
   const storeReadOnly = s.hasMetadata && !!appInfo?.desktopDataReadOnly
   const title = useSessionTitle()(s)
   const project = s.projectKey === 'unresolved' ? t('sessions:unknownProject') : s.projectName
 
-  const desktopBlocked = !!process && (process.desktopRunning || !!process.error)
+  // Codex: Codex changes its own data when asked (codex archive / delete), which needs its CLI;
+  // a session it wrote to a moment ago may still be running. Claude Desktop does not matter here.
+  const codex = s.provider === 'codex'
+  const cliMissing = codex && !codexCli
+  const desktopBlocked = !codex && !!process && (process.desktopRunning || !!process.error)
   const live = s.live
   // Claude archive changes Claude Desktop metadata, so it is guarded like delete.
-  const archiveBlock = s.hasMetadata && (desktopBlocked || !!live)
-  const deleteBlock = desktopBlocked || !!live
-  const blockReason = live
-    ? t(s.hasMetadata ? 'inspector:block.liveArchive' : 'inspector:block.live', {
-        state: t(`sessions:live.state.${live.state}`),
-        pid: live.pid,
-        name: live.name ? ` · ${live.name}` : ''
-      })
-    : desktopBlocked
-      ? t(process?.error ? 'inspector:block.unknown' : 'inspector:block.desktop')
+  const archiveBlock = codex ? !!live || cliMissing : s.hasMetadata && (desktopBlocked || !!live)
+  const deleteBlock = codex ? !!live || cliMissing : desktopBlocked || !!live
+  const blockReason = codex
+    ? live
+      ? t('inspector:block.codexRecent')
       : null
+    : live
+      ? t(s.hasMetadata ? 'inspector:block.liveArchive' : 'inspector:block.live', {
+          state: t(`sessions:live.state.${live.state}`),
+          pid: live.pid,
+          name: live.name ? ` · ${live.name}` : ''
+        })
+      : desktopBlocked
+        ? t(process?.error ? 'inspector:block.unknown' : 'inspector:block.desktop')
+        : null
 
   const problems = s.problems
   const models = s.models.length > 1 ? s.models.join(', ') : s.model
@@ -113,7 +123,22 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
             <IconFolder size={14} /> {t('inspector:action.openProject')}
           </button>
           <ExportMenu session={s} disabled={busy} />
-          {storeReadOnly ? null : s.hasMetadata ? (
+          {codex ? (
+            // Codex has its own archive; a session hidden in this app shows the way back first.
+            s.hiddenInManager ? (
+              <button className="btn state-action" disabled={busy} onClick={() => void hideInManager(s.id, false)} title={t('common:action.showInManager')}>
+                <IconEye size={14} /> {t('inspector:action.show')}
+              </button>
+            ) : s.archived ? (
+              <button className="btn state-action" disabled={busy || archiveBlock} onClick={() => void archive(s.id, false)} title={t('inspector:action.restoreHint', { context })}>
+                <IconRestore size={14} /> {t('common:action.restore')}
+              </button>
+            ) : (
+              <button className="btn state-action" disabled={busy || archiveBlock} onClick={() => void archive(s.id, true)} title={t('inspector:action.archiveHint', { context })}>
+                <IconArchive size={14} /> {t('common:action.archive')}
+              </button>
+            )
+          ) : storeReadOnly ? null : s.hasMetadata ? (
             s.archived ? (
               <button className="btn state-action" disabled={busy || archiveBlock} onClick={() => void archive(s.id, false)} title={t('inspector:action.restoreHint')}>
                 <IconRestore size={14} /> {t('common:action.restore')}
@@ -149,6 +174,12 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
             <span>{t('inspector:note.storeDesktop')}</span>
           </div>
         )}
+        {cliMissing && (
+          <div className="notice subtle small" role="note">
+            <IconInfo size={14} />
+            <span>{t('inspector:note.codexCliMissing')}</span>
+          </div>
+        )}
         {hasSafeMode(safety) && !safety.dryRun && (
           <div className="notice danger small" role="note">
             <IconAlert size={14} />
@@ -180,10 +211,16 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
             {s.accountIds.length > 1 && <KV k={t('inspector:field.accounts')} v={accounts?.filter((a) => s.accountIds.includes(a.id)).map((a) => a.label).join(', ')} />}
             {live && (
               <KV
-                k={t('inspector:field.process')}
+                k={t('inspector:field.process', { context })}
                 v={
                   <span>
-                    {t(`sessions:live.state.${live.state}`)} · <span className="mono">PID {live.pid}</span>
+                    {t(`sessions:live.state.${live.state}`)}
+                    {live.pid > 0 && (
+                      <>
+                        {' · '}
+                        <span className="mono">PID {live.pid}</span>
+                      </>
+                    )}
                     {live.status && <span className="muted"> · {live.status}</span>}
                   </span>
                 }
@@ -204,30 +241,33 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
 
         <Collapsible className="technical" title={t('inspector:section.technical')}>
           <dl className="kv">
-            {s.cliSessionId && <KV k={t('inspector:field.cliSessionId')} v={<CopyCode value={s.cliSessionId} />} />}
+            {s.cliSessionId && <KV k={t('inspector:field.cliSessionId', { context })} v={<CopyCode value={s.cliSessionId} />} />}
             {s.desktopSessionId && <KV k={t('inspector:field.desktopSessionId')} v={<CopyCode value={s.desktopSessionId} />} />}
             {s.priorCliSessionIds.length > 0 && <KV k={t('inspector:field.priorIds')} v={<code className="wrap">{s.priorCliSessionIds.join(', ')}</code>} />}
             <KV k={t('inspector:field.internalId')} v={<CopyCode value={s.id} />} hint={t('inspector:hint.internalId')} />
-            <KV k={t('inspector:field.titleSource')} v={t(`inspector:titleSource.${s.titleSource}`)} />
+            <KV k={t('inspector:field.titleSource')} v={t(`inspector:titleSource.${s.titleSource}`, { context })} />
             {s.rawTitle && <KV k={t('inspector:field.rawTitle')} v={<RawTitleValue raw={s.rawTitle} />} hint={t('inspector:hint.rawTitle')} />}
             {s.customTitle && s.customTitle !== title && <KV k={t('inspector:field.customTitle')} v={s.customTitle} />}
             {s.aiTitle && s.aiTitle !== title && <KV k={t('inspector:field.aiTitle')} v={s.aiTitle} />}
-            <KV k={t('inspector:field.projectSource')} v={t(`inspector:projectSource.${s.projectSource}`)} />
-            {s.claudeVersion && <KV k={t('inspector:field.claudeCode')} v={<span className="mono">{`${s.claudeVersion}${s.entrypoint ? ` · ${s.entrypoint}` : ''}`}</span>} />}
+            <KV k={t('inspector:field.projectSource')} v={t(`inspector:projectSource.${s.projectSource}`, { context })} />
+            {s.claudeVersion && <KV k={t('inspector:field.claudeCode', { context })} v={<span className="mono">{`${s.claudeVersion}${s.entrypoint ? ` · ${s.entrypoint}` : ''}`}</span>} />}
             {s.gitBranch && <KV k={t('inspector:field.gitBranch')} v={<span className="mono">{s.gitBranch}</span>} />}
+            {/* Codex deletes and archives the sessions a session started along with it. */}
+            {!!s.subagentCount && <KV k={t('inspector:field.subagents')} v={fmt.count(s.subagentCount)} />}
+            {codex && s.sessionDataSize !== undefined && <KV k={t('inspector:field.codexHistory')} v={fmt.bytes(s.sessionDataSize)} />}
             {/* The file rows below show the transcript and session data; this is where the rest of the total goes. */}
-            {s.otherSize !== undefined && <KV k={t('inspector:size.other')} v={fmt.bytes(s.otherSize)} />}
+            {s.otherSize !== undefined && <KV k={t('inspector:size.other', { context })} v={fmt.bytes(s.otherSize)} />}
           </dl>
           <div className="preview-label">{t('inspector:section.files')}</div>
           <div className="path-list">
             <PathRow label={t('inspector:file.metadata')} path={s.metadataFile} raw={raw} size={s.metadataSize} onReveal={() => runAction(() => api().revealMetadata(s.id))} />
-            <PathRow label={t('inspector:file.transcript')} path={s.transcriptFile} raw={raw} size={s.transcriptSize} onReveal={() => runAction(() => api().revealTranscript(s.id))} />
-            <PathRow label={t('inspector:file.sessionData')} path={s.sessionDataDirectory} raw={raw} size={s.sessionDataSize} onReveal={() => runAction(() => api().revealSessionData(s.id))} />
+            <PathRow label={t('inspector:file.transcript', { context })} path={s.transcriptFile} raw={raw} size={s.transcriptSize} onReveal={() => runAction(() => api().revealTranscript(s.id))} />
+            <PathRow label={t('inspector:file.sessionData')} path={s.sessionDataDirectory} raw={raw} size={codex ? undefined : s.sessionDataSize} onReveal={() => runAction(() => api().revealSessionData(s.id))} />
             {s.extraSessionDataDirectories.map((p) => (
               <PathRow key={p} label={t('inspector:file.sessionDataOther')} path={p} raw={raw} />
             ))}
             {s.extraTranscriptFiles.map((p) => (
-              <PathRow key={p} label={t('inspector:file.priorTranscript')} path={p} raw={raw} />
+              <PathRow key={p} label={t('inspector:file.priorTranscript', { context })} path={p} raw={raw} />
             ))}
             {s.legacySubagentLogs.map((p) => (
               <PathRow key={p} label={t('inspector:file.subagentLog')} path={p} raw={raw} />

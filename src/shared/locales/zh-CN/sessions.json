@@ -10,12 +10,14 @@
     "state": {
       "running": "运行中",
       "idle": "空闲",
-      "in-use": "使用中"
+      "in-use": "使用中",
+      "recent": "刚刚活动"
     },
     "hint": {
       "running": "一个 Claude Code 进程正在此会话中工作（PID {{pid}}）。无法删除。",
       "idle": "已在运行中的 Claude Code 进程里打开（空闲，PID {{pid}}）。无法删除。",
-      "in-use": "已关联到运行中的 Claude Code 进程（PID {{pid}}）。无法删除。"
+      "in-use": "已关联到运行中的 Claude Code 进程（PID {{pid}}）。无法删除。",
+      "recent": "Codex 在不到 2 分钟前写入了此会话，它可能仍在运行。暂时无法归档和删除。"
     }
   },
   "badge": {
@@ -24,7 +26,8 @@
     "transcriptOnlyHint": "此会话没有 Claude Desktop 元数据，因此无法归档。“隐藏会话”只会更改本应用自己的列表，该会话仍会在 Claude 中显示。",
     "orphanHint": "此会话文件夹既没有会话记录也没有 Claude Desktop 元数据。“隐藏会话”只会更改本应用自己的列表。",
     "issues_other": "{{count}} 个问题",
-    "issuesHint": "请查看详情面板中的“问题”"
+    "issuesHint": "请查看详情面板中的“问题”",
+    "hiddenHint_codex": "仅在本管理器中隐藏；Codex 自身状态不变"
   },
   "filter": {
     "all": "全部会话",
@@ -32,7 +35,8 @@
     "archived": "已归档 (Claude)",
     "hidden": "在管理器中隐藏",
     "transcript-only": "仅有会话记录",
-    "problems": "仅有元数据 / 问题"
+    "problems": "仅有元数据 / 问题",
+    "archived_codex": "已归档 (Codex)"
   },
   "title": {
     "all": "全部会话",
@@ -40,7 +44,8 @@
     "archived": "在 Claude 中已归档",
     "hidden": "在管理器中隐藏",
     "transcript-only": "仅有会话记录的会话",
-    "problems": "仅有元数据 / 问题"
+    "problems": "仅有元数据 / 问题",
+    "archived_codex": "在 Codex 中已归档"
   },
   "unknownProject": "未知项目",
   "unknownWorkspacePath": "工作区路径未知",
@@ -77,7 +82,9 @@
     "hideHint": "仅在本管理器中隐藏；不会修改 Claude 的文件和归档状态",
     "show": "在管理器中显示 ({{count}})",
     "exportHint": "将原始 JSONL 和会话信息 JSON 复制到你选择的文件夹",
-    "clear": "取消选择"
+    "clear": "取消选择",
+    "archiveHint_codex": "请 Codex 归档它们（\"codex archive\"）",
+    "hideHint_codex": "仅在本管理器中隐藏；不会修改 Codex 的数据和归档状态"
   },
   "selectAllVisible": "选择所有可见会话",
   "column": {
@@ -103,5 +110,7 @@
   },
   "row": {
     "select": "选择“{{title}}”"
-  }
+  },
+  "refreshHint_codex": "重新扫描 Codex 存储 (F5)",
+  "loading_codex": "正在扫描 Codex 存储…"
 }

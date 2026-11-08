@@ -28,7 +28,7 @@
     "manual": "仅手动",
     "manualHint": "在启动时以及点击“刷新”(F5) 时扫描。",
     "watch": "监视文件",
-    "watchHint": "Claude 写入其存储文件夹后很快重新扫描（已防抖，监视器很少）。",
+    "watchHint": "Claude 或 Codex 写入其存储文件夹后很快重新扫描（已防抖，监视器很少）。",
     "interval": "定时",
     "intervalHint": "按固定间隔重新扫描。",
     "seconds_other": "{{count}} 秒",
@@ -48,7 +48,14 @@
     "noDesktop": "未找到 Claude Desktop 的 claude-code-sessions 文件夹",
     "desktopCounts": "{{sessions}} 个会话文件 · {{tombstones}} 个删除标记 · {{indexes}} 个归档索引",
     "pending": "等待扫描…",
-    "checked_other": "已检查的全部位置（{{count}}）"
+    "checked_other": "已检查的全部位置（{{count}}）",
+    "accounts_codex": "Codex 账户",
+    "codexHome": "Codex 主目录",
+    "codexState": "Codex 会话数据库",
+    "codexHistory": "Codex 对话数据库",
+    "codexSessions": "Codex 会话文件",
+    "codexCli": "Codex CLI（归档、恢复、删除）",
+    "codexCliMissing": "未找到：请用 \"npm i -g @openai/codex\" 安装"
   },
   "cache": {
     "label": "扫描缓存",

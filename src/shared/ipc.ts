@@ -10,6 +10,7 @@ import type {
   ExportResult,
   LogEntry,
   ProcessStatus,
+  Provider,
   SafetyModeState,
   ScanSnapshot,
   SessionDetails,
@@ -21,7 +22,9 @@ import type {
  * IPC channel names. The renderer can only reach the main process through
  * these channels (exposed by the preload script); there is deliberately no
  * generic file-system channel. Every session-mutating call takes internal
- * session IDs produced by the scanner, never paths.
+ * session IDs produced by the scanner, never paths. A Claude and a Codex
+ * session never share an ID, so the main process knows from the ID alone
+ * which tool's data an action is about.
  */
 export const IPC = {
   getAppInfo: 'app:get-info',
@@ -72,17 +75,20 @@ export const IPC = {
 export interface ScanState {
   scanning: boolean
   reason?: string
+  /** Whose scan this is (Claude when absent). */
+  provider?: Provider
 }
 
 export interface SessionManagerApi {
   getAppInfo(): Promise<AppInfo>
   getLogs(): Promise<LogEntry[]>
 
-  scanSessions(): Promise<ScanSnapshot>
-  refreshSessions(): Promise<ScanSnapshot>
+  /** The sessions of one tool (Claude when omitted). */
+  scanSessions(provider?: Provider): Promise<ScanSnapshot>
+  refreshSessions(provider?: Provider): Promise<ScanSnapshot>
   getSession(id: string): Promise<SessionDetails | null>
 
-  /** Claude Desktop archive (`isArchived` in metadata). Desktop sessions only. */
+  /** Claude Desktop archive (`isArchived` in metadata), or Codex's own archive (`codex archive`). */
   archiveSession(id: string): Promise<ActionResult>
   restoreSession(id: string): Promise<ActionResult>
   bulkArchive(ids: string[]): Promise<BulkActionResult>
@@ -109,8 +115,8 @@ export interface SessionManagerApi {
   openProject(id: string): Promise<ActionResult>
 
   getClaudeProcessStatus(force?: boolean): Promise<ProcessStatus>
-  /** Totals of one Claude account, or of every session without an ID. */
-  getStorageInfo(accountId?: string): Promise<StorageInfo>
+  /** Totals of one account of a tool, or of every session of it without an ID. */
+  getStorageInfo(accountId?: string, provider?: Provider): Promise<StorageInfo>
 
   getSettings(): Promise<AppSettings>
   updateSettings(patch: Partial<AppSettings>): Promise<AppSettings>

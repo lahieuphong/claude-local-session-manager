@@ -9,7 +9,7 @@ import type {
 } from '../../../shared/types'
 import { isConfirmationValid } from '../../../shared/confirm'
 import { useFmt, type Formatters } from '../i18n'
-import { closeDelete, copyToClipboard, errText, hasSafeMode, refreshProcess, setChecked, useAppState, type DeleteRequest } from '../stores/appStore'
+import { closeDelete, copyToClipboard, errText, hasSafeMode, refreshProcess, setChecked, toolContext, useAppState, type DeleteRequest } from '../stores/appStore'
 import { IconAlert, IconCheck, IconCopy, IconMinus, IconRefresh, IconShield, IconShieldAlert, IconTrash, IconX } from './Icons'
 import { Modal, ModalClose } from './Modal'
 import { tCode } from './RichText'
@@ -20,6 +20,8 @@ const api = (): Window['sessionManager'] => window.sessionManager
 type AnyItem = DeletePlanItem | DeleteItemResult
 
 const isDelete = (i: AnyItem): boolean => i.action === 'delete-file' || i.action === 'delete-directory'
+/** Removed by Codex itself (`codex delete`); its size still counts. */
+const isCodexDelete = (i: AnyItem): boolean => i.action === 'codex-delete'
 
 export function DeleteModal(): ReactElement | null {
   const { t } = useTranslation()
@@ -307,13 +309,14 @@ export function DeleteModal(): ReactElement | null {
 
 function ModeBar({ dryRun }: { dryRun: boolean }): ReactElement {
   const { t } = useTranslation()
+  const context = useAppState(toolContext)
   return dryRun ? (
     <div className="mode-bar safe">
       <span className="mode-chip safe">
         <IconShield size={14} />
         {t('safety:mode.safeDryRun')}
       </span>
-      <span>{t('deletion:mode.safeText')}</span>
+      <span>{t('deletion:mode.safeText', { context })}</span>
     </div>
   ) : (
     <div className="mode-bar armed">
@@ -343,7 +346,7 @@ function ItemRow({ item, fmt }: { item: AnyItem; fmt: Formatters }): ReactElemen
         <span className="plan-kind">{t(`deletion:kind.${item.kind}`)}</span>
         <span className="plan-action">{outcome ? t(`deletion:outcome.${outcome}`) : actionLabel(t, item)}</span>
         <div className="spacer" />
-        {item.sizeBytes !== undefined && isDelete(item) && <span className="plan-size">{fmt.bytes(item.sizeBytes)}</span>}
+        {item.sizeBytes !== undefined && (isDelete(item) || isCodexDelete(item)) && <span className="plan-size">{fmt.bytes(item.sizeBytes)}</span>}
       </div>
       <div className="plan-path mono">{item.path}</div>
       {item.note && <div className="plan-note">{fmt.msg(item.noteMsg, item.note)}</div>}
@@ -369,6 +372,7 @@ function PlanGroup({ label, tone, items, fmt }: { label: string; tone: 'delete' 
 function SessionPlanCard({ plan: s, items, fmt }: { plan: SessionDeletePlan; items?: AnyItem[]; fmt: Formatters }): ReactElement {
   const { t } = useTranslation()
   const list = items ?? s.items
+  const context = useAppState(toolContext)
   return (
     <div className="plan-session">
       <div className="plan-session-head">
@@ -383,7 +387,7 @@ function SessionPlanCard({ plan: s, items, fmt }: { plan: SessionDeletePlan; ite
         </span>
       </div>
       <dl className="kv compact plan-kv">
-        <dt>{t('inspector:field.cliSessionId')}</dt>
+        <dt>{t('inspector:field.cliSessionId', { context })}</dt>
         <dd className="mono">{s.cliSessionId ?? '—'}</dd>
         {s.desktopSessionId && (
           <>
@@ -397,6 +401,7 @@ function SessionPlanCard({ plan: s, items, fmt }: { plan: SessionDeletePlan; ite
         <dd className="mono">{s.projectPath ?? t('inspector:value.unknown')}</dd>
       </dl>
       <PlanGroup label={t('deletion:group.willDelete')} tone="delete" items={list.filter(isDelete)} fmt={fmt} />
+      <PlanGroup label={t('deletion:group.codexDeletes')} tone="delete" items={list.filter(isCodexDelete)} fmt={fmt} />
       <PlanGroup label={t('deletion:group.willChange')} tone="change" items={list.filter((i) => i.action === 'create-file' || i.action === 'update-file')} fmt={fmt} />
       <PlanGroup label={t('deletion:group.managerRecords')} tone="record" items={list.filter((i) => i.action === 'remove-record')} fmt={fmt} />
       <div className="plan-group keep">

@@ -112,7 +112,8 @@
     "workspace": "project workspace (source code)",
     "projectFolder": "Claude project folder itself, its other sessions and memory/",
     "memory": "project memory",
-    "desktopFolder": "Claude Desktop session folder and other sessions in it"
+    "desktopFolder": "Claude Desktop session folder and other sessions in it",
+    "codexHome": "Codex folder: other sessions, settings and the sign-in"
   },
   "export": {
     "notFound": "Session not found",
@@ -177,5 +178,27 @@
     "problemDetailStore": "{{reason}}\n\nTry again. If this keeps happening, reinstall the app from Microsoft Store.\n\nLog file: {{log}}",
     "retry": "Try again",
     "quit": "Quit"
+  },
+  "codex": {
+    "cliMissing": "The Codex CLI was not found, so this app cannot archive, restore or delete Codex sessions (it only asks Codex to). Install it with \"npm i -g @openai/codex\", or install the Codex extension for VS Code, then refresh.",
+    "badId": "This Codex session has no valid ID, so Codex cannot be asked to change it.",
+    "recentlyActive": "Codex wrote to this session less than {{minutes}} minutes ago, so it may still be running. Try again once it is done.",
+    "alreadyArchived": "This session is already archived in Codex.",
+    "alreadyActive": "This session is not archived in Codex.",
+    "archived": "Archived in Codex. Codex moved its file to archived_sessions.",
+    "restored": "Restored in Codex.",
+    "archiveDryRun": "Safe Mode: Codex would archive this session. Nothing was changed.",
+    "restoreDryRun": "Safe Mode: Codex would restore this session. Nothing was changed.",
+    "commandFailed": "Codex could not do it: {{output}}",
+    "notApplied": "Codex reported success, but the session did not change in its database.",
+    "stillThere": "Still there after \"codex delete\".",
+    "hidden": "Hidden in manager. Only this app's list changed; Codex's data and archive state are untouched.",
+    "noDatabase": "This Codex folder has no sessions database (Codex versions without one are not supported).",
+    "noFolder": "No Codex folder found (CODEX_HOME or ~/.codex).",
+    "noteThread": "Session {{id}}",
+    "noteThreadWithAgents": "Session {{id}} and the {{count}} sessions it started (sub-agents)",
+    "noteHistory": "{{count}} stored conversation items",
+    "noteAgentFile": "File of a session it started (sub-agent)",
+    "noteIndex": "Its line in the list of named sessions"
   }
 }

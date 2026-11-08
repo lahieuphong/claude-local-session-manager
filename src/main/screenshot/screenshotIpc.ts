@@ -176,12 +176,21 @@ export function createScreenshotHandlers(opts: { appInfo: AppInfo; fixture: Scre
     return { ...plan, reportText: formatPlanReport(plan, appInfo.name) }
   }
 
+  // The demo is of Claude sessions; the Codex view is shown empty.
+  const codexSnapshot = {
+    ...fixture.snapshot,
+    provider: 'codex' as const,
+    sessions: [],
+    roots: { ...fixture.snapshot.roots, accounts: [], desktopRoots: [], candidates: [], codexCli: null }
+  }
+  const snapshotFor = (provider: unknown) => (provider === 'codex' ? codexSnapshot : fixture.snapshot)
+
   return {
     [IPC.getAppInfo]: () => appInfo,
     [IPC.getLogs]: (): LogEntry[] => [],
 
-    [IPC.scanSessions]: () => fixture.snapshot,
-    [IPC.refreshSessions]: () => fixture.snapshot,
+    [IPC.scanSessions]: (provider) => snapshotFor(provider),
+    [IPC.refreshSessions]: (provider) => snapshotFor(provider),
     [IPC.getSession]: (id) => screenshotDetails(fixture, assertId(id)),
 
     [IPC.archiveSession]: (id) => {
@@ -260,7 +269,7 @@ export function createScreenshotHandlers(opts: { appInfo: AppInfo; fixture: Scre
     },
 
     [IPC.getClaudeProcessStatus]: () => fixture.processStatus,
-    [IPC.getStorageInfo]: () => computeStorageInfo(fixture.snapshot, appInfo.cachePath),
+    [IPC.getStorageInfo]: (_accountId, provider) => computeStorageInfo(snapshotFor(provider), appInfo.cachePath),
 
     // Kept in memory for this run only (no settings file is read or written).
     [IPC.getSettings]: () => ({ ...settings }),

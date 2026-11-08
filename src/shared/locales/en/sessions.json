@@ -10,12 +10,14 @@
     "state": {
       "running": "Running",
       "idle": "Idle",
-      "in-use": "In use"
+      "in-use": "In use",
+      "recent": "Active now"
     },
     "hint": {
       "running": "A Claude Code process is working in this session right now (PID {{pid}}). Deletion is blocked.",
       "idle": "Open (idle) in a running Claude Code process (PID {{pid}}). Deletion is blocked.",
-      "in-use": "Attached to a running Claude Code process (PID {{pid}}). Deletion is blocked."
+      "in-use": "Attached to a running Claude Code process (PID {{pid}}). Deletion is blocked.",
+      "recent": "Codex wrote to this session less than 2 minutes ago, so it may still be running. Archive and delete are blocked."
     }
   },
   "badge": {
@@ -25,7 +27,8 @@
     "orphanHint": "Session folder without a transcript or Claude Desktop metadata. Hide session only changes this app's own list.",
     "issues_one": "{{count}} issue",
     "issues_other": "{{count}} issues",
-    "issuesHint": "See Problems in the details panel"
+    "issuesHint": "See Problems in the details panel",
+    "hiddenHint_codex": "Hidden in this manager only; Codex's own state is unchanged"
   },
   "filter": {
     "all": "All sessions",
@@ -33,7 +36,8 @@
     "archived": "Archived (Claude)",
     "hidden": "Hidden in manager",
     "transcript-only": "Transcript only",
-    "problems": "Metadata only / Problems"
+    "problems": "Metadata only / Problems",
+    "archived_codex": "Archived (Codex)"
   },
   "title": {
     "all": "All sessions",
@@ -41,7 +45,8 @@
     "archived": "Archived in Claude",
     "hidden": "Hidden in manager",
     "transcript-only": "Transcript-only sessions",
-    "problems": "Metadata only / Problems"
+    "problems": "Metadata only / Problems",
+    "archived_codex": "Archived in Codex"
   },
   "unknownProject": "Unknown project",
   "unknownWorkspacePath": "Workspace path unknown",
@@ -79,7 +84,9 @@
     "hideHint": "Hide in this manager only; Claude's files and archive state are not modified",
     "show": "Show in manager ({{count}})",
     "exportHint": "Copy raw JSONL + session info JSON into a folder you choose",
-    "clear": "Clear selection"
+    "clear": "Clear selection",
+    "archiveHint_codex": "Ask Codex to archive them (\"codex archive\")",
+    "hideHint_codex": "Hide in this manager only; Codex's data and archive state are not modified"
   },
   "selectAllVisible": "Select all visible sessions",
   "column": {
@@ -105,5 +112,7 @@
   },
   "row": {
     "select": "Select “{{title}}”"
-  }
+  },
+  "refreshHint_codex": "Rescan Codex storage (F5)",
+  "loading_codex": "Scanning Codex storage…"
 }

@@ -58,6 +58,21 @@ export function classifyProcess(p: RawProcess): ClaudeProcessKind | null {
   return null
 }
 
+/**
+ * Codex: the Codex desktop app (C:\Program Files\WindowsApps\OpenAI.Codex_<ver>\app\ChatGPT.exe;
+ * the ChatGPT app has the same file name in another package) and the Codex CLI
+ * (codex.exe, which the VS Code extension runs too, or node running @openai/codex).
+ */
+export function classifyCodexProcess(p: RawProcess): ClaudeProcessKind | null {
+  const name = p.name.toLowerCase()
+  const exe = (p.executablePath ?? '').replace(/\//g, '\\').toLowerCase()
+  const cmd = (p.commandLine ?? '').toLowerCase()
+  if (name === 'chatgpt.exe' && exe.includes('\\windowsapps\\openai.codex_')) return 'codex-app'
+  if (name === 'codex.exe' || name === 'codex') return 'codex-cli'
+  if ((name === 'node.exe' || name === 'node') && /@openai[\\/]codex/.test(cmd)) return 'codex-cli'
+  return null
+}
+
 const LIVE_NAME_RE = /^(claude|node|bun)(\.exe)?$/i
 
 type Runner = (pids: number[]) => Promise<RawProcess[]>
@@ -78,7 +93,7 @@ export const windowsRunner: Runner = async (pids) => {
     "$ErrorActionPreference = 'SilentlyContinue'",
     '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
     `$pids = @(${pidList})`,
-    "Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(claude|node|bun)(\\.exe)?$' -or $pids -contains [int]$_.ProcessId } |",
+    "Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(claude|node|bun|codex|chatgpt)(\\.exe)?$' -or $pids -contains [int]$_.ProcessId } |",
     "  Select-Object ProcessId, Name, ExecutablePath, CommandLine, @{n='StartMs';e={ if ($_.CreationDate) { ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }} |",
     '  ConvertTo-Json -Compress -Depth 2'
   ].join('\n')
@@ -127,7 +142,13 @@ export function buildProcessStatus(
   const desktop: ClaudeProcessInfo[] = []
   const code: ClaudeProcessInfo[] = []
   const unknown: ClaudeProcessInfo[] = []
+  const codex: ClaudeProcessInfo[] = []
   for (const p of processes) {
+    const codexKind = classifyCodexProcess(p)
+    if (codexKind) {
+      codex.push({ pid: p.pid, name: p.name, executablePath: p.executablePath, kind: codexKind })
+      continue
+    }
     const kind = classifyProcess(p)
     if (!kind) continue
     const info: ClaudeProcessInfo = { pid: p.pid, name: p.name, executablePath: p.executablePath, kind }
@@ -157,6 +178,8 @@ export function buildProcessStatus(
     claudeCodeProcesses: code,
     unknownProcesses: unknown,
     liveSessions,
+    codexAppRunning: codex.some((c) => c.kind === 'codex-app'),
+    codexProcesses: codex,
     error
   }
 }

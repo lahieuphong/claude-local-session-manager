@@ -11,7 +11,8 @@
     "noProjects": "Không tìm thấy dự án nào",
     "storage": "Dung lượng",
     "settings": "Cài đặt",
-    "accounts": "Tài khoản Claude"
+    "accounts": "Tài khoản Claude",
+    "accounts_codex": "Tài khoản Codex"
   },
   "account": {
     "current": "Tài khoản đang xem: {{name}}",
@@ -25,10 +26,12 @@
       "original": "Kho phiên nằm ở tài khoản này và có tài khoản khác dùng chung. Xóa phiên sẽ xóa cho tất cả.",
       "shared": "Dùng chung kho phiên với tài khoản khác. Xóa phiên sẽ xóa cho tất cả."
     },
-    "note": "Chỉ đổi phiên đang xem, không đổi tài khoản đăng nhập của Claude."
+    "note": "Chỉ đổi phiên đang xem, không đổi tài khoản đăng nhập của Claude.",
+    "note_codex": "Chỉ đổi phiên đang xem, không đổi tài khoản đăng nhập của Codex."
   },
   "status": {
-    "liveSessions_other": "{{count}} phiên Claude Code đang mở"
+    "liveSessions_other": "{{count}} phiên Claude Code đang mở",
+    "liveSessions_codex_other": "{{count}} phiên Codex vừa hoạt động (2 phút qua)"
   },
   "action": {
     "refresh": "Làm mới",
@@ -54,5 +57,15 @@
     "firstFailure": "{{title}}:",
     "copied": "Đã sao chép",
     "copyFailed": "Sao chép thất bại: {{error}}"
+  },
+  "picker": {
+    "title": "Bạn muốn quản lý phiên của công cụ nào?",
+    "subtitle": "Dữ liệu của cả hai đều nằm trên máy này. Bạn có thể đổi bất cứ lúc nào ở đầu thanh bên.",
+    "claudeDesc": "Claude Code và Claude Desktop",
+    "codexDesc": "Codex CLI, ứng dụng Codex và tiện ích VS Code",
+    "open": "Quản lý phiên {{name}}",
+    "trademark": "Claude là nhãn hiệu của Anthropic. OpenAI và Codex là nhãn hiệu của OpenAI. Logo chỉ dùng để phân biệt hai công cụ; ứng dụng không chính thức này không liên kết với công ty nào.",
+    "switch": "Đổi công cụ",
+    "current": "Đang quản lý phiên {{name}}. Chọn công cụ khác"
   }
 }

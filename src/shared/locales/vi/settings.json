@@ -28,7 +28,7 @@
     "manual": "Chỉ thủ công",
     "manualHint": "Quét khi mở ứng dụng và khi bạn bấm Làm mới (F5).",
     "watch": "Theo dõi tệp",
-    "watchHint": "Quét lại ngay sau khi Claude ghi vào thư mục lưu (có giãn cách, ít bộ theo dõi).",
+    "watchHint": "Quét lại ngay sau khi Claude hoặc Codex ghi vào thư mục lưu (có giãn cách, ít bộ theo dõi).",
     "interval": "Định kỳ",
     "intervalHint": "Quét lại theo chu kỳ cố định.",
     "seconds_other": "{{count}} giây",
@@ -48,7 +48,14 @@
     "noDesktop": "Không tìm thấy thư mục claude-code-sessions của Claude Desktop",
     "desktopCounts": "{{sessions}} tệp phiên · {{tombstones}} dấu xóa · {{indexes}} chỉ mục lưu trữ",
     "pending": "Đang chờ quét…",
-    "checked_other": "Tất cả vị trí đã kiểm tra ({{count}})"
+    "checked_other": "Tất cả vị trí đã kiểm tra ({{count}})",
+    "accounts_codex": "Tài khoản Codex",
+    "codexHome": "Thư mục Codex",
+    "codexState": "Cơ sở dữ liệu phiên của Codex",
+    "codexHistory": "Cơ sở dữ liệu hội thoại của Codex",
+    "codexSessions": "Tệp phiên của Codex",
+    "codexCli": "Codex CLI (lưu trữ, khôi phục, xóa)",
+    "codexCliMissing": "Không tìm thấy: cài bằng \"npm i -g @openai/codex\""
   },
   "cache": {
     "label": "Bộ nhớ đệm quét",

@@ -4,7 +4,7 @@ import type { StorageInfo } from '../../../shared/types'
 import { EmptyState } from '../components/EmptyState'
 import { IconAlert, IconChevron, IconDatabase } from '../components/Icons'
 import { useFmt } from '../i18n'
-import { activeAccountId, errText, select, setView, useAppState } from '../stores/appStore'
+import { activeAccountId, errText, select, setView, toolContext, useAppState } from '../stores/appStore'
 import { localTitle } from '../utils/titles'
 
 const api = (): Window['sessionManager'] => window.sessionManager
@@ -14,6 +14,9 @@ export function StoragePage(): ReactElement {
   const fmt = useFmt()
   const snapshot = useAppState((s) => s.snapshot)
   const accountId = useAppState(activeAccountId)
+  const provider = useAppState((s) => s.provider)
+  const context = useAppState(toolContext)
+  const codex = provider === 'codex'
   const [info, setInfo] = useState<StorageInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,13 +24,13 @@ export function StoragePage(): ReactElement {
     let current = true
     setError(null)
     api()
-      .getStorageInfo(accountId ?? undefined)
+      .getStorageInfo(accountId ?? undefined, provider ?? undefined)
       .then((next) => current && setInfo(next))
       .catch((err) => current && setError(errText(err)))
     return () => {
       current = false
     }
-  }, [snapshot, accountId])
+  }, [snapshot, accountId, provider])
 
   if (error) {
     return (
@@ -65,18 +68,19 @@ export function StoragePage(): ReactElement {
           <div className="hero-value">{fmt.bytes(info.totalSize)}</div>
           <div className="hero-label">{t('storage:stat.totalDisk')}</div>
         </div>
-        <div className="stat-cells">
+        <div className={`stat-cells ${codex ? 'four' : ''}`}>
           <Stat label={t('storage:stat.sessions')} value={fmt.count(info.totalSessions)} />
           <Stat label={t('storage:stat.active')} value={fmt.count(info.active)} />
-          <Stat label={t('storage:stat.archived')} value={fmt.count(info.archived)} />
+          <Stat label={t('storage:stat.archived', { context })} value={fmt.count(info.archived)} />
           <Stat label={t('storage:stat.hidden')} value={fmt.count(info.hiddenInManager)} />
-          <Stat label={t('storage:stat.transcriptOnly')} value={fmt.count(info.transcriptOnly)} />
-          <Stat label={t('storage:stat.metadataOrphan')} value={fmt.count(info.metadataOnly + info.orphan)} />
+          {/* A Codex session is always whole: these two counts are Claude's alone. */}
+          {!codex && <Stat label={t('storage:stat.transcriptOnly')} value={fmt.count(info.transcriptOnly)} />}
+          {!codex && <Stat label={t('storage:stat.metadataOrphan')} value={fmt.count(info.metadataOnly + info.orphan)} />}
         </div>
       </div>
 
       <StorageSection title={t('storage:section.breakdown')}>
-        <div className="stack-bar" role="img" aria-label={parts.map((p) => `${t(`storage:part.${p.key}`)}: ${fmt.bytes(p.bytes)}`).join(', ')}>
+        <div className="stack-bar" role="img" aria-label={parts.map((p) => `${t(`storage:part.${p.key}`, { context })}: ${fmt.bytes(p.bytes)}`).join(', ')}>
           {parts.map((p) => (
             <div key={p.key} className={`stack-seg ${p.cls}`} style={{ width: `${(p.bytes / total) * 100}%` }} />
           ))}
@@ -85,7 +89,7 @@ export function StoragePage(): ReactElement {
           {parts.map((p) => (
             <span key={p.key} className="legend-item">
               <span className={`legend-swatch ${p.cls}`} aria-hidden="true" />
-              {t(`storage:part.${p.key}`)}
+              {t(`storage:part.${p.key}`, { context })}
               <span className="legend-value">{fmt.bytes(p.bytes)}</span>
             </span>
           ))}
@@ -145,13 +149,23 @@ export function StoragePage(): ReactElement {
       {snapshot && (
         <StorageSection title={t('storage:section.lastScan')}>
           <dl className="scan-stats">
-            <ScanStat label={t('storage:scan.transcripts')} value={fmt.count(snapshot.stats.transcripts)} />
-            <ScanStat label={t('storage:scan.parsed')} value={fmt.count(snapshot.stats.transcriptsParsed)} />
-            <ScanStat label={t('storage:scan.incremental')} value={fmt.count(snapshot.stats.transcriptsIncremental)} />
-            <ScanStat label={t('storage:scan.fromCache')} value={fmt.count(snapshot.stats.transcriptsFromCache)} />
-            <ScanStat label={t('storage:scan.subagentExcluded')} value={fmt.count(snapshot.stats.subagentLogsExcluded)} />
-            <ScanStat label={t('storage:scan.metadataFiles')} value={fmt.count(snapshot.stats.metadataFiles)} />
-            <ScanStat label={t('storage:scan.tombstones')} value={fmt.count(snapshot.stats.tombstones)} />
+            {codex ? (
+              <>
+                <ScanStat label={t('storage:scan.codexSessions')} value={fmt.count(snapshot.sessions.length)} />
+                <ScanStat label={t('storage:scan.transcripts', { context })} value={fmt.count(snapshot.stats.transcripts)} />
+                <ScanStat label={t('storage:scan.subagentExcluded', { context })} value={fmt.count(snapshot.stats.subagentLogsExcluded)} />
+              </>
+            ) : (
+              <>
+                <ScanStat label={t('storage:scan.transcripts')} value={fmt.count(snapshot.stats.transcripts)} />
+                <ScanStat label={t('storage:scan.parsed')} value={fmt.count(snapshot.stats.transcriptsParsed)} />
+                <ScanStat label={t('storage:scan.incremental')} value={fmt.count(snapshot.stats.transcriptsIncremental)} />
+                <ScanStat label={t('storage:scan.fromCache')} value={fmt.count(snapshot.stats.transcriptsFromCache)} />
+                <ScanStat label={t('storage:scan.subagentExcluded')} value={fmt.count(snapshot.stats.subagentLogsExcluded)} />
+                <ScanStat label={t('storage:scan.metadataFiles')} value={fmt.count(snapshot.stats.metadataFiles)} />
+                <ScanStat label={t('storage:scan.tombstones')} value={fmt.count(snapshot.stats.tombstones)} />
+              </>
+            )}
             <ScanStat label={t('storage:scan.duration')} value={t('storage:scan.ms', { value: fmt.count(snapshot.durationMs) })} />
           </dl>
           {snapshot.issues.length > 0 && (

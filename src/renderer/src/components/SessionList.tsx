@@ -14,6 +14,7 @@ import {
   setSearch,
   setSort,
   toggleChecked,
+  toolContext,
   useAppState,
   visibleSessions,
   type GroupBy,
@@ -64,8 +65,12 @@ export function SessionList(): ReactElement {
   const scanning = useAppState((s) => s.scanning)
   const busy = useAppState((s) => s.busy)
   const loadError = useAppState((s) => s.loadError)
+  const codex = useAppState((s) => s.provider) === 'codex'
+  const context = useAppState(toolContext)
   // Microsoft Store edition: Claude Desktop's archive flag cannot be changed by this build.
-  const canArchive = !useAppState((s) => s.appInfo?.desktopDataReadOnly ?? false)
+  // Codex archives its own sessions, through its CLI.
+  const desktopReadOnly = useAppState((s) => s.appInfo?.desktopDataReadOnly ?? false)
+  const canArchive = codex ? !!snapshot?.roots.codexCli : !desktopReadOnly
   const searchRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const titleOf = useSessionTitle()
@@ -89,8 +94,10 @@ export function SessionList(): ReactElement {
   const someVisibleChecked = visible.some((s) => checkedSet.has(s.id))
   const checkedSessions = useMemo(() => all.filter((s) => checkedSet.has(s.id)), [all, checkedSet])
   const ids = (list: typeof checkedSessions): string[] => list.map((s) => s.id)
-  const selDesktopActive = ids(checkedSessions.filter((s) => s.hasMetadata && !s.archived))
-  const selDesktopArchived = ids(checkedSessions.filter((s) => s.hasMetadata && s.archived))
+  // Sessions with an archive of their own: Claude Desktop's (metadata) or Codex's.
+  const archivable = (s: ClaudeSession): boolean => s.hasMetadata || s.provider === 'codex'
+  const selDesktopActive = ids(checkedSessions.filter((s) => archivable(s) && !s.archived))
+  const selDesktopArchived = ids(checkedSessions.filter((s) => archivable(s) && s.archived))
   const selHideable = ids(checkedSessions.filter((s) => !s.hasMetadata && !s.hiddenInManager))
   const selHidden = ids(checkedSessions.filter((s) => s.hiddenInManager))
 
@@ -132,7 +139,7 @@ export function SessionList(): ReactElement {
     }
   }, [])
 
-  const pageTitle = projectName ?? t(`sessions:title.${filter}`)
+  const pageTitle = projectName ?? t(`sessions:title.${filter}`, { context })
   const countText = snapshot ? t('sessions:count', { shown: fmt.count(visible.length), total: fmt.count(all.length) }) : ''
 
   return (
@@ -144,7 +151,7 @@ export function SessionList(): ReactElement {
           </h1>
           <span className="count-label">{countText}</span>
           <div className="spacer" />
-          <button className="btn quiet" onClick={() => void refresh()} disabled={scanning} title={t('sessions:refreshHint')}>
+          <button className="btn quiet" onClick={() => void refresh()} disabled={scanning} title={t('sessions:refreshHint', { context })}>
             <IconRefresh size={14} className={scanning ? 'spin' : ''} />
             {scanning ? t('sessions:scanning') : t('common:action.refresh')}
           </button>
@@ -189,7 +196,7 @@ export function SessionList(): ReactElement {
           <span className="bulk-count">{t('sessions:bulk.selected', { count: checked.length })}</span>
           {/* Claude archive only applies to sessions with Claude Desktop metadata. */}
           {canArchive && selDesktopActive.length > 0 && (
-            <button className="btn small" disabled={busy} onClick={() => void bulkArchive(selDesktopActive, true)} title={t('sessions:bulk.archiveHint')}>
+            <button className="btn small" disabled={busy} onClick={() => void bulkArchive(selDesktopActive, true)} title={t('sessions:bulk.archiveHint', { context })}>
               <IconArchive size={14} /> {t('sessions:bulk.archive', { count: selDesktopActive.length })}
             </button>
           )}
@@ -200,7 +207,7 @@ export function SessionList(): ReactElement {
           )}
           {/* Manager-only hiding for sessions Claude cannot archive. */}
           {selHideable.length > 0 && (
-            <button className="btn small" disabled={busy} onClick={() => void bulkHideInManager(selHideable, true)} title={t('sessions:bulk.hideHint')}>
+            <button className="btn small" disabled={busy} onClick={() => void bulkHideInManager(selHideable, true)} title={t('sessions:bulk.hideHint', { context })}>
               <IconEyeOff size={14} /> {t('sessions:bulk.hide', { count: selHideable.length })}
             </button>
           )}
@@ -268,7 +275,7 @@ export function SessionList(): ReactElement {
         {!snapshot && !loadError && (
           <>
             <div className="visually-hidden" role="status">
-              {t('sessions:loading')}
+              {t('sessions:loading', { context })}
             </div>
             <SkeletonRows />
           </>

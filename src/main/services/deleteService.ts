@@ -187,7 +187,7 @@ export function keptPaths(record: SessionRecord): Array<{ path: string; reason: 
   return out
 }
 
-function contentHashOf(sessions: SessionDeletePlan[]): string {
+export function contentHashOf(sessions: SessionDeletePlan[]): string {
   const data = sessions.map((s) => [
     s.sessionId,
     s.cliSessionId ?? null,
@@ -198,7 +198,7 @@ function contentHashOf(sessions: SessionDeletePlan[]): string {
 }
 
 /** Why a plan is stale: which targets appeared or disappeared, or only their contents changed. */
-function staleMessage(before: string[], after: string[]): { message: string; msg: MessageRef } {
+export function staleMessage(before: string[], after: string[]): { message: string; msg: MessageRef } {
   const a = new Set(before)
   const b = new Set(after)
   const added = [...b].filter((x) => !a.has(x)).join(', ')

@@ -28,7 +28,8 @@
   },
   "mode": {
     "safeText": "Validation only: the full check pipeline runs and the exact plan is logged, but no Claude file is modified. To delete for real, arm real deletion in Settings → Deletion safety.",
-    "armedText": "The files below will be permanently deleted. The app returns to Safe Mode right after this delete."
+    "armedText": "The files below will be permanently deleted. The app returns to Safe Mode right after this delete.",
+    "safeText_codex": "Validation only: every check runs and the exact plan is logged, but Codex is not asked to delete anything. To delete for real, enable real deletion in Settings → Deletion safety."
   },
   "meta": {
     "planId": "Plan ID",
@@ -58,7 +59,8 @@
     "delete-directory": "delete folder · {{files}}, {{folders}}",
     "create-file": "create file",
     "update-file": "update file",
-    "remove-record": "remove record"
+    "remove-record": "remove record",
+    "codex-delete": "Codex deletes it"
   },
   "kind": {
     "metadata": "Metadata",
@@ -69,13 +71,18 @@
     "session-env": "Session env",
     "tombstone": "Tombstone",
     "archive-index": "Archive index",
-    "manager-record": "Manager record"
+    "manager-record": "Manager record",
+    "codex-thread": "Codex session",
+    "codex-history": "Conversation",
+    "codex-rollout": "Session file",
+    "codex-index": "Session index"
   },
   "group": {
     "willDelete": "Will delete",
     "willChange": "Will change · Claude Desktop bookkeeping",
     "managerRecords": "Manager records · this app only",
-    "willNotDelete": "Will not delete"
+    "willNotDelete": "Will not delete",
+    "codexDeletes": "Codex deletes · with \"codex delete\""
   },
   "outcome": {
     "deleted": "deleted",

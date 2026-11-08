@@ -416,6 +416,7 @@ export function buildScreenshotFixture(now: number): ScreenshotFixture {
   }
 
   const snapshot: ScanSnapshot = {
+    provider: 'claude',
     sessions: built.sessions,
     scannedAt: now,
     durationMs: 184,
@@ -444,7 +445,9 @@ export function buildScreenshotFixture(now: number): ScreenshotFixture {
     desktopProcesses: [],
     claudeCodeProcesses: liveSessions.map((l) => ({ pid: l.pid, name: 'claude.exe', kind: 'claude-code' as const })),
     unknownProcesses: [],
-    liveSessions
+    liveSessions,
+    codexAppRunning: false,
+    codexProcesses: []
   }
 
   return { now, snapshot, records: built.records, rawMetadata, processStatus }

@@ -10,7 +10,8 @@
     "archived": "Đã lưu trữ (Claude)",
     "hidden": "Ẩn trong trình quản lý",
     "transcriptOnly": "Chỉ có bản ghi hội thoại",
-    "metadataOrphan": "Chỉ có siêu dữ liệu / mồ côi"
+    "metadataOrphan": "Chỉ có siêu dữ liệu / mồ côi",
+    "archived_codex": "Đã lưu trữ (Codex)"
   },
   "section": {
     "breakdown": "Phân bổ dung lượng",
@@ -21,7 +22,10 @@
   "part": {
     "transcripts": "Bản ghi hội thoại",
     "sessionData": "Dữ liệu phiên (tác tử phụ, kết quả công cụ)",
-    "other": "Lịch sử tệp, môi trường, siêu dữ liệu"
+    "other": "Lịch sử tệp, môi trường, siêu dữ liệu",
+    "transcripts_codex": "Tệp phiên",
+    "sessionData_codex": "Hội thoại trong cơ sở dữ liệu Codex",
+    "other_codex": "Tệp của các phiên do chúng tạo ra"
   },
   "sessionsCount_other": "{{count}} phiên",
   "noProjects": "Không có dự án.",
@@ -35,6 +39,9 @@
     "tombstones": "Dấu xóa",
     "duration": "Thời gian",
     "ms": "{{value}} ms",
-    "issues_other": "{{count}} vấn đề khi quét"
+    "issues_other": "{{count}} vấn đề khi quét",
+    "codexSessions": "Phiên Codex",
+    "transcripts_codex": "Có tệp phiên",
+    "subagentExcluded_codex": "Phiên con (agent)"
   }
 }

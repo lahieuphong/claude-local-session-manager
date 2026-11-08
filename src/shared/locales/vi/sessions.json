@@ -10,12 +10,14 @@
     "state": {
       "running": "Đang chạy",
       "idle": "Đang chờ",
-      "in-use": "Đang dùng"
+      "in-use": "Đang dùng",
+      "recent": "Vừa hoạt động"
     },
     "hint": {
       "running": "Một tiến trình Claude Code đang làm việc trong phiên này (PID {{pid}}). Không thể xóa.",
       "idle": "Đang mở (chờ) trong một tiến trình Claude Code (PID {{pid}}). Không thể xóa.",
-      "in-use": "Đang gắn với một tiến trình Claude Code (PID {{pid}}). Không thể xóa."
+      "in-use": "Đang gắn với một tiến trình Claude Code (PID {{pid}}). Không thể xóa.",
+      "recent": "Codex vừa ghi vào phiên này chưa đầy 2 phút trước, có thể nó vẫn đang chạy. Tạm khóa lưu trữ và xóa."
     }
   },
   "badge": {
@@ -24,7 +26,8 @@
     "transcriptOnlyHint": "Phiên này không có siêu dữ liệu Claude Desktop nên không lưu trữ được. Ẩn phiên chỉ thay đổi danh sách của ứng dụng này; phiên vẫn hiện trong Claude.",
     "orphanHint": "Thư mục phiên không có bản ghi hội thoại hay siêu dữ liệu Claude Desktop. Ẩn phiên chỉ thay đổi danh sách của ứng dụng này.",
     "issues_other": "{{count}} vấn đề",
-    "issuesHint": "Xem mục Vấn đề trong khung chi tiết"
+    "issuesHint": "Xem mục Vấn đề trong khung chi tiết",
+    "hiddenHint_codex": "Chỉ ẩn trong trình quản lý này; trạng thái của Codex không đổi"
   },
   "filter": {
     "all": "Tất cả phiên",
@@ -32,7 +35,8 @@
     "archived": "Đã lưu trữ (Claude)",
     "hidden": "Ẩn trong trình quản lý",
     "transcript-only": "Chỉ có bản ghi hội thoại",
-    "problems": "Chỉ có siêu dữ liệu / Vấn đề"
+    "problems": "Chỉ có siêu dữ liệu / Vấn đề",
+    "archived_codex": "Đã lưu trữ (Codex)"
   },
   "title": {
     "all": "Tất cả phiên",
@@ -40,7 +44,8 @@
     "archived": "Đã lưu trữ trong Claude",
     "hidden": "Ẩn trong trình quản lý",
     "transcript-only": "Phiên chỉ có bản ghi hội thoại",
-    "problems": "Chỉ có siêu dữ liệu / Vấn đề"
+    "problems": "Chỉ có siêu dữ liệu / Vấn đề",
+    "archived_codex": "Đã lưu trữ trong Codex"
   },
   "unknownProject": "Dự án không xác định",
   "unknownWorkspacePath": "Không rõ đường dẫn thư mục dự án",
@@ -77,7 +82,9 @@
     "hideHint": "Chỉ ẩn trong trình quản lý này; không thay đổi tệp hay trạng thái lưu trữ của Claude",
     "show": "Hiện lại ({{count}})",
     "exportHint": "Sao chép JSONL gốc + tệp JSON thông tin phiên vào thư mục bạn chọn",
-    "clear": "Bỏ chọn"
+    "clear": "Bỏ chọn",
+    "archiveHint_codex": "Nhờ Codex lưu trữ chúng (\"codex archive\")",
+    "hideHint_codex": "Chỉ ẩn trong trình quản lý này; không thay đổi dữ liệu hay trạng thái lưu trữ của Codex"
   },
   "selectAllVisible": "Chọn tất cả phiên đang hiển thị",
   "column": {
@@ -103,5 +110,7 @@
   },
   "row": {
     "select": "Chọn “{{title}}”"
-  }
+  },
+  "refreshHint_codex": "Quét lại dữ liệu Codex (F5)",
+  "loading_codex": "Đang quét dữ liệu Codex…"
 }

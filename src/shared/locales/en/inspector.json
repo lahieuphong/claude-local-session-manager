@@ -9,7 +9,8 @@
     "live": "Attached to a live Claude Code process ({{state}}, PID {{pid}}{{name}}). Close that session before deleting.",
     "liveArchive": "Attached to a live Claude Code process ({{state}}, PID {{pid}}{{name}}). Close that session before archiving or deleting.",
     "unknown": "Claude process status is unknown. Refresh the process status first.",
-    "desktop": "Close Claude Desktop before modifying session files."
+    "desktop": "Close Claude Desktop before modifying session files.",
+    "codexRecent": "Codex wrote to this session less than 2 minutes ago, so it may still be running. Archive and delete are blocked until it stops."
   },
   "action": {
     "restoreHint": "Clear Claude Desktop's isArchived flag",
@@ -17,11 +18,14 @@
     "hide": "Hide session",
     "show": "Show session",
     "openProject": "Open project",
-    "openProjectHint": "Open the workspace folder in Explorer"
+    "openProjectHint": "Open the workspace folder in Explorer",
+    "archiveHint_codex": "Ask Codex to archive it (\"codex archive\"): Codex moves its file to archived_sessions",
+    "restoreHint_codex": "Ask Codex to restore it (\"codex unarchive\")"
   },
   "note": {
     "storeDesktop": "Microsoft Store edition: this session has Claude Desktop metadata, so it can be viewed and exported here, but not archived, restored or deleted. Windows Store packaging isolates certain AppData writes, and Claude Desktop would not see such changes.",
-    "armed": "Real Delete Armed — Delete permanently will really remove this session's files."
+    "armed": "Real Delete Armed — Delete permanently will really remove this session's files.",
+    "codexCliMissing": "The Codex CLI was not found, so this session can be viewed, exported and hidden, but not archived or deleted. Install it with \"npm i -g @openai/codex\", then refresh."
   },
   "section": {
     "problems": "Problems",
@@ -50,7 +54,12 @@
     "model": "Model",
     "accounts": "Accounts",
     "claudeCode": "Claude Code",
-    "gitBranch": "Git branch"
+    "gitBranch": "Git branch",
+    "claudeCode_codex": "Codex",
+    "cliSessionId_codex": "Codex session ID",
+    "process_codex": "Activity",
+    "subagents": "Sessions it started",
+    "codexHistory": "Conversation in Codex's database"
   },
   "hint": {
     "rawTitle": "The exact title field in the Claude Desktop metadata file",
@@ -68,7 +77,9 @@
     "summary": "Transcript summary",
     "first-prompt": "First user prompt",
     "last-prompt": "Last prompt",
-    "untitled": "No title available"
+    "untitled": "No title available",
+    "custom-title_codex": "Name you gave it in Codex",
+    "ai-title_codex": "Title written by Codex"
   },
   "projectSource": {
     "metadata-cwd": "Claude Desktop metadata cwd",
@@ -76,10 +87,12 @@
     "owner-session": "Owning session",
     "folder-records": "Records inside the session folder",
     "decoded-folder-name": "Claude storage folder name, matched to a real folder",
-    "unresolved": "Unresolved"
+    "unresolved": "Unresolved",
+    "transcript-cwd_codex": "Working folder recorded by Codex"
   },
   "size": {
-    "other": "Other (history, env, logs)"
+    "other": "Other (history, env, logs)",
+    "other_codex": "Files of sessions it started"
   },
   "file": {
     "metadata": "Metadata",
@@ -93,7 +106,9 @@
     "copyPath": "Copy full path",
     "copyPathOf": "Copy full path of {{label}}",
     "reveal": "Reveal in Explorer",
-    "revealOf": "Reveal {{label}} in Explorer"
+    "revealOf": "Reveal {{label}} in Explorer",
+    "transcript_codex": "Session file",
+    "priorTranscript_codex": "File of a session it started"
   },
   "metric": {
     "prompts": "Prompts",

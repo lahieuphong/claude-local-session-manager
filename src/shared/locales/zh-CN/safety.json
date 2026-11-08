@@ -9,7 +9,9 @@
     "safeText": "试运行 — 无法删除、归档或恢复任何 Claude 文件。",
     "safeTextStore": "试运行 — 无法删除任何 Claude 文件。",
     "armedText": "本次应用会话已启用永久删除。删除一次、10 分钟后或关闭应用都会返回安全模式。",
-    "settingsLink": "删除安全"
+    "settingsLink": "删除安全",
+    "safeText_codex": "试运行 — 不会请 Codex 删除、归档或恢复任何内容。",
+    "safeTextStore_codex": "试运行 — 不会请 Codex 删除任何内容。"
   },
   "claude": {
     "running": "Claude Desktop 正在运行 — 已禁用归档、恢复和删除",
@@ -19,7 +21,9 @@
     "unknownHint": "无法确认 Claude Desktop 是否正在运行。",
     "closed": "Claude Desktop 已关闭",
     "checking": "正在检查 Claude…",
-    "recheck": "重新检查 Claude 进程"
+    "recheck": "重新检查 Claude 进程",
+    "recheck_codex": "重新检查 Codex 进程",
+    "checking_codex": "正在检查 Codex…"
   },
   "action": {
     "returnToSafe": "返回安全模式",
@@ -48,5 +52,10 @@
   },
   "toast": {
     "returned": "已返回安全模式。无法删除任何 Claude 文件。"
+  },
+  "codex": {
+    "running": "Codex 应用正在运行",
+    "closed": "Codex 应用已关闭",
+    "runningHint": "本应用请 Codex 修改其自身数据，因此 Codex 应用可以保持打开。它正在处理的会话会被暂时阻止。"
   }
 }

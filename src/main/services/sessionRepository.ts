@@ -170,6 +170,7 @@ export class SessionRepository extends EventEmitter {
     for (const d of desktop) counts.set(d.root, desktopCounts(d))
 
     const snapshot: ScanSnapshot = {
+      provider: 'claude',
       sessions,
       scannedAt: Date.now(),
       durationMs: Date.now() - started,

@@ -371,6 +371,7 @@ function normalize(r: SessionRecord, input: BuildInput): ClaudeSession {
 
   return {
     id,
+    provider: 'claude',
     kind,
     status,
     displayTitle: title.title,

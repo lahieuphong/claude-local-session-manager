@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useFmt } from '../i18n'
-import { setView, useAppState, visibleSessions, type SessionFilter } from '../stores/appStore'
+import { leaveProvider, setView, toolContext, useAppState, visibleSessions, type SessionFilter } from '../stores/appStore'
+import { PROVIDER_NAMES, ProviderLogo } from './BrandLogos'
 import { UpdatePill } from './Updates'
 import { appBrand } from '../../../shared/appIdentity'
 import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
@@ -16,7 +17,8 @@ import {
   IconFileText,
   IconFolder,
   IconLayers,
-  IconSettings
+  IconSettings,
+  IconSwap
 } from './Icons'
 
 const FILTERS: Array<{ id: SessionFilter; icon: (p: { size?: number }) => ReactElement }> = [
@@ -27,6 +29,8 @@ const FILTERS: Array<{ id: SessionFilter; icon: (p: { size?: number }) => ReactE
   { id: 'transcript-only', icon: IconFileText },
   { id: 'problems', icon: IconAlert }
 ]
+/** A Codex session is always a whole session with Codex's own archive: the Claude-only views do not apply. */
+const CODEX_FILTERS = FILTERS.filter((f) => f.id !== 'transcript-only' && f.id !== 'problems')
 
 export function Sidebar(): ReactElement {
   const { t } = useTranslation()
@@ -35,6 +39,8 @@ export function Sidebar(): ReactElement {
   const view = useAppState((s) => s.view)
   const process = useAppState((s) => s.process)
   const appInfo = useAppState((s) => s.appInfo)
+  const provider = useAppState((s) => s.provider) ?? 'claude'
+  const context = useAppState(toolContext)
   const [projectsOpen, setProjectsOpen] = useState(true)
   // The product name depends on the distribution (the Microsoft Store edition has its own).
   const brand = appInfo ? appBrand(appInfo.distribution) : null
@@ -45,11 +51,14 @@ export function Sidebar(): ReactElement {
   const projects = useMemo(() => projectsOf(sessions.filter((s) => !s.hiddenInManager)), [sessions])
   const totalSize = useMemo(() => sessions.reduce((n, s) => n + s.totalSize, 0), [sessions])
   // With several accounts, like every other number here: the account on screen (as in its menu).
+  // Codex keeps no registry of running sessions: its count is of sessions active a moment ago.
   const severalAccounts = (snapshot?.roots.accounts.length ?? 0) > 1
-  const liveCount = severalAccounts ? sessions.filter((s) => s.live).length : (process?.liveSessions.filter((l) => l.alive).length ?? 0)
+  const liveCount =
+    severalAccounts || provider === 'codex' ? sessions.filter((s) => s.live).length : (process?.liveSessions.filter((l) => l.alive).length ?? 0)
 
   const activeFilter = view.kind === 'sessions' && !view.project ? view.filter : null
   const activeProject = view.kind === 'sessions' ? view.project : undefined
+  const name = PROVIDER_NAMES[provider]
 
   return (
     <aside className="sidebar" aria-label={t('common:nav.sidebar')}>
@@ -61,19 +70,25 @@ export function Sidebar(): ReactElement {
         </div>
       </div>
       <div className="identity-note">{t('common:app.tagline')}</div>
+      <button className="provider-switch" onClick={leaveProvider} title={t('common:picker.current', { name })} aria-label={t('common:picker.current', { name })}>
+        <ProviderLogo provider={provider} size={16} />
+        <span className="provider-switch-name">{name}</span>
+        <span className="provider-switch-hint">{t('common:picker.switch')}</span>
+        <IconSwap size={14} className="provider-switch-icon" />
+      </button>
 
       <nav className="nav" aria-label={t('common:nav.sessions')}>
         <div className="nav-label">{t('common:nav.sessions')}</div>
-        {FILTERS.map((f) => (
+        {(provider === 'codex' ? CODEX_FILTERS : FILTERS).map((f) => (
           <button
             key={f.id}
             className={`nav-item ${activeFilter === f.id ? 'active' : ''}`}
             aria-current={activeFilter === f.id ? 'page' : undefined}
             onClick={() => setView({ kind: 'sessions', filter: f.id })}
-            title={t(`sessions:filter.${f.id}`)}
+            title={t(`sessions:filter.${f.id}`, { context })}
           >
             <f.icon size={16} />
-            <span className="nav-text">{t(`sessions:filter.${f.id}`)}</span>
+            <span className="nav-text">{t(`sessions:filter.${f.id}`, { context })}</span>
             <span className="nav-count">{snapshot ? fmt.count(counts[f.id]) : ''}</span>
           </button>
         ))}
@@ -127,7 +142,7 @@ export function Sidebar(): ReactElement {
 
         <div className="sidebar-status">
           <UpdatePill />
-          {liveCount > 0 && <div className="sidebar-status-line">{t('common:status.liveSessions', { count: liveCount })}</div>}
+          {liveCount > 0 && <div className="sidebar-status-line">{t('common:status.liveSessions', { count: liveCount, context })}</div>}
           <div className="sidebar-version mono">{appInfo ? `v${appInfo.version}` : ''}</div>
         </div>
       </div>

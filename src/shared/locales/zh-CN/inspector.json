@@ -9,7 +9,8 @@
     "live": "已关联到运行中的 Claude Code 进程（{{state}}，PID {{pid}}{{name}}）。请先关闭该会话再删除。",
     "liveArchive": "已关联到运行中的 Claude Code 进程（{{state}}，PID {{pid}}{{name}}）。请先关闭该会话再归档或删除。",
     "unknown": "Claude 进程状态未知。请先刷新进程状态。",
-    "desktop": "修改会话文件前请先关闭 Claude Desktop。"
+    "desktop": "修改会话文件前请先关闭 Claude Desktop。",
+    "codexRecent": "Codex 在不到 2 分钟前写入了此会话，它可能仍在运行。在其停止前无法归档或删除。"
   },
   "action": {
     "restoreHint": "清除 Claude Desktop 的 isArchived 标志",
@@ -17,11 +18,14 @@
     "hide": "隐藏会话",
     "show": "显示会话",
     "openProject": "打开项目",
-    "openProjectHint": "在资源管理器中打开工作区文件夹"
+    "openProjectHint": "在资源管理器中打开工作区文件夹",
+    "archiveHint_codex": "请 Codex 归档（\"codex archive\"）：Codex 会把其文件移到 archived_sessions",
+    "restoreHint_codex": "请 Codex 恢复（\"codex unarchive\"）"
   },
   "note": {
     "storeDesktop": "Microsoft Store 版：此会话带有 Claude Desktop 元数据，在这里只能查看和导出，不能归档、恢复或删除。Windows 应用商店的打包机制会隔离部分 AppData 写入，Claude Desktop 看不到这类更改。",
-    "armed": "已启用永久删除 — “永久删除”将真正删除此会话的文件。"
+    "armed": "已启用永久删除 — “永久删除”将真正删除此会话的文件。",
+    "codexCliMissing": "未找到 Codex CLI，此会话只能查看、导出和隐藏，不能归档或删除。请用 \"npm i -g @openai/codex\" 安装后刷新。"
   },
   "section": {
     "problems": "问题",
@@ -50,7 +54,12 @@
     "model": "模型",
     "accounts": "账户",
     "claudeCode": "Claude Code",
-    "gitBranch": "Git 分支"
+    "gitBranch": "Git 分支",
+    "claudeCode_codex": "Codex",
+    "cliSessionId_codex": "Codex 会话 ID",
+    "process_codex": "活动",
+    "subagents": "它创建的会话",
+    "codexHistory": "Codex 数据库中的对话"
   },
   "hint": {
     "rawTitle": "Claude Desktop 元数据文件中 title 字段的原始值",
@@ -68,7 +77,9 @@
     "summary": "会话记录摘要",
     "first-prompt": "第一条提示词",
     "last-prompt": "最后一条提示词",
-    "untitled": "没有可用标题"
+    "untitled": "没有可用标题",
+    "custom-title_codex": "你在 Codex 中设置的名称",
+    "ai-title_codex": "Codex 生成的标题"
   },
   "projectSource": {
     "metadata-cwd": "Claude Desktop 元数据中的 cwd",
@@ -76,10 +87,12 @@
     "owner-session": "所属会话",
     "folder-records": "会话文件夹内的记录",
     "decoded-folder-name": "Claude 存储文件夹名称，已匹配到真实文件夹",
-    "unresolved": "无法确定"
+    "unresolved": "无法确定",
+    "transcript-cwd_codex": "Codex 记录的工作文件夹"
   },
   "size": {
-    "other": "其他（历史、环境、日志）"
+    "other": "其他（历史、环境、日志）",
+    "other_codex": "它创建的会话的文件"
   },
   "file": {
     "metadata": "元数据",
@@ -93,7 +106,9 @@
     "copyPath": "复制完整路径",
     "copyPathOf": "复制 {{label}} 的完整路径",
     "reveal": "在资源管理器中显示",
-    "revealOf": "在资源管理器中显示 {{label}}"
+    "revealOf": "在资源管理器中显示 {{label}}",
+    "transcript_codex": "会话文件",
+    "priorTranscript_codex": "它创建的会话的文件"
   },
   "metric": {
     "prompts": "提示词",

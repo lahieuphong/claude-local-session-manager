@@ -12,7 +12,8 @@
     "noProjects": "No projects found",
     "storage": "Storage",
     "settings": "Settings",
-    "accounts": "Claude accounts"
+    "accounts": "Claude accounts",
+    "accounts_codex": "Codex accounts"
   },
   "account": {
     "current": "Account on screen: {{name}}",
@@ -28,11 +29,14 @@
       "original": "This account holds the session store, and another account shares it. Deleting a session deletes it for all of them.",
       "shared": "Shares its session store with another account. Deleting a session deletes it for all of them."
     },
-    "note": "This only changes which sessions you see. It does not change the account Claude is signed in to."
+    "note": "This only changes which sessions you see. It does not change the account Claude is signed in to.",
+    "note_codex": "This only changes which sessions you see. It does not change the account Codex is signed in to."
   },
   "status": {
     "liveSessions_one": "{{count}} Claude Code session open",
-    "liveSessions_other": "{{count}} Claude Code sessions open"
+    "liveSessions_other": "{{count}} Claude Code sessions open",
+    "liveSessions_codex_one": "{{count}} Codex session active in the last 2 minutes",
+    "liveSessions_codex_other": "{{count}} Codex sessions active in the last 2 minutes"
   },
   "action": {
     "refresh": "Refresh",
@@ -58,5 +62,15 @@
     "firstFailure": "{{title}}:",
     "copied": "Copied to clipboard",
     "copyFailed": "Copy failed: {{error}}"
+  },
+  "picker": {
+    "title": "Which sessions do you want to manage?",
+    "subtitle": "Both stay on this PC. You can switch at any time from the top of the sidebar.",
+    "claudeDesc": "Claude Code and Claude Desktop",
+    "codexDesc": "Codex CLI, the Codex app and the VS Code extension",
+    "open": "Manage {{name}} sessions",
+    "trademark": "Claude is a trademark of Anthropic. OpenAI and Codex are trademarks of OpenAI. Their logos are shown only to tell the two tools apart; this unofficial app is not affiliated with either company.",
+    "switch": "Switch tool",
+    "current": "Managing {{name}} sessions. Choose another tool"
   }
 }

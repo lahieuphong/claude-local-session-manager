@@ -35,7 +35,7 @@ export function SessionBadges({ session, compact }: { session: ClaudeSession; co
     <span className="badges">
       <StatusBadge status={session.status} quiet={compact} />
       {session.hiddenInManager && (
-        <span className="badge badge-hidden" title={t('sessions:badge.hiddenHint')}>
+        <span className="badge badge-hidden" title={t('sessions:badge.hiddenHint', { context: session.provider === 'codex' ? 'codex' : undefined })}>
           {t('sessions:badge.hidden')}
         </span>
       )}

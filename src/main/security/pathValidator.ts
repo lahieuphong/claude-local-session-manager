@@ -11,7 +11,8 @@ import {
 import type { PlanItemKind } from '../../shared/types'
 
 /** Plan item kinds that are Claude files on disk (manager records are not). */
-export type ClaudeTargetKind = Exclude<PlanItemKind, 'manager-record'>
+/** Files this app deletes itself. Codex items are deleted by Codex (`codex delete`), never by this app. */
+export type ClaudeTargetKind = Exclude<PlanItemKind, 'manager-record' | 'codex-thread' | 'codex-history' | 'codex-rollout' | 'codex-index'>
 
 /**
  * Canonical (realpath'd) roots that the app is allowed to modify.

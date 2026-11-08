@@ -21,6 +21,11 @@ import { devFakeUpdater } from './services/devFakeUpdater'
 import { SessionRepository } from './services/sessionRepository'
 import { SettingsService } from './services/settingsService'
 import { WatchService } from './services/watchService'
+import { CodexActions } from './services/codex/codexActions'
+import { CodexDeleteService } from './services/codex/codexDelete'
+import { CodexExportService } from './services/codex/codexExport'
+import { codexEnvFromProcess } from './services/codex/codexHomes'
+import { CodexRepository } from './services/codex/codexRepository'
 import { errorMessage, logger } from './util/logger'
 import { localText } from './util/messages'
 import { resolveLocale, type SupportedLocale } from '../shared/locale'
@@ -154,6 +159,19 @@ async function start(): Promise<void> {
   }
   const exporter = new ExportService(repo, exportDialogs, { policy, appName: brand.name })
 
+  // OpenAI Codex: read from its own databases; archive, restore and delete run the Codex CLI.
+  const codexRepo = new CodexRepository({ env: codexEnvFromProcess(), hidden })
+  const codex = {
+    repo: codexRepo,
+    actions: new CodexActions(codexRepo, () => safety.isDryRun()),
+    deleter: new CodexDeleteService(codexRepo, {
+      dryRun: () => safety.isDryRun(),
+      onRealDeleteExecuted: () => safety.disarm('after-delete'),
+      appName: brand.name
+    }),
+    exporter: new CodexExportService(codexRepo, exportDialogs, brand.name)
+  }
+
   // Updates. GitHub channel: electron-updater + GitHub Releases (packaged builds
   // only). Store channel: the Store manages updates; electron-updater is never
   // loaded. Development: no updater (a fake one can be enabled to review the UI).
@@ -196,15 +214,22 @@ async function start(): Promise<void> {
   updates.on('changed', (state: UpdateState) => mainWindow?.webContents.send(IPC.updateStateChanged, state))
   logger.info(`Update mode: ${updateMode}`)
 
-  const watcher = new WatchService((reason) => {
-    repo.scan(reason).catch((err) => logger.error(`Auto refresh failed: ${errorMessage(err)}`))
+  const watcher = new WatchService((reason, target) => {
+    if (target !== 'codex') repo.scan(reason).catch((err) => logger.error(`Auto refresh failed: ${errorMessage(err)}`))
+    // Codex only once it has been opened: nobody is looking at it otherwise.
+    if (target !== 'claude' && codexRepo.getSnapshot()) codexRepo.scan(reason).catch((err) => logger.error(`Codex auto refresh failed: ${errorMessage(err)}`))
   })
 
   repo.on('changed', (snapshot) => {
     mainWindow?.webContents.send(IPC.sessionsChanged, snapshot)
-    watcher.configure(settings.get(), repo.getRoots())
+    watcher.configure(settings.get(), repo.getRoots(), codexRepo.getHomes().map((h) => h.path))
   })
-  repo.on('scan-state', (state) => mainWindow?.webContents.send(IPC.scanStateChanged, state))
+  repo.on('scan-state', (state) => mainWindow?.webContents.send(IPC.scanStateChanged, { ...state, provider: 'claude' }))
+  codexRepo.on('changed', (snapshot) => {
+    mainWindow?.webContents.send(IPC.sessionsChanged, snapshot)
+    watcher.configure(settings.get(), repo.getRoots(), codexRepo.getHomes().map((h) => h.path))
+  })
+  codexRepo.on('scan-state', (state) => mainWindow?.webContents.send(IPC.scanStateChanged, { ...state, provider: 'codex' }))
 
   registerIpc({
     repo,
@@ -217,9 +242,10 @@ async function start(): Promise<void> {
     settings,
     cache,
     appInfo,
+    codex,
     onSettingsChanged: (next) => {
       logger.debugEnabled = next.debugMode
-      watcher.configure(next, repo.getRoots())
+      watcher.configure(next, repo.getRoots(), codexRepo.getHomes().map((h) => h.path))
     },
     isTrustedSender
   })
@@ -236,6 +262,7 @@ async function start(): Promise<void> {
 
   app.on('window-all-closed', () => {
     watcher.stop()
+    codexRepo.dispose()
     safety.dispose()
     void cache.save().finally(() => app.quit())
   })

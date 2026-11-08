@@ -9,7 +9,8 @@
     "live": "Đang gắn với một tiến trình Claude Code ({{state}}, PID {{pid}}{{name}}). Hãy đóng phiên đó trước khi xóa.",
     "liveArchive": "Đang gắn với một tiến trình Claude Code ({{state}}, PID {{pid}}{{name}}). Hãy đóng phiên đó trước khi lưu trữ hoặc xóa.",
     "unknown": "Chưa xác định được trạng thái tiến trình Claude. Hãy kiểm tra lại tiến trình trước.",
-    "desktop": "Hãy đóng Claude Desktop trước khi thay đổi tệp phiên."
+    "desktop": "Hãy đóng Claude Desktop trước khi thay đổi tệp phiên.",
+    "codexRecent": "Codex vừa ghi vào phiên này chưa đầy 2 phút trước, có thể nó vẫn đang chạy. Tạm khóa lưu trữ và xóa cho tới khi nó dừng."
   },
   "action": {
     "restoreHint": "Bỏ cờ isArchived của Claude Desktop",
@@ -17,11 +18,14 @@
     "hide": "Ẩn phiên",
     "show": "Hiện phiên",
     "openProject": "Mở dự án",
-    "openProjectHint": "Mở thư mục dự án trong Explorer"
+    "openProjectHint": "Mở thư mục dự án trong Explorer",
+    "archiveHint_codex": "Nhờ Codex lưu trữ (\"codex archive\"): Codex chuyển tệp của phiên sang archived_sessions",
+    "restoreHint_codex": "Nhờ Codex khôi phục (\"codex unarchive\")"
   },
   "note": {
     "storeDesktop": "Bản Microsoft Store: phiên này có siêu dữ liệu Claude Desktop nên ở đây chỉ xem và xuất được, không lưu trữ, khôi phục hay xóa được. Cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData, và Claude Desktop sẽ không thấy các thay đổi đó.",
-    "armed": "Đã bật xóa thật — Xóa vĩnh viễn sẽ xóa thật các tệp của phiên này."
+    "armed": "Đã bật xóa thật — Xóa vĩnh viễn sẽ xóa thật các tệp của phiên này.",
+    "codexCliMissing": "Không tìm thấy Codex CLI, nên phiên này chỉ xem, xuất và ẩn được, chưa lưu trữ hay xóa được. Cài bằng \"npm i -g @openai/codex\" rồi làm mới."
   },
   "section": {
     "problems": "Vấn đề",
@@ -50,7 +54,12 @@
     "model": "Mô hình",
     "accounts": "Tài khoản",
     "claudeCode": "Claude Code",
-    "gitBranch": "Nhánh Git"
+    "gitBranch": "Nhánh Git",
+    "claudeCode_codex": "Codex",
+    "cliSessionId_codex": "ID phiên Codex",
+    "process_codex": "Hoạt động",
+    "subagents": "Phiên do nó tạo ra",
+    "codexHistory": "Hội thoại trong cơ sở dữ liệu Codex"
   },
   "hint": {
     "rawTitle": "Giá trị chính xác của trường title trong tệp siêu dữ liệu Claude Desktop",
@@ -68,7 +77,9 @@
     "summary": "Tóm tắt trong bản ghi hội thoại",
     "first-prompt": "Câu lệnh đầu tiên",
     "last-prompt": "Câu lệnh gần nhất",
-    "untitled": "Không có tiêu đề"
+    "untitled": "Không có tiêu đề",
+    "custom-title_codex": "Tên bạn đặt trong Codex",
+    "ai-title_codex": "Tiêu đề do Codex đặt"
   },
   "projectSource": {
     "metadata-cwd": "cwd trong siêu dữ liệu Claude Desktop",
@@ -76,10 +87,12 @@
     "owner-session": "Phiên sở hữu",
     "folder-records": "Bản ghi trong thư mục phiên",
     "decoded-folder-name": "Tên thư mục lưu của Claude, khớp với thư mục thật",
-    "unresolved": "Chưa xác định"
+    "unresolved": "Chưa xác định",
+    "transcript-cwd_codex": "Thư mục làm việc do Codex ghi lại"
   },
   "size": {
-    "other": "Khác (lịch sử, môi trường, nhật ký)"
+    "other": "Khác (lịch sử, môi trường, nhật ký)",
+    "other_codex": "Tệp của các phiên do nó tạo ra"
   },
   "file": {
     "metadata": "Siêu dữ liệu",
@@ -93,7 +106,9 @@
     "copyPath": "Sao chép đường dẫn đầy đủ",
     "copyPathOf": "Sao chép đường dẫn đầy đủ của {{label}}",
     "reveal": "Mở trong Explorer",
-    "revealOf": "Mở {{label}} trong Explorer"
+    "revealOf": "Mở {{label}} trong Explorer",
+    "transcript_codex": "Tệp phiên",
+    "priorTranscript_codex": "Tệp của phiên do nó tạo ra"
   },
   "metric": {
     "prompts": "Câu lệnh",

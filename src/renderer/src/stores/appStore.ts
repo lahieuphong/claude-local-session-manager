@@ -11,6 +11,7 @@ import type {
   MessageRef,
   MotionPreference,
   ProcessStatus,
+  Provider,
   SafetyModeState,
   ScanSnapshot,
   UpdateState
@@ -52,8 +53,11 @@ export interface AppState {
   armModalOpen: boolean
   updates: UpdateState | null
   settings: AppSettings | null
+  /** Whose sessions are on screen: Claude or Codex. null = the picker shown at every start. */
+  provider: Provider | null
+  /** The sessions of that tool (never the other tool's). */
   snapshot: ScanSnapshot | null
-  /** The Claude account on screen, as last chosen. See activeAccountId(). */
+  /** The account on screen, as last chosen for this tool. See activeAccountId(). */
   accountId: string | null
   scanning: boolean
   loadError?: string
@@ -89,9 +93,12 @@ function savePref(key: string, value: string): void {
   }
 }
 
-function loadAccount(): string | null {
+/** Each tool remembers its own account (the Claude key predates Codex support). */
+const accountKey = (provider: Provider | null): string => (provider === 'codex' ? 'account:codex' : 'account')
+
+function loadAccount(provider: Provider | null): string | null {
   try {
-    return localStorage.getItem('account')
+    return localStorage.getItem(accountKey(provider))
   } catch {
     return null
   }
@@ -103,8 +110,9 @@ let state: AppState = {
   armModalOpen: false,
   updates: null,
   settings: null,
+  provider: null,
   snapshot: null,
-  accountId: loadAccount(),
+  accountId: null,
   scanning: false,
   process: null,
   processChecking: false,
@@ -229,8 +237,13 @@ export function visibleSessions(s: AppState): ClaudeSession[] {
   return visible.sessions
 }
 
+/** i18next context for texts that name the tool: `key_codex` when it exists, else `key`. */
+export function toolContext(s: AppState): 'codex' | undefined {
+  return s.provider === 'codex' ? 'codex' : undefined
+}
+
 export function setAccount(accountId: string): void {
-  savePref('account', accountId)
+  savePref(accountKey(state.provider), accountId)
   setState((s) => ({
     accountId,
     // What was selected or open belongs to the other account.
@@ -245,6 +258,8 @@ export function setAccount(accountId: string): void {
 // ---------------------------------------------------------------------------
 
 function applySnapshot(snapshot: ScanSnapshot): void {
+  // Scans of the other tool (its watcher, a refresh in flight when switching) are not shown here.
+  if ((snapshot.provider ?? 'claude') !== state.provider) return
   setState((s) => {
     // A session can leave the account on screen, when it is resumed under another one.
     const ids = new Set(visibleSessions({ ...s, snapshot }).map((x) => x.id))
@@ -262,7 +277,9 @@ export async function init(): Promise<void> {
   if (initialized) return
   initialized = true
   api().onSessionsChanged(applySnapshot)
-  api().onScanStateChanged((st) => setState({ scanning: st.scanning }))
+  api().onScanStateChanged((st) => {
+    if ((st.provider ?? 'claude') === state.provider) setState({ scanning: st.scanning })
+  })
   api().onSafetyModeChanged((safety) => setState({ safety }))
   api().onUpdateStateChanged((updates) => setState({ updates }))
   void api()
@@ -281,21 +298,47 @@ export async function init(): Promise<void> {
     setState({ loadError: errText(err) })
   }
   void refreshProcess(false)
+  // The sessions are read once a tool is chosen on the picker.
+}
+
+/** Show this tool's sessions (from the picker, or the switch at the top of the sidebar). */
+export async function chooseProvider(provider: Provider): Promise<void> {
+  if (state.provider === provider && state.snapshot) return
+  setState({
+    provider,
+    snapshot: null,
+    accountId: loadAccount(provider),
+    selectedId: null,
+    checked: [],
+    search: '',
+    view: { kind: 'sessions', filter: 'all' },
+    deleteRequest: null,
+    loadError: undefined
+  })
   try {
     setState({ scanning: true })
-    applySnapshot(await api().scanSessions())
+    applySnapshot(await api().scanSessions(provider))
   } catch (err) {
-    setState({ loadError: errText(err) })
-    toastError('common:toast.scanFailed', err)
+    if (state.provider === provider) {
+      setState({ loadError: errText(err) })
+      toastError('common:toast.scanFailed', err)
+    }
   } finally {
-    setState({ scanning: false })
+    if (state.provider === provider) setState({ scanning: false })
   }
 }
 
+/** Back to the picker. */
+export function leaveProvider(): void {
+  setState({ provider: null, snapshot: null, selectedId: null, checked: [], search: '', view: { kind: 'sessions', filter: 'all' }, deleteRequest: null, scanning: false })
+}
+
 export async function refresh(): Promise<void> {
+  const provider = state.provider
+  if (!provider) return
   try {
     setState({ scanning: true })
-    applySnapshot(await api().refreshSessions())
+    applySnapshot(await api().refreshSessions(provider))
     void refreshProcess(true)
   } catch (err) {
     toastError('common:toast.refreshFailed', err)

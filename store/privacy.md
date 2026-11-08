@@ -1,12 +1,14 @@
 # Privacy policy — LHP Local Session Manager
 
-_Last updated: 7 November 2026_
+_Last updated: 8 November 2026_
 
 LHP Local Session Manager is an **unofficial, independent** desktop utility for
 Windows. It lets you browse, search, export and clean up the session history
-that Claude Code and Claude Desktop keep on your own computer. It is not made
-by, affiliated with, endorsed by or sponsored by Anthropic. "Claude" is a
-trademark of Anthropic.
+that Claude Code and Claude Desktop, and OpenAI Codex, keep on your own
+computer. It is not made by, affiliated with, endorsed by or sponsored by
+Anthropic or OpenAI. "Claude" is a trademark of Anthropic; "OpenAI" and "Codex"
+are trademarks of OpenAI. Their logos are shown only so you can choose which
+tool's sessions to manage.
 
 This policy describes the Microsoft Store edition. The same open-source project
 is also published as Setup and Portable builds on GitHub. Where those builds
@@ -30,8 +32,17 @@ behave differently, this page says so.
   `%APPDATA%\Claude`, or under the Claude package folder in
   `%LOCALAPPDATA%\Packages`. These files contain session titles, session IDs,
   the project folder path, the model name, dates and the archive flag.
-- **Running processes** named `claude`, `node` or `bun`: name, executable path,
-  command line and start time. This is a local, read-only Windows query.
+- **OpenAI Codex session data**, when you open the Codex view: in
+  `%USERPROFILE%\.codex` (or the folder named by `CODEX_HOME`) and in each
+  `%USERPROFILE%\.codex-<name>` folder, Codex's sessions database
+  (`state_<n>.sqlite`), its conversations database (`thread_history_<n>.sqlite`),
+  its session files (`sessions` and `archived_sessions`) and `session_index.jsonl`.
+  The app opens the databases read-only. They contain session titles, your
+  prompts, Codex's replies, commands it ran, file paths, project names and git
+  details. The app never opens `auth.json`, the file with your Codex sign-in.
+- **Running processes** named `claude`, `node`, `bun`, `codex` or `ChatGPT`
+  (the Codex app): name, executable path, command line and start time. This is
+  a local, read-only Windows query.
 - **The name and plan of each Claude sign-in**, if you have more than one on this
   PC: the email address, display name and plan name (such as "Max 20x") from each
   account's `.claude.json` file. The app reads that file, keeps only these three
@@ -118,6 +129,13 @@ you confirm.
   export into `AppData`.
 - **Permanent delete** removes the exact local files listed in the plan. Deleted
   files are not sent anywhere, and the app cannot recover them.
+- **Codex sessions** are archived, restored and deleted by the Codex CLI
+  installed on your computer (`codex archive`, `codex unarchive` and
+  `codex delete --force <session id>`), which the app runs only after you ask,
+  and for a delete only after you review and confirm the plan. The app itself
+  never writes Codex's files or databases; it reads them again afterwards to
+  check what Codex did. Without the Codex CLI, Codex sessions can only be
+  viewed, exported and hidden.
 - **Microsoft Store edition**: sessions that have Claude Desktop metadata can
   be viewed and exported, but not archived, restored or deleted. The Microsoft
   Store edition does not modify Claude Desktop's AppData files. It may still

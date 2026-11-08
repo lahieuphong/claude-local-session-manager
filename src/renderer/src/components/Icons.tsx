@@ -119,6 +119,15 @@ export const IconExternal = (p: IconProps): ReactElement => (
     <path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
   </Icon>
 )
+/** Two opposite arrows: switch to the other tool. */
+export const IconSwap = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <path d="M7 4 3 8l4 4" />
+    <path d="M3 8h14" />
+    <path d="m17 20 4-4-4-4" />
+    <path d="M21 16H7" />
+  </Icon>
+)
 export const IconUser = (p: IconProps): ReactElement => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="9.25" />

@@ -23,7 +23,8 @@
   },
   "mode": {
     "safeText": "仅验证：完整运行所有检查并记录确切的计划，但不会修改任何 Claude 文件。如需真正删除，请在“设置 → 删除安全”中启用永久删除。",
-    "armedText": "下面的文件将被永久删除。此次删除后，应用会立即返回安全模式。"
+    "armedText": "下面的文件将被永久删除。此次删除后，应用会立即返回安全模式。",
+    "safeText_codex": "仅验证：运行所有检查并记录确切的计划，但不会请 Codex 删除任何内容。如需真正删除，请在“设置 → 删除安全”中启用永久删除。"
   },
   "meta": {
     "planId": "计划 ID",
@@ -53,7 +54,8 @@
     "delete-directory": "删除文件夹 · {{files}}，{{folders}}",
     "create-file": "创建文件",
     "update-file": "更新文件",
-    "remove-record": "移除记录"
+    "remove-record": "移除记录",
+    "codex-delete": "由 Codex 删除"
   },
   "kind": {
     "metadata": "元数据",
@@ -64,13 +66,18 @@
     "session-env": "会话环境",
     "tombstone": "删除标记",
     "archive-index": "归档索引",
-    "manager-record": "管理器记录"
+    "manager-record": "管理器记录",
+    "codex-thread": "Codex 会话",
+    "codex-history": "对话内容",
+    "codex-rollout": "会话文件",
+    "codex-index": "会话索引"
   },
   "group": {
     "willDelete": "将删除",
     "willChange": "将修改 · Claude Desktop 记录",
     "managerRecords": "管理器记录 · 仅本应用",
-    "willNotDelete": "不会删除"
+    "willNotDelete": "不会删除",
+    "codexDeletes": "由 Codex 删除 · 使用 \"codex delete\""
   },
   "outcome": {
     "deleted": "已删除",

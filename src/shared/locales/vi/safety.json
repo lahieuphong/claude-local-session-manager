@@ -9,7 +9,9 @@
     "safeText": "Chạy thử — không tệp nào của Claude có thể bị xóa, lưu trữ hay khôi phục.",
     "safeTextStore": "Chạy thử — không tệp nào của Claude có thể bị xóa.",
     "armedText": "Đã cho phép xóa vĩnh viễn trong lần mở ứng dụng này. Sau một lần xóa, sau 10 phút hoặc khi đóng ứng dụng sẽ quay về Chế độ an toàn.",
-    "settingsLink": "An toàn khi xóa"
+    "settingsLink": "An toàn khi xóa",
+    "safeText_codex": "Chạy thử — không nhờ Codex xóa, lưu trữ hay khôi phục gì.",
+    "safeTextStore_codex": "Chạy thử — không nhờ Codex xóa gì."
   },
   "claude": {
     "running": "Claude Desktop đang chạy — đã tắt lưu trữ, khôi phục và xóa",
@@ -19,7 +21,9 @@
     "unknownHint": "Không kiểm tra được Claude Desktop có đang chạy hay không.",
     "closed": "Claude Desktop đã đóng",
     "checking": "Đang kiểm tra Claude…",
-    "recheck": "Kiểm tra lại tiến trình Claude"
+    "recheck": "Kiểm tra lại tiến trình Claude",
+    "recheck_codex": "Kiểm tra lại tiến trình Codex",
+    "checking_codex": "Đang kiểm tra Codex…"
   },
   "action": {
     "returnToSafe": "Quay về Chế độ an toàn",
@@ -48,5 +52,10 @@
   },
   "toast": {
     "returned": "Đã quay về Chế độ an toàn. Không tệp nào của Claude có thể bị xóa."
+  },
+  "codex": {
+    "running": "Ứng dụng Codex đang chạy",
+    "closed": "Ứng dụng Codex đã đóng",
+    "runningHint": "Codex tự thay đổi dữ liệu của nó khi app này nhờ, nên ứng dụng Codex vẫn có thể mở. Các phiên nó đang làm thì bị tạm khóa."
   }
 }

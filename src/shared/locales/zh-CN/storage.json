@@ -10,7 +10,8 @@
     "archived": "已归档 (Claude)",
     "hidden": "在管理器中隐藏",
     "transcriptOnly": "仅有会话记录",
-    "metadataOrphan": "仅有元数据 / 孤立"
+    "metadataOrphan": "仅有元数据 / 孤立",
+    "archived_codex": "已归档 (Codex)"
   },
   "section": {
     "breakdown": "磁盘用量明细",
@@ -21,7 +22,10 @@
   "part": {
     "transcripts": "会话记录",
     "sessionData": "会话数据（子代理、工具结果）",
-    "other": "文件历史、环境、元数据"
+    "other": "文件历史、环境、元数据",
+    "transcripts_codex": "会话文件",
+    "sessionData_codex": "Codex 数据库中的对话",
+    "other_codex": "它们创建的会话的文件"
   },
   "sessionsCount_other": "{{count}} 个会话",
   "noProjects": "没有项目。",
@@ -35,6 +39,9 @@
     "tombstones": "删除标记",
     "duration": "耗时",
     "ms": "{{value}} 毫秒",
-    "issues_other": "{{count}} 个扫描问题"
+    "issues_other": "{{count}} 个扫描问题",
+    "codexSessions": "Codex 会话",
+    "transcripts_codex": "有会话文件",
+    "subagentExcluded_codex": "子代理会话"
   }
 }

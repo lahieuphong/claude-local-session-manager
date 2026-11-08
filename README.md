@@ -15,6 +15,7 @@ export or permanently delete sessions.
 ## Features
 
 - Automatic discovery of Claude storage. Nothing is hard-coded: everything comes from `USERPROFILE` / `APPDATA` / `LOCALAPPDATA` (and `CLAUDE_CONFIG_DIR` if set).
+- **Claude and OpenAI Codex**: every start asks which tool's sessions to manage. Codex sessions get the same list, search, projects, details, export, hide, archive and delete; Codex itself does the archiving and deleting (see [OpenAI Codex](#openai-codex)).
 - **Several Claude accounts**: every sign-in on this PC (`~/.claude` and `~/.claude-accounts/<name>`) is listed in a dropdown at the top right, and the list, projects and storage follow it.
 - Session list with search (title, prompts, project, paths, IDs, accent-insensitive: `nha hat` finds `Nhà hát`), sorting, grouping by date or project, and filters (All / Active / Archived / Transcript only / Metadata only & problems / per project).
 - Details panel:
@@ -336,6 +337,43 @@ under two. One with no trace goes under the account whose folder really holds th
 store. **This is only where a session is listed.** Safety does not depend on it: a
 session running under any account is protected in every view, and deleting a session
 removes it from the shared store, with its folders in every account.
+
+## OpenAI Codex
+
+The first screen asks whose sessions to manage: Claude's or Codex's. The switch at
+the top of the sidebar goes back to it.
+
+Codex keeps its sessions in its own folder, `%USERPROFILE%\.codex` (or `CODEX_HOME`).
+Each `%USERPROFILE%\.codex-<name>` folder that holds a Codex database is listed as
+another Codex account. In each folder the app reads:
+
+| What | Where |
+|---|---|
+| The sessions (title, folder, model, dates, archive flag) | `state_<n>.sqlite`, table `threads` |
+| Who started whom (sub-agents) | `state_<n>.sqlite`, table `thread_spawn_edges` |
+| The conversation | `thread_history_<n>.sqlite`, table `thread_items` |
+| Session files of older or not yet migrated sessions | `sessions\YYYY\MM\DD\rollout-….jsonl`, `archived_sessions\` |
+| Names given to sessions | `session_index.jsonl` |
+
+The databases are opened read-only, with every column looked up first (Codex's
+schema changes between versions). Only the sessions the user started are listed:
+sub-agents and Codex's automatic reviews are counted with the session that
+started them. `auth.json`, the Codex sign-in, is never opened.
+
+**Changes are made by Codex itself.** Archive, Restore and Delete run the Codex
+CLI found on this PC (`npm i -g @openai/codex`, else the one the Codex extension
+for VS Code brings), never a shell: `codex archive <id>`, `codex unarchive <id>`
+and `codex delete --force <id>`, with `CODEX_HOME` set to the session's folder.
+Codex deletes the session, the sessions it started, their conversation, their
+files and the index line; the app then reads Codex's data again and reports each
+part it finds still there. Delete goes through the same plan, confirmation,
+expiry, fresh re-scan and Safe Mode as for Claude. A session Codex wrote to in the
+last two minutes may still be running, so it is not archived or deleted. The
+Codex app may stay open: Codex changes its own data.
+
+"OpenAI" and "Codex" are trademarks of OpenAI, and "Claude" of Anthropic. Their
+logos (from the publishers' VS Code extensions) are shown only to tell the two
+tools apart. This unofficial app is not affiliated with either company.
 
 ## How sessions are recognised
 

@@ -1,4 +1,4 @@
-import type { ExportFormat } from '../../shared/types'
+import { PROVIDERS, type ExportFormat, type Provider } from '../../shared/types'
 import { SESSION_ID_RE } from '../services/sessionBuilder'
 
 /**
@@ -35,6 +35,13 @@ export function assertAccountId(v: unknown): string | undefined {
   if (v === undefined || v === null) return undefined
   if (typeof v !== 'string' || !/^[a-f0-9]{12}$/.test(v)) throw new Error('Invalid account id')
   return v
+}
+
+/** Which tool's sessions; Claude when absent. */
+export function assertProvider(v: unknown): Provider {
+  if (v === undefined || v === null) return 'claude'
+  if (typeof v !== 'string' || !PROVIDERS.includes(v as Provider)) throw new Error('Invalid provider')
+  return v as Provider
 }
 
 export function assertString(v: unknown, max = 200): string {

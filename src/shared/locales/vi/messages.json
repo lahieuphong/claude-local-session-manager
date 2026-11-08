@@ -108,7 +108,8 @@
     "workspace": "thư mục dự án (mã nguồn)",
     "projectFolder": "chính thư mục dự án của Claude, các phiên khác và memory/",
     "memory": "bộ nhớ dự án",
-    "desktopFolder": "thư mục phiên Claude Desktop và các phiên khác trong đó"
+    "desktopFolder": "thư mục phiên Claude Desktop và các phiên khác trong đó",
+    "codexHome": "thư mục Codex: các phiên khác, cài đặt và thông tin đăng nhập"
   },
   "export": {
     "notFound": "Không tìm thấy phiên",
@@ -172,5 +173,27 @@
     "problemDetailStore": "{{reason}}\n\nHãy thử lại. Nếu vẫn lỗi, hãy cài lại ứng dụng từ Microsoft Store.\n\nTệp nhật ký: {{log}}",
     "retry": "Thử lại",
     "quit": "Thoát"
+  },
+  "codex": {
+    "cliMissing": "Không tìm thấy Codex CLI, nên app không thể lưu trữ, khôi phục hay xóa phiên Codex (app chỉ nhờ Codex làm). Cài bằng \"npm i -g @openai/codex\", hoặc cài tiện ích Codex cho VS Code, rồi làm mới.",
+    "badId": "Phiên Codex này không có mã hợp lệ, nên không thể nhờ Codex thay đổi nó.",
+    "recentlyActive": "Codex vừa ghi vào phiên này chưa đầy {{minutes}} phút trước, có thể nó vẫn đang chạy. Hãy thử lại khi xong.",
+    "alreadyArchived": "Phiên này đã được lưu trữ trong Codex.",
+    "alreadyActive": "Phiên này chưa được lưu trữ trong Codex.",
+    "archived": "Đã lưu trữ trong Codex. Codex đã chuyển tệp của phiên sang archived_sessions.",
+    "restored": "Đã khôi phục trong Codex.",
+    "archiveDryRun": "Chế độ an toàn: Codex sẽ lưu trữ phiên này. Chưa có gì thay đổi.",
+    "restoreDryRun": "Chế độ an toàn: Codex sẽ khôi phục phiên này. Chưa có gì thay đổi.",
+    "commandFailed": "Codex không làm được: {{output}}",
+    "notApplied": "Codex báo đã xong, nhưng phiên không thay đổi trong cơ sở dữ liệu của nó.",
+    "stillThere": "Vẫn còn sau khi chạy \"codex delete\".",
+    "hidden": "Đã ẩn trong trình quản lý. Chỉ danh sách của app này thay đổi; dữ liệu và trạng thái lưu trữ của Codex không bị đụng tới.",
+    "noDatabase": "Thư mục Codex này không có cơ sở dữ liệu phiên (chưa hỗ trợ các bản Codex không có nó).",
+    "noFolder": "Không tìm thấy thư mục Codex (CODEX_HOME hoặc ~/.codex).",
+    "noteThread": "Phiên {{id}}",
+    "noteThreadWithAgents": "Phiên {{id}} và {{count}} phiên do nó tạo ra (agent con)",
+    "noteHistory": "{{count}} mục hội thoại đã lưu",
+    "noteAgentFile": "Tệp của một phiên do nó tạo ra (agent con)",
+    "noteIndex": "Dòng của nó trong danh sách phiên có tên"
   }
 }

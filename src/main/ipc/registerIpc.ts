@@ -11,7 +11,11 @@ import type { ExportService } from '../services/exportService'
 import type { ProcessService } from '../services/processService'
 import type { SafetyModeController } from '../services/safetyMode'
 import type { UpdateService } from '../services/updateService'
-import { assertFormat, assertId, assertIds, assertPlanId, assertString, assertAccountId } from './validators'
+import { assertFormat, assertId, assertIds, assertPlanId, assertProvider, assertString, assertAccountId } from './validators'
+import type { CodexActions } from '../services/codex/codexActions'
+import type { CodexDeleteService } from '../services/codex/codexDelete'
+import type { CodexExportService } from '../services/codex/codexExport'
+import type { CodexRepository } from '../services/codex/codexRepository'
 import type { SessionRepository } from '../services/sessionRepository'
 import type { SettingsService } from '../services/settingsService'
 import { computeStorageInfo } from '../services/storageService'
@@ -27,6 +31,13 @@ export interface IpcContext {
   settings: SettingsService
   cache: ScanCache
   appInfo: AppInfo
+  /** OpenAI Codex: read from its databases, changed only through the Codex CLI. */
+  codex: {
+    repo: CodexRepository
+    actions: CodexActions
+    deleter: CodexDeleteService
+    exporter: CodexExportService
+  }
   onSettingsChanged(settings: AppSettings): void
   isTrustedSender(event: IpcMainInvokeEvent): boolean
 }
@@ -51,43 +62,88 @@ export function registerIpc(ctx: IpcContext): void {
     })
   }
   const record = (id: unknown) => ctx.repo.getRecord(assertId(id))
+  const codex = ctx.codex
+  /** A Codex session ID (never also a Claude one: both are hashes of different inputs). */
+  const isCodex = (id: string): boolean => codex.repo.has(id)
+  /** Every ID of one call is of the same tool. */
+  const codexIds = (ids: string[]): boolean => {
+    const n = ids.filter(isCodex).length
+    if (n > 0 && n < ids.length) throw new Error('Claude and Codex sessions cannot be changed in one call')
+    return n > 0
+  }
+  const snapshotOf = async (provider: unknown) =>
+    assertProvider(provider) === 'codex' ? codex.repo.getSnapshot() ?? codex.repo.scan('initial') : ctx.repo.getSnapshot() ?? ctx.repo.scan('initial')
 
   handle(IPC.getAppInfo, () => ctx.appInfo)
   handle(IPC.getLogs, () => logger.getEntries())
 
-  handle(IPC.scanSessions, async () => ctx.repo.getSnapshot() ?? ctx.repo.scan('initial'))
-  handle(IPC.refreshSessions, () => ctx.repo.scan('manual'))
-  handle(IPC.getSession, (id) => ctx.repo.getDetails(assertId(id)))
-
-  handle(IPC.archiveSession, (id) => ctx.archive.setArchived(assertId(id), true))
-  handle(IPC.restoreSession, (id) => ctx.archive.setArchived(assertId(id), false))
-  handle(IPC.bulkArchive, (ids) => ctx.archive.bulk(assertIds(ids), true))
-  handle(IPC.bulkRestore, (ids) => ctx.archive.bulk(assertIds(ids), false))
-  handle(IPC.hideSession, (id) => ctx.archive.setHidden(assertId(id), true))
-  handle(IPC.unhideSession, (id) => ctx.archive.setHidden(assertId(id), false))
-  handle(IPC.bulkHide, (ids) => ctx.archive.bulkHidden(assertIds(ids), true))
-  handle(IPC.bulkUnhide, (ids) => ctx.archive.bulkHidden(assertIds(ids), false))
-
-  handle(IPC.createDeletePlan, (id) => ctx.deleter.createPlan([assertId(id)], false))
-  handle(IPC.deleteSession, (id, confirmation, planId) =>
-    ctx.deleter.execute([assertId(id)], assertString(confirmation), assertPlanId(planId), false)
-  )
-  handle(IPC.createBulkDeletePlan, (ids) => ctx.deleter.createPlan(assertIds(ids), true))
-  handle(IPC.bulkDelete, (ids, confirmation, planId) =>
-    ctx.deleter.execute(assertIds(ids), assertString(confirmation), assertPlanId(planId), true)
-  )
-
-  handle(IPC.exportSession, (id, format) => ctx.exporter.exportOne(assertId(id), assertFormat(format)))
-  handle(IPC.exportSessions, (ids, formats) => {
-    if (!Array.isArray(formats) || formats.length === 0) throw new Error('Choose at least one export format')
-    return ctx.exporter.exportMany(assertIds(ids), [...new Set(formats.map(assertFormat))])
+  handle(IPC.scanSessions, (provider) => snapshotOf(provider))
+  handle(IPC.refreshSessions, (provider) => (assertProvider(provider) === 'codex' ? codex.repo.scan('manual') : ctx.repo.scan('manual')))
+  handle(IPC.getSession, (id) => {
+    const sid = assertId(id)
+    return isCodex(sid) ? codex.repo.getDetails(sid) : ctx.repo.getDetails(sid)
   })
 
-  handle(IPC.revealMetadata, (id) => reveal(record(id)?.metadata?.filePath, 'metadata'))
-  handle(IPC.revealTranscript, (id) => reveal(record(id)?.transcript?.filePath, 'transcript'))
-  handle(IPC.revealSessionData, (id) => reveal(record(id)?.dataDir?.dirPath, 'sessionData'))
+  const archiveOne = (id: unknown, archived: boolean) => {
+    const sid = assertId(id)
+    return isCodex(sid) ? codex.actions.setArchived(sid, archived) : ctx.archive.setArchived(sid, archived)
+  }
+  const archiveMany = (ids: unknown, archived: boolean) => {
+    const list = assertIds(ids)
+    return codexIds(list) ? codex.actions.bulk(list, archived) : ctx.archive.bulk(list, archived)
+  }
+  const hideOne = (id: unknown, hidden: boolean) => {
+    const sid = assertId(id)
+    return isCodex(sid) ? codex.actions.setHidden(sid, hidden) : ctx.archive.setHidden(sid, hidden)
+  }
+  const hideMany = (ids: unknown, hidden: boolean) => {
+    const list = assertIds(ids)
+    return codexIds(list) ? codex.actions.bulkHidden(list, hidden) : ctx.archive.bulkHidden(list, hidden)
+  }
+  handle(IPC.archiveSession, (id) => archiveOne(id, true))
+  handle(IPC.restoreSession, (id) => archiveOne(id, false))
+  handle(IPC.bulkArchive, (ids) => archiveMany(ids, true))
+  handle(IPC.bulkRestore, (ids) => archiveMany(ids, false))
+  handle(IPC.hideSession, (id) => hideOne(id, true))
+  handle(IPC.unhideSession, (id) => hideOne(id, false))
+  handle(IPC.bulkHide, (ids) => hideMany(ids, true))
+  handle(IPC.bulkUnhide, (ids) => hideMany(ids, false))
+
+  const deleterFor = (ids: string[]) => (codexIds(ids) ? codex.deleter : ctx.deleter)
+  handle(IPC.createDeletePlan, (id) => {
+    const ids = [assertId(id)]
+    return deleterFor(ids).createPlan(ids, false)
+  })
+  handle(IPC.deleteSession, (id, confirmation, planId) => {
+    const ids = [assertId(id)]
+    return deleterFor(ids).execute(ids, assertString(confirmation), assertPlanId(planId), false)
+  })
+  handle(IPC.createBulkDeletePlan, (ids) => {
+    const list = assertIds(ids)
+    return deleterFor(list).createPlan(list, true)
+  })
+  handle(IPC.bulkDelete, (ids, confirmation, planId) => {
+    const list = assertIds(ids)
+    return deleterFor(list).execute(list, assertString(confirmation), assertPlanId(planId), true)
+  })
+
+  handle(IPC.exportSession, (id, format) => {
+    const sid = assertId(id)
+    return isCodex(sid) ? codex.exporter.exportOne(sid, assertFormat(format)) : ctx.exporter.exportOne(sid, assertFormat(format))
+  })
+  handle(IPC.exportSessions, (ids, formats) => {
+    if (!Array.isArray(formats) || formats.length === 0) throw new Error('Choose at least one export format')
+    const list = assertIds(ids)
+    const chosen = [...new Set(formats.map(assertFormat))]
+    return codexIds(list) ? codex.exporter.exportMany(list, chosen) : ctx.exporter.exportMany(list, chosen)
+  })
+
+  const codexRecord = (id: unknown) => codex.repo.getRecord(assertId(id))
+  handle(IPC.revealMetadata, (id) => reveal(codexRecord(id) ? undefined : record(id)?.metadata?.filePath, 'metadata'))
+  handle(IPC.revealTranscript, (id) => reveal(codexRecord(id)?.session.transcriptFile ?? record(id)?.transcript?.filePath, 'transcript'))
+  handle(IPC.revealSessionData, (id) => reveal(codexRecord(id) ? undefined : record(id)?.dataDir?.dirPath, 'sessionData'))
   handle(IPC.openProject, async (id): Promise<ActionResult> => {
-    const p = record(id)?.session.projectPath
+    const p = (codexRecord(id) ?? record(id))?.session.projectPath
     if (!p) return { ok: false, code: 'NOT_FOUND', ...msg('project.unknownPath') }
     if (!(await isDirectory(p))) return { ok: false, code: 'NOT_FOUND', ...msg('project.missingFolder', { path: p }) }
     const err = await shell.openPath(p)
@@ -95,9 +151,9 @@ export function registerIpc(ctx: IpcContext): void {
   })
 
   handle(IPC.getClaudeProcessStatus, (force) => ctx.processes.getStatus(force === true))
-  handle(IPC.getStorageInfo, async (accountId) => {
+  handle(IPC.getStorageInfo, async (accountId, provider) => {
     const id = assertAccountId(accountId)
-    const snapshot = ctx.repo.getSnapshot() ?? (await ctx.repo.scan('storage'))
+    const snapshot = await snapshotOf(provider)
     return computeStorageInfo(id ? { ...snapshot, sessions: snapshot.sessions.filter((s) => s.accountIds.includes(id)) } : snapshot, ctx.appInfo.cachePath)
   })
 

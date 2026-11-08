@@ -451,7 +451,8 @@ describe('Store edition wiring and wording', () => {
   it('the UI hides Archive / Restore and disables Delete for Desktop-backed sessions in the Store edition', () => {
     const details = read('src/renderer/src/components/DetailsPanel.tsx')
     expect(details).toMatch(/const storeReadOnly = s\.hasMetadata && !!appInfo\?\.desktopDataReadOnly/)
-    expect(details).toMatch(/\{storeReadOnly \? null : s\.hasMetadata \? \(/)
+    // Claude sessions only: a Codex session (its own branch, before this one) is not Claude Desktop data.
+    expect(details).toMatch(/: storeReadOnly \? null : s\.hasMetadata \? \(/)
     expect(details).toMatch(/disabled=\{busy \|\| deleteBlock \|\| storeReadOnly\}/)
     expect(details).toMatch(/inspector:note\.storeDesktop/)
     const list = read('src/renderer/src/components/SessionList.tsx')

@@ -23,7 +23,8 @@
   },
   "mode": {
     "safeText": "Chỉ kiểm tra: toàn bộ các bước kiểm tra được chạy và kế hoạch được ghi nhật ký, nhưng không tệp nào của Claude bị thay đổi. Muốn xóa thật, hãy bật xóa thật trong Cài đặt → An toàn khi xóa.",
-    "armedText": "Các tệp bên dưới sẽ bị xóa vĩnh viễn. Ứng dụng tự quay về Chế độ an toàn ngay sau lần xóa này."
+    "armedText": "Các tệp bên dưới sẽ bị xóa vĩnh viễn. Ứng dụng tự quay về Chế độ an toàn ngay sau lần xóa này.",
+    "safeText_codex": "Chỉ kiểm tra: toàn bộ các bước kiểm tra được chạy và kế hoạch được ghi nhật ký, nhưng Codex không được yêu cầu xóa gì. Muốn xóa thật, hãy bật xóa thật trong Cài đặt → An toàn khi xóa."
   },
   "meta": {
     "planId": "ID kế hoạch",
@@ -53,7 +54,8 @@
     "delete-directory": "xóa thư mục · {{files}}, {{folders}}",
     "create-file": "tạo tệp",
     "update-file": "cập nhật tệp",
-    "remove-record": "gỡ bản ghi"
+    "remove-record": "gỡ bản ghi",
+    "codex-delete": "Codex xóa"
   },
   "kind": {
     "metadata": "Siêu dữ liệu",
@@ -64,13 +66,18 @@
     "session-env": "Môi trường phiên",
     "tombstone": "Dấu xóa",
     "archive-index": "Chỉ mục lưu trữ",
-    "manager-record": "Bản ghi trình quản lý"
+    "manager-record": "Bản ghi trình quản lý",
+    "codex-thread": "Phiên Codex",
+    "codex-history": "Nội dung hội thoại",
+    "codex-rollout": "Tệp phiên",
+    "codex-index": "Chỉ mục phiên"
   },
   "group": {
     "willDelete": "Sẽ xóa",
     "willChange": "Sẽ thay đổi · sổ sách của Claude Desktop",
     "managerRecords": "Bản ghi của trình quản lý · chỉ ứng dụng này",
-    "willNotDelete": "Không xóa"
+    "willNotDelete": "Không xóa",
+    "codexDeletes": "Codex sẽ xóa · bằng lệnh \"codex delete\""
   },
   "outcome": {
     "deleted": "đã xóa",

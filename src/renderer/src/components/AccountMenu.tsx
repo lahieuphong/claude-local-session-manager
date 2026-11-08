@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { useTranslation } from 'react-i18next'
 import { matchesFilter } from '../../../shared/sessionQuery'
 import type { ClaudeAccount } from '../../../shared/types'
-import { activeAccountId, setAccount, useAppState } from '../stores/appStore'
+import { activeAccountId, setAccount, toolContext, useAppState } from '../stores/appStore'
 import { IconCheck, IconChevron, IconUser } from './Icons'
 
 /** Which Claude account is on screen. There is nothing to choose with a single account. */
@@ -15,6 +15,7 @@ function AccountDropdown({ accounts }: { accounts: ClaudeAccount[] }): ReactElem
   const { t } = useTranslation()
   const sessions = useAppState((s) => s.snapshot?.sessions)
   const activeId = useAppState(activeAccountId)
+  const context = useAppState(toolContext)
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -116,7 +117,7 @@ function AccountDropdown({ accounts }: { accounts: ClaudeAccount[] }): ReactElem
           onMouseDown={(e) => e.preventDefault()}
         >
           <div className="menu-heading" id={headingId}>
-            {t('common:nav.accounts')}
+            {t('common:nav.accounts', { context })}
           </div>
           <div className="account-list">
             {accounts.map((a) => (
@@ -124,7 +125,7 @@ function AccountDropdown({ accounts }: { accounts: ClaudeAccount[] }): ReactElem
             ))}
           </div>
           <div className="menu-note" id={noteId}>
-            {t('common:account.note')}
+            {t('common:account.note', { context })}
           </div>
         </div>
       )}

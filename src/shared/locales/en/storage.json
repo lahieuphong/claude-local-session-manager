@@ -10,7 +10,8 @@
     "archived": "Archived (Claude)",
     "hidden": "Hidden in manager",
     "transcriptOnly": "Transcript only",
-    "metadataOrphan": "Metadata only / orphan"
+    "metadataOrphan": "Metadata only / orphan",
+    "archived_codex": "Archived (Codex)"
   },
   "section": {
     "breakdown": "Disk usage breakdown",
@@ -21,7 +22,10 @@
   "part": {
     "transcripts": "Transcripts",
     "sessionData": "Session data (subagents, tool results)",
-    "other": "File history, env, metadata"
+    "other": "File history, env, metadata",
+    "transcripts_codex": "Session files",
+    "sessionData_codex": "Conversations in Codex's database",
+    "other_codex": "Files of sessions they started"
   },
   "sessionsCount_one": "{{count}} session",
   "sessionsCount_other": "{{count}} sessions",
@@ -37,6 +41,9 @@
     "duration": "Duration",
     "ms": "{{value}} ms",
     "issues_one": "{{count}} scan issue",
-    "issues_other": "{{count}} scan issues"
+    "issues_other": "{{count}} scan issues",
+    "codexSessions": "Codex sessions",
+    "transcripts_codex": "With a session file",
+    "subagentExcluded_codex": "Sub-agent sessions"
   }
 }

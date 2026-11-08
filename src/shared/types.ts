@@ -11,6 +11,11 @@ import type { DistributionChannel } from './distribution'
 
 export type { MessageRef }
 
+/** Which tool's sessions: Claude (Claude Code and Claude Desktop) or OpenAI Codex. */
+export type Provider = 'claude' | 'codex'
+
+export const PROVIDERS: readonly Provider[] = ['claude', 'codex']
+
 export type SessionStatus = 'active' | 'archived' | 'transcript-only' | 'metadata-only' | 'orphan'
 
 /** Where a session record originates from. */
@@ -21,6 +26,8 @@ export type SessionKind =
   | 'cli'
   /** A <uuid>/ session data directory with neither transcript nor metadata. */
   | 'orphan'
+  /** An OpenAI Codex thread (a row in Codex's own database). */
+  | 'codex'
 
 /**
  * The raw `title` field of a Claude Desktop metadata file, preserved exactly
@@ -48,10 +55,13 @@ export type TitleSource =
  * ~/.claude/sessions/<pid>.json): `running` = busy generating, `idle` =
  * attached but idle, `in-use` = attached in any other state (waiting for
  * input/permission, unknown). Every state blocks deletion.
+ * `recent` = Codex wrote to the session moments ago (Codex keeps no registry of
+ * running sessions, so recent activity is what marks one as possibly running).
  */
-export type LiveState = 'running' | 'idle' | 'in-use'
+export type LiveState = 'running' | 'idle' | 'in-use' | 'recent'
 
 export interface LiveSessionRef {
+  /** 0 when no process is known (Codex). */
   pid: number
   state: LiveState
   status?: string
@@ -68,9 +78,11 @@ export type ProjectSource =
   | 'decoded-folder-name'
   | 'unresolved'
 
+/** A session of either tool (the name predates Codex support). */
 export interface ClaudeSession {
   /** Internal stable ID assigned by the scanner. The only ID the renderer may send back. */
   id: string
+  provider: Provider
   kind: SessionKind
   status: SessionStatus
 
@@ -156,8 +168,13 @@ export interface ClaudeSession {
   /** Remote (SSH/WSL) Desktop session: transcript is not on this machine. */
   remoteKind?: 'ssh' | 'wsl'
 
-  /** Set when a running Claude Code process currently owns this session. */
+  /** Set when a running Claude Code process currently owns this session (Codex: recent activity). */
   live?: LiveSessionRef
+
+  /** Codex: where the session was started (`vscode`, `cli`, `exec`, ...). */
+  codexSource?: string
+  /** Codex: sessions it started (sub-agents); Codex deletes them along with it. */
+  subagentCount?: number
 
   /** English diagnostics (searchable, logged). */
   problems: string[]
@@ -196,7 +213,7 @@ export interface CandidatePath {
   /** What this path is, in English. */
   note?: string
   /** The translated label for it, when there is one (`settings:roots.<noteKey>`). */
-  noteKey?: 'claudeHome' | 'transcripts' | 'fileHistory' | 'sessionEnv' | 'running'
+  noteKey?: 'claudeHome' | 'transcripts' | 'fileHistory' | 'sessionEnv' | 'running' | 'codexHome' | 'codexState' | 'codexHistory' | 'codexSessions'
 }
 
 /** A Claude sign-in on this PC: one Claude config folder. */
@@ -225,6 +242,8 @@ export interface StorageRoots {
   liveSessionsDir: string | null
   desktopRoots: DesktopRootInfo[]
   candidates: CandidatePath[]
+  /** Codex: the Codex CLI the app runs to archive, restore and delete (null = not found). */
+  codexCli?: string | null
 }
 
 export interface ScanStats {
@@ -249,6 +268,7 @@ export interface ScanIssue {
 }
 
 export interface ScanSnapshot {
+  provider: Provider
   sessions: ClaudeSession[]
   scannedAt: number
   durationMs: number
@@ -290,7 +310,7 @@ export interface StorageInfo {
 // Process safety
 // ---------------------------------------------------------------------------
 
-export type ClaudeProcessKind = 'desktop' | 'claude-code' | 'unknown'
+export type ClaudeProcessKind = 'desktop' | 'claude-code' | 'unknown' | 'codex-app' | 'codex-cli'
 
 export interface ClaudeProcessInfo {
   pid: number
@@ -322,6 +342,10 @@ export interface ProcessStatus {
   claudeCodeProcesses: ClaudeProcessInfo[]
   unknownProcesses: ClaudeProcessInfo[]
   liveSessions: LiveCliSession[]
+  /** The Codex desktop app is running (informational: Codex changes its data itself). */
+  codexAppRunning: boolean
+  /** Codex app and Codex CLI processes. Never block anything of Claude's. */
+  codexProcesses: ClaudeProcessInfo[]
   error?: string
 }
 
@@ -375,8 +399,17 @@ export type PlanItemKind =
   | 'archive-index'
   /** A record in this manager's own data (hidden list, scan cache). Not a Claude file. */
   | 'manager-record'
+  /** Codex: the session's row in Codex's database (and its sub-agents'). */
+  | 'codex-thread'
+  /** Codex: the conversation stored in Codex's history database. */
+  | 'codex-history'
+  /** Codex: a session file (rollout-….jsonl), the session's or a sub-agent's. */
+  | 'codex-rollout'
+  /** Codex: the session's line in session_index.jsonl. */
+  | 'codex-index'
 
-export type PlanAction = 'delete-file' | 'delete-directory' | 'create-file' | 'update-file' | 'remove-record'
+/** `codex-delete`: removed by Codex itself (`codex delete`), never by this app. */
+export type PlanAction = 'delete-file' | 'delete-directory' | 'create-file' | 'update-file' | 'remove-record' | 'codex-delete'
 
 export interface DeletePlanItem {
   kind: PlanItemKind

@@ -11,8 +11,8 @@ const api: SessionManagerApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC.getAppInfo),
   getLogs: () => ipcRenderer.invoke(IPC.getLogs),
 
-  scanSessions: () => ipcRenderer.invoke(IPC.scanSessions),
-  refreshSessions: () => ipcRenderer.invoke(IPC.refreshSessions),
+  scanSessions: (provider) => ipcRenderer.invoke(IPC.scanSessions, provider),
+  refreshSessions: (provider) => ipcRenderer.invoke(IPC.refreshSessions, provider),
   getSession: (id) => ipcRenderer.invoke(IPC.getSession, id),
 
   archiveSession: (id) => ipcRenderer.invoke(IPC.archiveSession, id),
@@ -38,7 +38,7 @@ const api: SessionManagerApi = {
   openProject: (id) => ipcRenderer.invoke(IPC.openProject, id),
 
   getClaudeProcessStatus: (force) => ipcRenderer.invoke(IPC.getClaudeProcessStatus, force === true),
-  getStorageInfo: (accountId) => ipcRenderer.invoke(IPC.getStorageInfo, accountId),
+  getStorageInfo: (accountId, provider) => ipcRenderer.invoke(IPC.getStorageInfo, accountId, provider),
 
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.updateSettings, patch),

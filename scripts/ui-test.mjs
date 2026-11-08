@@ -25,11 +25,13 @@
 //
 // A window opens during the run. Report and screenshots: .ui-test/report/
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AUDIT_SCRIPT } from './ui-test-audit.mjs'
 import { LONG_TITLE_EN, UI_TEST_SECRET, UI_UUID_RE, writeUiTestProfile } from './ui-test-profile.mjs'
+import { CODEX_TEST_SECRET, CODEX_UUID_RE, writeCodexProfile } from './ui-test-codex.mjs'
+import { DatabaseSync } from 'node:sqlite'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const WORK = path.join(ROOT, '.ui-test')
@@ -75,8 +77,10 @@ const skip = (name, why) => console.log(`SKIP  ${name}  [${why}]`)
 
 function sandboxEnv(home, userData, channel) {
   const env = { ...process.env }
-  for (const name of Object.keys(env)) if (/^(CLAUDE|ELECTRON)_/i.test(name)) delete env[name]
+  for (const name of Object.keys(env)) if (/^(CLAUDE|ELECTRON|CODEX)_/i.test(name)) delete env[name]
   Object.assign(env, {
+    // Codex: the stand-in (scripts/ui-test-codex.mjs) instead of the real Codex CLI.
+    CLAUDE_SESSION_MANAGER_CODEX_COMMAND: JSON.stringify([process.execPath, path.join(ROOT, 'scripts', 'ui-test-codex.mjs')]),
     USERPROFILE: home,
     HOME: home,
     HOMEDRIVE: path.parse(home).root.replace(/\\$/, ''),
@@ -212,7 +216,8 @@ async function launch(channel, env) {
     await page.send('Runtime.enable')
     await page.send('Log.enable')
     await page.send('Page.enable')
-    await page.waitFor(`document.querySelectorAll('.row').length > 0`, 'the session list', 45_000)
+    // Every start shows the choice of tool (Claude or Codex) first.
+    await page.waitFor(`document.querySelector('.picker-card')`, 'the choice of tool', 45_000)
     return { child, page, events, stop: () => stop(page) }
   } catch (err) {
     await stop(null)
@@ -237,6 +242,8 @@ async function runVariant(channel) {
   writeFileSync(path.join(userData, 'settings.json'), JSON.stringify({ language: 'en', refreshMode: 'manual' }))
   const profile = writeUiTestProfile(home, { livePid: process.pid })
   const { roles } = profile
+  const codexProfile = writeCodexProfile(home)
+  const cxRoles = codexProfile.roles
   const env = sandboxEnv(home, userData, channel)
 
   let app = null
@@ -364,8 +371,30 @@ async function runVariant(channel) {
     await page.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common })
   }
 
+  /** The tool on screen: claude, codex, or null on the picker. */
+  const toolOnScreen = () => page.evaluate(`document.querySelector('.picker-card') ? null : document.querySelector('.app')?.dataset.provider ?? null`)
+  const goTool = async (tool) => {
+    if ((await toolOnScreen()) === tool) return
+    if (!(await has('.picker-card'))) {
+      await clickEl(`document.querySelector('.provider-switch')`, 'the switch of tool')
+      await page.waitFor(`document.querySelector('.picker-card')`, 'the choice of tool')
+    }
+    await clickEl(`document.querySelector('.picker-card.${tool}')`, `the ${tool} card`)
+    await page.waitFor(`document.querySelector('.app')?.dataset.provider === '${tool}' && document.querySelectorAll('.row').length > 0`, `the ${tool} sessions`)
+    await settle()
+  }
+
   /** Back to a known place: the first account's full session list with nothing open or checked. */
   const reset = async () => {
+    if ((await toolOnScreen()) !== 'claude') {
+      // A dialog fades out: the switch can be clicked only once it is gone.
+      for (let i = 0; i < 3 && (await has('.modal-backdrop')); i++) {
+        await press('Escape')
+        await page.waitFor(`!document.querySelector('.modal-backdrop')`, 'the dialog to close', 5000).catch(() => {})
+      }
+      if (await has('.menu')) await press('Escape')
+      await goTool('claude')
+    }
     for (let i = 0; i < 3 && (await has('.modal-backdrop')); i++) {
       await press('Escape')
       await page.waitFor(`!document.querySelector('.modal-backdrop')`, 'the dialog to close', 5000).catch(() => {})
@@ -469,6 +498,17 @@ async function runVariant(channel) {
     // -----------------------------------------------------------------------
     // Guard rail: everything must come from the throw-away folder.
     // -----------------------------------------------------------------------
+    const picker = await page.evaluate(`[...document.querySelectorAll('.picker-card')].map((c) => ({ tool: c.dataset.provider, logo: !!c.querySelector('svg.brand-logo'), name: c.querySelector('.picker-name').textContent }))`)
+    check(`${channel}: every start offers Claude and Codex, each with its logo`, picker.map((c) => `${c.tool}:${c.name}:${c.logo}`).join() === 'claude:Claude:true,codex:Codex:true', JSON.stringify(picker))
+    check(`${channel}: the picker names the trademarks and that the app is unofficial`, /Anthropic/.test(await text('.picker-legal')) && /OpenAI/.test(await text('.picker-legal')))
+    check(`${channel}: the keyboard starts on the first tool`, await page.evaluate(`document.activeElement?.dataset.provider === 'claude'`))
+    await press('ArrowRight')
+    check(`${channel}: the arrow keys move between the tools`, await page.evaluate(`document.activeElement?.dataset.provider === 'codex'`))
+    await press('ArrowLeft')
+    await pressEnter()
+    await page.waitFor(`document.querySelector('.app')?.dataset.provider === 'claude' && document.querySelectorAll('.row').length > 0`, 'the Claude sessions')
+    check(`${channel}: Enter opens the tool`, true)
+
     const snap = await page.evaluate('window.sessionManager.scanSessions()')
     const inSandbox = (p) => p.toLowerCase().startsWith(home.toLowerCase() + path.sep)
     const safe =
@@ -478,7 +518,18 @@ async function runVariant(channel) {
       snap.sessions.every((s) => !s.cliSessionId || UI_UUID_RE.test(s.cliSessionId))
     if (!safe) throw new Error(`NOT IN THE THROW-AWAY FOLDER, stopping before any click: ${snap.roots.claudeHome}`)
     check(`${channel}: the app reads only the throw-away profile`, true, `${snap.sessions.length} sessions`)
-    ids = Object.fromEntries(snap.sessions.filter((s) => s.cliSessionId).map((s) => [s.cliSessionId, s.id]))
+    const cxSnap = await page.evaluate(`window.sessionManager.scanSessions('codex')`)
+    // Codex folders are shown by their real path: compare with the profile's real path too.
+    const realHomeDir = realpathSync.native(home).toLowerCase()
+    const realHome = (p) => inSandbox(p) || p.toLowerCase().startsWith(realHomeDir + path.sep)
+    const cxSafe =
+      cxSnap.provider === 'codex' &&
+      cxSnap.roots.accounts.length === 2 &&
+      cxSnap.roots.accounts.every((a) => realHome(a.path)) &&
+      cxSnap.sessions.every((s) => CODEX_UUID_RE.test(s.cliSessionId ?? ''))
+    if (!cxSafe) throw new Error(`CODEX NOT IN THE THROW-AWAY FOLDER, stopping before any click: ${cxSnap.roots.accounts.map((a) => a.path).join(', ')}`)
+    check(`${channel}: Codex is read only from the throw-away profile`, true, `${cxSnap.sessions.length} sessions`)
+    ids = Object.fromEntries([...snap.sessions, ...cxSnap.sessions].filter((s) => s.cliSessionId).map((s) => [s.cliSessionId, s.id]))
 
     const info = await page.evaluate('window.sessionManager.getAppInfo()')
     const processStatus = await page.evaluate('window.sessionManager.getClaudeProcessStatus(true)')
@@ -589,6 +640,14 @@ async function runVariant(channel) {
     }
     const states = [
       { name: 'list', enter: reset },
+      { name: 'picker', enter: async () => { await reset(); await clickEl(`document.querySelector('.provider-switch')`, 'the switch of tool'); await page.waitFor(`document.querySelector('.picker-card')`, 'the choice of tool') } },
+      { name: 'codex-list', enter: async () => { await reset(); await goTool('codex') } },
+      { name: 'codex-details', enter: async () => { await reset(); await goTool('codex'); await selectRow(cxRoles.withAgents); await openTechnical(); await scrollToEnd('.inspector-scroll') } },
+      { name: 'codex-long-title', enter: async () => { await reset(); await goTool('codex'); await selectRow(cxRoles.longVi) } },
+      { name: 'codex-account-menu', enter: async () => { await reset(); await goTool('codex'); await openAccounts() } },
+      { name: 'codex-delete-dialog', enter: async () => { await reset(); await goTool('codex'); await selectRow(cxRoles.withAgents); await click('.inspector .actions .btn.danger'); await page.waitFor(`document.querySelector('.plan-session')`, 'the Codex delete plan') } },
+      { name: 'codex-storage', enter: async () => { await reset(); await goTool('codex'); await goStorage() } },
+      { name: 'codex-settings', enter: async () => { await reset(); await goTool('codex'); await goSettings() } },
       { name: 'sidebar-scrolled-to-end', enter: async () => { await reset(); await scrollToEnd('.nav') } },
       { name: 'sidebar-projects-collapsed', enter: async () => { await reset(); await click('.nav-label-button') } },
       { name: 'account-menu', enter: async () => { await reset(); await openAccounts() } },
@@ -723,7 +782,7 @@ async function runVariant(channel) {
     }
 
     // Text that is the same as English in another language was probably never translated.
-    const SAME_EVERYWHERE = /^(Claude( Desktop| Code| Local)?( Session Manager)?|Claude Desktop \(.*\)|Session Manager|LHP( Local)?( Session Manager)?|Local Session Manager|DELETE( \d+)?|ENABLE DELETE|JSON|JSONL|Markdown|PID|CLI|GitHub|Microsoft Store|APPDATA|Ctrl K|English|Tiếng Việt|简体中文|[\d\s.,:/%·—-]+)$/
+    const SAME_EVERYWHERE = /^(Claude( Desktop| Code| Local)?( Session Manager)?|Codex( CLI)?|Claude Desktop \(.*\)|Session Manager|LHP( Local)?( Session Manager)?|Local Session Manager|DELETE( \d+)?|ENABLE DELETE|JSON|JSONL|Markdown|PID|CLI|GitHub|Microsoft Store|APPDATA|Ctrl K|English|Tiếng Việt|简体中文|[\d\s.,:/%·—-]+)$/
     for (const [state, perLocale] of strings) {
       const english = perLocale.get('en')
       if (!english) continue
@@ -864,6 +923,125 @@ async function runVariant(channel) {
     check('accounts: Enter switches, closes and goes back to the button', (await accountOnScreen()) === ACCOUNT_LABELS[2] && !(await has('.account-menu')) && (await triggerFocused()))
     const leakCheck = JSON.stringify(await page.evaluate('window.sessionManager.scanSessions()')) + (await page.evaluate('document.body.innerText')) + (await page.evaluate(`window.sessionManager.getLogs().then(JSON.stringify)`))
     check('accounts: nothing but the name and plan is read from the sign-in files', !leakCheck.includes(UI_TEST_SECRET))
+    await reset()
+
+    // -----------------------------------------------------------------------
+    // OpenAI Codex: the same app on Codex's own data, which only Codex changes,
+    // through its CLI (here the stand-in scripts/ui-test-codex.mjs).
+    // -----------------------------------------------------------------------
+    await goTool('codex')
+    const cxDb = (file) => new DatabaseSync(path.join(codexProfile.main, file))
+    const cxThread = (id) => {
+      const db = cxDb('state_5.sqlite')
+      try {
+        return db.prepare('SELECT archived, rollout_path FROM threads WHERE id = ?').get(id)
+      } finally {
+        db.close()
+      }
+    }
+    const cxHistoryRows = (ids) => {
+      const db = cxDb('thread_history_1.sqlite')
+      try {
+        return ids.reduce((n, id) => n + db.prepare('SELECT COUNT(*) AS n FROM thread_items WHERE thread_id = ?').get(id).n, 0)
+      } finally {
+        db.close()
+      }
+    }
+    check('codex: the switch at the top names the tool on screen', (await text('.provider-switch-name')) === 'Codex')
+    check('codex: the sessions the user started, not sub-agents or Codex reviews', sameIds(await rowIdsNow(), [cxRoles.named, cxRoles.aiTitle, cxRoles.archived, cxRoles.withAgents, cxRoles.recent, cxRoles.longVi]))
+    const cxFilters = await page.evaluate(`[...document.querySelectorAll('.nav > .nav-item')].map((b) => b.querySelector('.nav-text').textContent)`)
+    check('codex: only the views that apply, its archive named as Codex\'s', cxFilters.length === 4 && /Codex/.test(cxFilters[2]), cxFilters.join(' | '))
+    const cxStrip = await page.evaluate(`({ text: document.querySelector('.strip-claude').innerText, warn: document.querySelector('.strip-claude').classList.contains('warn') })`)
+    check('codex: the top strip tells about the Codex app and never blocks', /Codex/.test(cxStrip.text) && !cxStrip.warn, cxStrip.text)
+    await openAccounts()
+    const cxAccounts = await page.evaluate(`[...document.querySelectorAll('.account-item-name')].map((n) => n.textContent)`)
+    check('codex: one row per Codex sign-in, under a Codex heading', cxAccounts.join() === 'codex,account-2' && /Codex/.test(await text('.account-menu .menu-heading')), cxAccounts.join())
+    await press('Escape')
+
+    await selectRow(cxRoles.named)
+    const cxButtons = await page.evaluate(`[...document.querySelectorAll('.inspector .actions .btn')].map((b) => (b.disabled ? '-' : '+') + b.textContent.trim())`)
+    check('codex: open, export, archive and delete', cxButtons.length === 4 && cxButtons.every((b) => b.startsWith('+')), cxButtons.join(' | '))
+    check('codex: the details name Codex, not Claude', !/Claude/.test(await page.evaluate(`document.querySelector('.inspector').innerText`)))
+    await selectRow(cxRoles.withAgents)
+    await openTechnical()
+    check('codex: a session shows the sessions it started', (await page.evaluate(`[...document.querySelectorAll('.inspector .kv dd')].map((d) => d.textContent)`)).includes('2'))
+
+    // The session Codex is "working in": it adds to its conversation just now.
+    {
+      const db = cxDb('thread_history_1.sqlite')
+      db.prepare('UPDATE thread_items SET created_at_ms = ? WHERE thread_id = ?').run(Date.now(), cxRoles.recent)
+      db.close()
+    }
+    await page.evaluate(`window.sessionManager.refreshSessions('codex')`)
+    await settle()
+    await selectRow(cxRoles.recent)
+    check(
+      'codex: a session Codex wrote to a moment ago cannot be archived or deleted, and says why',
+      (await page.evaluate(`document.querySelector('.inspector .actions .btn.danger').disabled && document.querySelector('.inspector .actions .state-action').disabled`)) &&
+        (await has('.inspector .notice.warn')) &&
+        (await has('.inspector-sub .badge-live.live-recent'))
+    )
+
+    await selectRow(cxRoles.named)
+    if (isStore) {
+      await clickEl(STATE_BUTTON, 'Archive')
+      await page.waitFor(`document.querySelector('.toast')`, 'the Safe Mode message')
+      check('codex: Safe Mode only says what Codex would do', cxThread(cxRoles.named).archived === 0)
+      await closeToasts()
+    } else {
+      await clickEl(STATE_BUTTON, 'Archive')
+      await page.waitFor(`document.querySelector('.toast')`, 'the archive message')
+      check('codex: Archive asks Codex, which archives it and moves its file', cxThread(cxRoles.named).archived === 1 && /archived_sessions/.test(cxThread(cxRoles.named).rollout_path))
+      await closeToasts()
+      await selectRow(cxRoles.named, 'archived')
+      await clickEl(STATE_BUTTON, 'Restore')
+      await page.waitFor(`document.querySelector('.toast')`, 'the restore message')
+      check('codex: Restore asks Codex, which restores it', cxThread(cxRoles.named).archived === 0)
+      await closeToasts()
+    }
+
+    // Delete: the plan says what Codex will remove; Codex removes it; the app checks.
+    await selectRow(cxRoles.withAgents)
+    await click('.inspector .actions .btn.danger')
+    await page.waitFor(`document.querySelector('.plan-session')`, 'the Codex delete plan')
+    const cxPlan = await page.evaluate(`[...document.querySelectorAll('.plan-group.delete .plan-item .plan-path')].map((el) => el.textContent)`)
+    const cxGroups = await page.evaluate(`[...document.querySelectorAll('.plan-group-label')].map((l) => l.textContent).join(' | ')`)
+    check('codex: the plan lists what Codex will remove, under its own heading', cxPlan.length === 6 && /codex delete/.test(cxGroups), `${cxPlan.length} items: ${cxGroups}`)
+    check('codex: the plan touches only the throw-away Codex folder', cxPlan.every((p) => realHome(p)))
+    const cxFiles = cxPlan.filter((p) => p.endsWith('.jsonl') && !p.endsWith('session_index.jsonl'))
+    await setInput('.confirm-input', 'DELETE')
+    const cxButton = isStore ? '.modal-footer .btn.info.solid' : '.modal-footer .btn.danger.solid'
+    await page.waitFor(`!document.querySelector(${quote(cxButton)}).disabled`, 'the delete button')
+    await click(cxButton)
+    await page.waitFor(`document.querySelector('.result-session')`, 'the Codex delete result')
+    const gone = [cxRoles.withAgents, cxRoles.agentA, cxRoles.agentB]
+    if (isStore) {
+      check('codex: Safe Mode deletes nothing', gone.every((id) => cxThread(id)) && cxFiles.every((f) => existsSync(f)))
+    } else {
+      check(
+        'codex: deleted through Codex: the session, the sessions it started, their conversation and files, its index line',
+        gone.every((id) => !cxThread(id)) &&
+          cxHistoryRows(gone) === 0 &&
+          cxFiles.length === 3 &&
+          cxFiles.every((f) => !existsSync(f)) &&
+          !readFileSync(path.join(codexProfile.main, 'session_index.jsonl'), 'utf8').includes(cxRoles.withAgents),
+        `${cxFiles.length} files`
+      )
+      check('codex: the other sessions are untouched', !!cxThread(cxRoles.named) && !!cxThread(cxRoles.aiTitle))
+    }
+    await click('.modal-footer .btn[data-autofocus]')
+    await page.waitFor(`!document.querySelector('.modal-backdrop')`, 'the dialog to close')
+    await closeToasts()
+    if (!isStore) check('codex: it leaves the list', !(await has(`.row-main[data-id="${idOf(cxRoles.withAgents)}"]`)))
+
+    await goStorage()
+    check('codex: the storage page counts Codex sessions', (await has('.stat-cells.four')) && (await count('.stat-cell')) === 4)
+    await goSettings()
+    check('codex: Settings shows the Codex CLI the app runs', (await page.evaluate(`document.querySelector('.kv.roots').innerText`)).includes(process.execPath))
+    const cxLeak = JSON.stringify(await page.evaluate(`window.sessionManager.scanSessions('codex')`)) + (await page.evaluate('document.body.innerText')) + (await page.evaluate(`window.sessionManager.getLogs().then(JSON.stringify)`))
+    check('codex: the Codex sign-in file is never read', !cxLeak.includes(CODEX_TEST_SECRET))
+    await goTool('claude')
+    check('codex: back to Claude, its sessions again', (await toolOnScreen()) === 'claude' && (await count('.row')) > 0)
     await reset()
 
     // Every filter shows as many rows as its counter says.

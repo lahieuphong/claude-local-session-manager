@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import { hasSafeMode, refreshProcess, returnToSafeMode, setView, useAppState } from '../stores/appStore'
+import { hasSafeMode, refreshProcess, returnToSafeMode, setView, toolContext, useAppState } from '../stores/appStore'
 import { AccountMenu } from './AccountMenu'
 import { IconAlert, IconRefresh, IconShield, IconShieldAlert } from './Icons'
 import { useArmCountdown } from './SafetyMode'
@@ -20,7 +20,10 @@ export function StatusStrip(): ReactElement {
   const remaining = useArmCountdown(safety)
   const safeMode = hasSafeMode(safety)
   const armed = safeMode && !safety.dryRun
-  const claudeBlocks = !!process && (process.desktopRunning || !!process.error)
+  const codex = useAppState((s) => s.provider) === 'codex'
+  const context = useAppState(toolContext)
+  // Codex changes its own data when asked, so a running Codex app never blocks anything here.
+  const claudeBlocks = !codex && !!process && (process.desktopRunning || !!process.error)
 
   return (
     <div className={`status-strip ${armed ? 'armed' : ''}`}>
@@ -45,8 +48,8 @@ export function StatusStrip(): ReactElement {
               <IconShield size={14} />
               {t('safety:mode.safe')}
             </span>
-            <span className="strip-text" title={t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText')}>
-              {t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText')}
+            <span className="strip-text" title={t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText', { context })}>
+              {t(storeEdition ? 'safety:strip.safeTextStore' : 'safety:strip.safeText', { context })}
             </span>
             <button className="link-btn" onClick={() => setView({ kind: 'settings' })}>
               {t('safety:strip.settingsLink')}
@@ -63,6 +66,13 @@ export function StatusStrip(): ReactElement {
               {t(process?.error ? 'safety:claude.unknown' : storeEdition ? 'safety:claude.runningStore' : 'safety:claude.running')}
             </span>
           </>
+        ) : codex ? (
+          <>
+            <span className={`dot ${process ? 'ok' : 'idle'}`} aria-hidden="true" />
+            <span className="strip-muted" title={process?.codexAppRunning ? t('safety:codex.runningHint') : undefined}>
+              {t(!process ? 'safety:claude.checking' : process.codexAppRunning ? 'safety:codex.running' : 'safety:codex.closed', { context })}
+            </span>
+          </>
         ) : (
           <>
             <span className={`dot ${process ? 'ok' : 'idle'}`} aria-hidden="true" />
@@ -73,8 +83,8 @@ export function StatusStrip(): ReactElement {
           className="icon-btn"
           onClick={() => void refreshProcess(true)}
           disabled={checking}
-          title={t('safety:claude.recheck')}
-          aria-label={t('safety:claude.recheck')}
+          title={t('safety:claude.recheck', { context })}
+          aria-label={t('safety:claude.recheck', { context })}
         >
           <IconRefresh size={14} className={checking ? 'spin' : ''} />
         </button>

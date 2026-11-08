@@ -28,7 +28,7 @@
     "manual": "Manual only",
     "manualHint": "Scan on start and when you click Refresh (F5).",
     "watch": "Watch files",
-    "watchHint": "Rescan shortly after Claude writes to its storage folders (debounced, few watchers).",
+    "watchHint": "Rescan shortly after Claude or Codex writes to its storage folders (debounced, few watchers).",
     "interval": "Interval",
     "intervalHint": "Rescan on a fixed timer.",
     "seconds_one": "{{count}} second",
@@ -51,7 +51,14 @@
     "desktopCounts": "{{sessions}} session files · {{tombstones}} tombstones · {{indexes}} archive indexes",
     "pending": "Scan pending…",
     "checked_one": "All locations checked ({{count}})",
-    "checked_other": "All locations checked ({{count}})"
+    "checked_other": "All locations checked ({{count}})",
+    "accounts_codex": "Codex accounts",
+    "codexHome": "Codex home",
+    "codexState": "Codex sessions database",
+    "codexHistory": "Codex conversations database",
+    "codexSessions": "Codex session files",
+    "codexCli": "Codex CLI (archive, restore, delete)",
+    "codexCliMissing": "Not found: install it with \"npm i -g @openai/codex\""
   },
   "cache": {
     "label": "Scan cache",

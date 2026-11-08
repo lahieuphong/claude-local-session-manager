@@ -11,7 +11,8 @@
     "noProjects": "未找到项目",
     "storage": "存储",
     "settings": "设置",
-    "accounts": "Claude 账户"
+    "accounts": "Claude 账户",
+    "accounts_codex": "Codex 账户"
   },
   "account": {
     "current": "正在查看的账户：{{name}}",
@@ -25,10 +26,12 @@
       "original": "此账户保存会话存储，另有账户共用。删除会话会对所有账户生效。",
       "shared": "与其他账户共用会话存储。删除会话会对所有账户生效。"
     },
-    "note": "只更改显示的会话，不会更改 Claude 的登录账户。"
+    "note": "只更改显示的会话，不会更改 Claude 的登录账户。",
+    "note_codex": "只更改显示的会话，不会更改 Codex 的登录账户。"
   },
   "status": {
-    "liveSessions_other": "{{count}} 个 Claude Code 会话已打开"
+    "liveSessions_other": "{{count}} 个 Claude Code 会话已打开",
+    "liveSessions_codex_other": "{{count}} 个 Codex 会话在最近 2 分钟内有活动"
   },
   "action": {
     "refresh": "刷新",
@@ -54,5 +57,15 @@
     "firstFailure": "{{title}}：",
     "copied": "已复制到剪贴板",
     "copyFailed": "复制失败：{{error}}"
+  },
+  "picker": {
+    "title": "要管理哪个工具的会话？",
+    "subtitle": "两者的数据都在本机。可随时在侧边栏顶部切换。",
+    "claudeDesc": "Claude Code 和 Claude Desktop",
+    "codexDesc": "Codex CLI、Codex 应用和 VS Code 扩展",
+    "open": "管理 {{name}} 会话",
+    "trademark": "Claude 是 Anthropic 的商标。OpenAI 和 Codex 是 OpenAI 的商标。显示其标志仅用于区分两个工具；本非官方应用与两家公司均无关联。",
+    "switch": "切换工具",
+    "current": "正在管理 {{name}} 会话。选择其他工具"
   }
 }

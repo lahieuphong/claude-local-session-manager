@@ -27,8 +27,8 @@ footer a { margin-right: 1rem; }
 <body>
 <main>
 <h1>Privacy policy — LHP Local Session Manager</h1>
-<p><em>Last updated: 7 November 2026</em></p>
-<p>LHP Local Session Manager is an <strong>unofficial, independent</strong> desktop utility for Windows. It lets you browse, search, export and clean up the session history that Claude Code and Claude Desktop keep on your own computer. It is not made by, affiliated with, endorsed by or sponsored by Anthropic. &quot;Claude&quot; is a trademark of Anthropic.</p>
+<p><em>Last updated: 8 November 2026</em></p>
+<p>LHP Local Session Manager is an <strong>unofficial, independent</strong> desktop utility for Windows. It lets you browse, search, export and clean up the session history that Claude Code and Claude Desktop, and OpenAI Codex, keep on your own computer. It is not made by, affiliated with, endorsed by or sponsored by Anthropic or OpenAI. &quot;Claude&quot; is a trademark of Anthropic; &quot;OpenAI&quot; and &quot;Codex&quot; are trademarks of OpenAI. Their logos are shown only so you can choose which tool's sessions to manage.</p>
 <p>This policy describes the Microsoft Store edition. The same open-source project is also published as Setup and Portable builds on GitHub. Where those builds behave differently, this page says so.</p>
 <h2>In short</h2>
 <ul>
@@ -40,7 +40,8 @@ footer a { margin-right: 1rem; }
 <ul>
   <li><strong>Claude Code session files</strong> in your user profile: <code>%USERPROFILE%\.claude\projects</code> (transcripts and session folders), <code>file-history</code>, <code>session-env</code> and <code>sessions</code> (which sessions are open right now). These files can contain your prompts, the assistant's replies, code, file paths, project names and git branch names.</li>
   <li><strong>Claude Desktop session metadata</strong>: the <code>claude-code-sessions</code> folder under <code>%APPDATA%\Claude</code>, or under the Claude package folder in <code>%LOCALAPPDATA%\Packages</code>. These files contain session titles, session IDs, the project folder path, the model name, dates and the archive flag.</li>
-  <li><strong>Running processes</strong> named <code>claude</code>, <code>node</code> or <code>bun</code>: name, executable path, command line and start time. This is a local, read-only Windows query.</li>
+  <li><strong>OpenAI Codex session data</strong>, when you open the Codex view: in <code>%USERPROFILE%\.codex</code> (or the folder named by <code>CODEX_HOME</code>) and in each <code>%USERPROFILE%\.codex-&lt;name&gt;</code> folder, Codex's sessions database (<code>state_&lt;n&gt;.sqlite</code>), its conversations database (<code>thread_history_&lt;n&gt;.sqlite</code>), its session files (<code>sessions</code> and <code>archived_sessions</code>) and <code>session_index.jsonl</code>. The app opens the databases read-only. They contain session titles, your prompts, Codex's replies, commands it ran, file paths, project names and git details. The app never opens <code>auth.json</code>, the file with your Codex sign-in.</li>
+  <li><strong>Running processes</strong> named <code>claude</code>, <code>node</code>, <code>bun</code>, <code>codex</code> or <code>ChatGPT</code> (the Codex app): name, executable path, command line and start time. This is a local, read-only Windows query.</li>
   <li><strong>The name and plan of each Claude sign-in</strong>, if you have more than one on this PC: the email address, display name and plan name (such as &quot;Max 20x&quot;) from each account's <code>.claude.json</code> file. The app reads that file, keeps only these three values and uses them only to label the account switcher on your screen. It never opens <code>.credentials.json</code>, the file with your sign-in tokens.</li>
   <li><strong>The paths of your project folders</strong>, as recorded in the session files. The app does not read the files inside your projects.</li>
 </ul>
@@ -89,6 +90,7 @@ footer a { margin-right: 1rem; }
 <ul>
   <li><strong>Export</strong> writes a copy (JSONL, JSON or Markdown) to a folder you choose. The original files are only read. An export contains the session's content, so keep it as carefully as the original. The Microsoft Store edition does not export into <code>AppData</code>.</li>
   <li><strong>Permanent delete</strong> removes the exact local files listed in the plan. Deleted files are not sent anywhere, and the app cannot recover them.</li>
+  <li><strong>Codex sessions</strong> are archived, restored and deleted by the Codex CLI installed on your computer (<code>codex archive</code>, <code>codex unarchive</code> and <code>codex delete --force &lt;session id&gt;</code>), which the app runs only after you ask, and for a delete only after you review and confirm the plan. The app itself never writes Codex's files or databases; it reads them again afterwards to check what Codex did. Without the Codex CLI, Codex sessions can only be viewed, exported and hidden.</li>
   <li><strong>Microsoft Store edition</strong>: sessions that have Claude Desktop metadata can be viewed and exported, but not archived, restored or deleted. The Microsoft Store edition does not modify Claude Desktop's AppData files. It may still write its own application data, such as settings and manager state, inside the app's own user-data location. Sessions that only have a transcript under <code>%USERPROFILE%\.claude</code> can be hidden or deleted.</li>
   <li>GitHub Setup and Portable builds only: these builds can also archive, restore and delete sessions that have Claude Desktop metadata. Doing so changes Claude Desktop's local metadata files on your computer.</li>
 </ul>

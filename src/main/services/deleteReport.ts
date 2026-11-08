@@ -7,7 +7,8 @@ const ACTION_LABEL: Record<DeletePlanItem['action'], string> = {
   'delete-directory': 'delete folder',
   'create-file': 'create file',
   'update-file': 'update file',
-  'remove-record': 'remove record'
+  'remove-record': 'remove record',
+  'codex-delete': 'Codex deletes it'
 }
 
 function bytes(n: number): string {
@@ -21,7 +22,7 @@ function itemLine(i: DeletePlanItem | DeleteItemResult): string {
       : i.action === 'delete-file'
         ? ' [1 file]'
         : ''
-  const size = i.sizeBytes !== undefined && i.action.startsWith('delete') ? `  ${formatBytes(i.sizeBytes)}` : ''
+  const size = i.sizeBytes !== undefined && (i.action.startsWith('delete') || i.action === 'codex-delete') ? `  ${formatBytes(i.sizeBytes)}` : ''
   const outcome = 'outcome' in i ? `  => ${i.outcome.toUpperCase()}${i.error ? ` (${i.error})` : ''}` : ''
   const note = i.note ? `\n        note: ${i.note}` : ''
   return `    - ${i.kind.padEnd(14)} ${ACTION_LABEL[i.action]}${counts}${size}${outcome}\n        ${i.path}${note}`
@@ -41,6 +42,7 @@ function sessionBlock(s: SessionDeletePlan, index: number, total: number, items:
   const groups: Array<[string, Array<DeletePlanItem | DeleteItemResult>]> = [
     ['WILL DELETE', items.filter((i) => i.action === 'delete-file' || i.action === 'delete-directory')],
     ['WILL CHANGE (Claude Desktop bookkeeping)', items.filter((i) => i.action === 'create-file' || i.action === 'update-file')],
+    ['CODEX DELETES (with `codex delete`)', items.filter((i) => i.action === 'codex-delete')],
     ['MANAGER RECORDS REMOVED (this app only)', items.filter((i) => i.action === 'remove-record')]
   ]
   for (const [title, list] of groups) {

@@ -630,6 +630,154 @@ html[lang='zh-CN'] .btn.caps {
   font-size: 12.5px;
   color: var(--text-secondary);
 }
+/* Whose sessions are on screen; a click goes back to the choice of tool. */
+.provider-switch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin: 0 var(--space-1) var(--space-3);
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  transition:
+    background-color var(--dur-hover) var(--ease),
+    border-color var(--dur-hover) var(--ease);
+}
+.provider-switch:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+}
+.provider-switch .brand-logo {
+  flex: none;
+}
+.provider-switch-name {
+  flex: none;
+}
+.provider-switch-hint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.provider-switch-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------ tool picker */
+.picker-app {
+  display: block;
+}
+.picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-6, 24px);
+  overflow: auto;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(217, 119, 87, 0.07), transparent 70%),
+    var(--bg-root);
+}
+.picker-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(640px, 100%);
+  text-align: center;
+}
+.picker-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+.picker-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.picker-subtitle {
+  margin: 8px 0 28px;
+  max-width: 460px;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.picker-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+.picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 28px 18px 24px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transition:
+    background-color var(--dur-hover) var(--ease),
+    border-color var(--dur-hover) var(--ease),
+    transform var(--dur-hover) var(--ease);
+}
+.picker-card:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+.picker-card.claude:hover {
+  border-color: var(--accent-border);
+}
+.picker-card:active {
+  transform: translateY(0);
+}
+.picker-logo {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+.picker-name {
+  font-size: 19px;
+  font-weight: 650;
+}
+.picker-desc {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.picker-legal {
+  margin: 28px 0 0;
+  max-width: 520px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .identity-note {
   margin: 10px var(--space-2) var(--space-4);
   font-family: var(--font);
@@ -1252,6 +1400,12 @@ html[lang='zh-CN'] .group-label {
   color: var(--warning);
   border-color: var(--warning-border);
   background: var(--warning-subtle);
+}
+/* Codex: written to a moment ago, so it may still be running. */
+.badge-live.live-recent {
+  color: var(--info);
+  border-color: var(--info-border);
+  background: var(--info-subtle);
 }
 .live-dot {
   width: 6px;
@@ -2251,6 +2405,10 @@ html[lang='zh-CN'] .update-mode {
 .stat-cells {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Codex has four counts: two by two, as tall as Claude's three by two. */
+.stat-cells.four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .stat-cell {
   padding: var(--space-3) var(--space-4);

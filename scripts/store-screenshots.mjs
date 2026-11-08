@@ -447,6 +447,9 @@ async function captureAll(pkg, report) {
   try {
     await page.send('Emulation.setDeviceMetricsOverride', { ...SCREENSHOT_SIZE, deviceScaleFactor: 1, mobile: false })
     await page.send('Emulation.setFocusEmulationEnabled', { enabled: true })
+    // Every start shows the choice of tool first; the screenshots are of Claude sessions.
+    await page.waitFor(`document.querySelector('.picker-card.claude')`, 'the choice of tool')
+    await page.evaluate(`document.querySelector('.picker-card.claude').click()`)
     await page.waitFor(`document.querySelectorAll('.row').length === ${DEMO_SESSIONS.length}`, 'the demo sessions in the list (is the PC or its graphics card busy? try --software-rendering)')
 
     // Guards: the packaged Store edition, scanning only the throw-away profile.

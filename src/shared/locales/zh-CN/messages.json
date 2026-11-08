@@ -108,7 +108,8 @@
     "workspace": "项目工作区（源代码）",
     "projectFolder": "Claude 项目文件夹本身、其中的其他会话和 memory/",
     "memory": "项目记忆",
-    "desktopFolder": "Claude Desktop 会话文件夹及其中的其他会话"
+    "desktopFolder": "Claude Desktop 会话文件夹及其中的其他会话",
+    "codexHome": "Codex 文件夹：其他会话、设置和登录信息"
   },
   "export": {
     "notFound": "未找到会话",
@@ -172,5 +173,27 @@
     "problemDetailStore": "{{reason}}\n\n请重试。如果问题持续出现，请从 Microsoft Store 重新安装应用。\n\n日志文件：{{log}}",
     "retry": "重试",
     "quit": "退出"
+  },
+  "codex": {
+    "cliMissing": "未找到 Codex CLI，因此本应用无法归档、恢复或删除 Codex 会话（本应用只是请 Codex 去做）。请用 \"npm i -g @openai/codex\" 安装，或安装 VS Code 的 Codex 扩展，然后刷新。",
+    "badId": "此 Codex 会话没有有效的 ID，无法请 Codex 修改它。",
+    "recentlyActive": "Codex 在不到 {{minutes}} 分钟前写入了此会话，它可能仍在运行。请在完成后重试。",
+    "alreadyArchived": "此会话已在 Codex 中归档。",
+    "alreadyActive": "此会话未在 Codex 中归档。",
+    "archived": "已在 Codex 中归档。Codex 已将其文件移到 archived_sessions。",
+    "restored": "已在 Codex 中恢复。",
+    "archiveDryRun": "安全模式：Codex 将归档此会话。未做任何更改。",
+    "restoreDryRun": "安全模式：Codex 将恢复此会话。未做任何更改。",
+    "commandFailed": "Codex 无法完成：{{output}}",
+    "notApplied": "Codex 报告成功，但会话在其数据库中没有变化。",
+    "stillThere": "运行 \"codex delete\" 后仍然存在。",
+    "hidden": "已在管理器中隐藏。只有本应用的列表发生了变化；Codex 的数据和归档状态未被改动。",
+    "noDatabase": "此 Codex 文件夹没有会话数据库（不支持没有它的 Codex 版本）。",
+    "noFolder": "未找到 Codex 文件夹（CODEX_HOME 或 ~/.codex）。",
+    "noteThread": "会话 {{id}}",
+    "noteThreadWithAgents": "会话 {{id}} 及其创建的 {{count}} 个会话（子代理）",
+    "noteHistory": "{{count}} 条已存储的对话项",
+    "noteAgentFile": "它创建的会话（子代理）的文件",
+    "noteIndex": "它在命名会话列表中的那一行"
   }
 }

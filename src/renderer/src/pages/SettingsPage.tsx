@@ -1,13 +1,13 @@
 import { useId, useState, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LOCALE_LABELS, SUPPORTED_LOCALES, resolveLocale } from '../../../shared/locale'
-import type { LogEntry, MotionPreference, RefreshMode } from '../../../shared/types'
+import type { LogEntry, MotionPreference, RefreshMode, StorageRoots } from '../../../shared/types'
 import { IconCheck, IconChevron, IconX } from '../components/Icons'
 import { DeletionSafetySection } from '../components/SafetyMode'
 import { Select } from '../components/Select'
 import { AboutSection, UpdatesSection } from '../components/Updates'
 import { useFmt } from '../i18n'
-import { clearCache, errText, hasSafeMode, setLanguage, setMotion, toast, updateSettings, useAppState } from '../stores/appStore'
+import { clearCache, errText, hasSafeMode, setLanguage, setMotion, toast, toolContext, updateSettings, useAppState } from '../stores/appStore'
 
 const api = (): Window['sessionManager'] => window.sessionManager
 
@@ -25,6 +25,8 @@ export function SettingsPage(): ReactElement {
   const safeMode = useAppState((s) => hasSafeMode(s.safety))
   const [logs, setLogs] = useState<LogEntry[] | null>(null)
   const roots = snapshot?.roots
+  const codex = useAppState((st) => st.provider) === 'codex'
+  const context = useAppState(toolContext)
   const langName = useId()
   const motionName = useId()
   const refreshName = useId()
@@ -110,7 +112,7 @@ export function SettingsPage(): ReactElement {
             <dl className="kv roots">
               {roots.accounts.length > 1 && (
                 <>
-                  <dt>{t('settings:roots.accounts')}</dt>
+                  <dt>{t('settings:roots.accounts', { context })}</dt>
                   <dd>
                     {roots.accounts.map((a) => (
                       <div key={a.id} className="root-entry">
@@ -121,36 +123,16 @@ export function SettingsPage(): ReactElement {
                   </dd>
                 </>
               )}
-              <dt>{t('settings:roots.claudeHome')}</dt>
-              <dd>
-                <code className="wrap">{roots.claudeHome}</code>
-              </dd>
-              <dt>{t('settings:roots.transcripts')}</dt>
-              <dd>{roots.projectsRoot ? <code className="wrap">{roots.projectsRoot}</code> : <span className="warn-text">{t('settings:roots.notFound')}</span>}</dd>
-              <dt>{t('settings:roots.fileHistory')}</dt>
-              <dd>{roots.fileHistoryRoot ? <code className="wrap">{roots.fileHistoryRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
-              <dt>{t('settings:roots.sessionEnv')}</dt>
-              <dd>{roots.sessionEnvRoot ? <code className="wrap">{roots.sessionEnvRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
-              <dt>{t('settings:roots.running')}</dt>
-              <dd>{roots.liveSessionsDir ? <code className="wrap">{roots.liveSessionsDir}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
-              <dt>{t('settings:roots.desktop')}</dt>
-              <dd>
-                {roots.desktopRoots.length === 0 && <span className="muted">{t('settings:roots.noDesktop')}</span>}
-                {roots.desktopRoots.map((d) => (
-                  <div key={d.path} className="root-entry">
-                    <code className="wrap">{d.path}</code>
-                    <div className="hint">
-                      {d.source.toUpperCase()} · {d.variant}
-                      {d.packageName ? ` · ${d.packageName}` : ''} ·{' '}
-                      {t('settings:roots.desktopCounts', {
-                        sessions: fmt.count(d.sessionFiles),
-                        tombstones: fmt.count(d.tombstones),
-                        indexes: fmt.count(d.archiveIndexes)
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </dd>
+              {codex ? (
+                <>
+                  <dt>{t('settings:roots.codexHome')}</dt>
+                  <dd>{roots.claudeHome ? <code className="wrap">{roots.claudeHome}</code> : <span className="warn-text">{t('settings:roots.notFound')}</span>}</dd>
+                  <dt>{t('settings:roots.codexCli')}</dt>
+                  <dd>{roots.codexCli ? <code className="wrap">{roots.codexCli}</code> : <span className="warn-text">{t('settings:roots.codexCliMissing')}</span>}</dd>
+                </>
+              ) : (
+                <ClaudeRoots roots={roots} />
+              )}
             </dl>
           ) : (
             <div className="hint">{t('settings:roots.pending')}</div>
@@ -286,5 +268,45 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange(v: bo
         <span className="switch-thumb" />
       </span>
     </label>
+  )
+}
+
+/** Where Claude keeps its sessions (the Codex view shows its own folders and CLI instead). */
+function ClaudeRoots({ roots }: { roots: StorageRoots }): ReactElement {
+  const { t } = useTranslation()
+  const fmt = useFmt()
+  return (
+    <>
+      <dt>{t('settings:roots.claudeHome')}</dt>
+      <dd>
+        <code className="wrap">{roots.claudeHome}</code>
+      </dd>
+      <dt>{t('settings:roots.transcripts')}</dt>
+      <dd>{roots.projectsRoot ? <code className="wrap">{roots.projectsRoot}</code> : <span className="warn-text">{t('settings:roots.notFound')}</span>}</dd>
+      <dt>{t('settings:roots.fileHistory')}</dt>
+      <dd>{roots.fileHistoryRoot ? <code className="wrap">{roots.fileHistoryRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
+      <dt>{t('settings:roots.sessionEnv')}</dt>
+      <dd>{roots.sessionEnvRoot ? <code className="wrap">{roots.sessionEnvRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
+      <dt>{t('settings:roots.running')}</dt>
+      <dd>{roots.liveSessionsDir ? <code className="wrap">{roots.liveSessionsDir}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
+      <dt>{t('settings:roots.desktop')}</dt>
+      <dd>
+        {roots.desktopRoots.length === 0 && <span className="muted">{t('settings:roots.noDesktop')}</span>}
+        {roots.desktopRoots.map((d) => (
+          <div key={d.path} className="root-entry">
+            <code className="wrap">{d.path}</code>
+            <div className="hint">
+              {d.source.toUpperCase()} · {d.variant}
+              {d.packageName ? ` · ${d.packageName}` : ''} ·{' '}
+              {t('settings:roots.desktopCounts', {
+                sessions: fmt.count(d.sessionFiles),
+                tombstones: fmt.count(d.tombstones),
+                indexes: fmt.count(d.archiveIndexes)
+              })}
+            </div>
+          </div>
+        ))}
+      </dd>
+    </>
   )
 }
