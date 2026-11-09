@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import os from 'node:os'
 import path from 'node:path'
 import { APP_ID, APP_NAME, RELEASES_URL, appBrand } from '../shared/appIdentity'
 import { IPC } from '../shared/ipc'
 import type { AppInfo, AppSettings, ExportFormat, SafetyModeState, UpdateState } from '../shared/types'
 import { registerIpc } from './ipc/registerIpc'
+import { registerTerminalIpc } from './ipc/terminalIpc'
 import { ArchiveService } from './services/archiveService'
 import { ScanCache } from './services/cacheService'
 import { envFromProcess } from './services/claudeDiscovery'
@@ -26,6 +27,11 @@ import { CodexDeleteService } from './services/codex/codexDelete'
 import { CodexExportService } from './services/codex/codexExport'
 import { codexEnvFromProcess } from './services/codex/codexHomes'
 import { CodexRepository } from './services/codex/codexRepository'
+import { loadNodePty } from './services/terminal/nodePty'
+import { resumePlan } from './services/terminal/resume'
+import { findShells } from './services/terminal/shells'
+import { TerminalService } from './services/terminal/terminalService'
+import { isDirectory } from './util/fsx'
 import { errorMessage, logger } from './util/logger'
 import { localText } from './util/messages'
 import { resolveLocale, type SupportedLocale } from '../shared/locale'
@@ -172,6 +178,32 @@ async function start(): Promise<void> {
     exporter: new CodexExportService(codexRepo, exportDialogs, brand.name)
   }
 
+  // The integrated terminal, in every build but the Microsoft Store edition: Windows isolates
+  // that package's AppData, so a command run from it would not behave as in any other terminal.
+  const terminals =
+    distribution.channel === 'store'
+      ? null
+      : new TerminalService({
+          loadPty: () => loadNodePty(app.isPackaged ? process.resourcesPath : null),
+          findShells: () => findShells(process.env),
+          windowsBuild: Number(os.release().split('.')[2]) || 0,
+          home: os.homedir(),
+          projectFolder: async (id) => {
+            const folder = (codexRepo.getRecord(id) ?? repo.getRecord(id))?.session.projectPath
+            return folder && (await isDirectory(folder)) ? folder : undefined
+          },
+          resumeOf: async (id) => {
+            const codexSession = codexRepo.getRecord(id)?.session
+            if (codexSession) return resumePlan(codexSession, codexRepo.getHomes())
+            const session = repo.getRecord(id)?.session
+            // The main Claude folder is listed first (claudeDiscovery.ts).
+            const accounts = (repo.getRoots()?.accounts ?? []).map((a, i) => ({ id: a.id, path: a.path, main: i === 0 }))
+            return session ? resumePlan(session, accounts) : null
+          },
+          env: process.env,
+          log: logger
+        })
+
   // Updates. GitHub channel: electron-updater + GitHub Releases (packaged builds
   // only). Store channel: the Store manages updates; electron-updater is never
   // loaded. Development: no updater (a fake one can be enabled to review the UI).
@@ -249,10 +281,19 @@ async function start(): Promise<void> {
     },
     isTrustedSender
   })
+  registerTerminalIpc({ service: terminals, isTrustedSender, page: () => mainWindow?.webContents ?? null })
 
   hardenSession()
   Menu.setApplicationMenu(null)
   createWindow(settings, uiLocale, logPath)
+  if (terminals && mainWindow) {
+    const win = mainWindow
+    // A shell belongs to the page that opened it: a reload or the window closing ends it.
+    win.webContents.on('did-start-navigation', (details) => {
+      if (details.isMainFrame && !details.isSameDocument) terminals.closeAll()
+    })
+    win.on('closed', () => terminals.closeAll())
+  }
 
   // Non-blocking GitHub update check a little after startup (never delays the window).
   // Only the GitHub channel checks; Store builds are updated by the Store.
@@ -291,6 +332,7 @@ function startScreenshotMode(config: ScreenshotModeConfig): void {
       return fn(...args)
     })
   }
+  registerTerminalIpc({ service: null, isTrustedSender, page: () => null })
   hardenSession()
   Menu.setApplicationMenu(null)
   const settings = { get: () => handlers[IPC.getSettings]() as AppSettings }
@@ -313,7 +355,7 @@ function rendererUrl(): string | undefined {
   return !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 }
 
-function isTrustedSender(event: IpcMainInvokeEvent): boolean {
+function isTrustedSender(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
   if (!mainWindow || event.sender !== mainWindow.webContents) return false
   const url = event.senderFrame?.url ?? ''
   const dev = rendererUrl()

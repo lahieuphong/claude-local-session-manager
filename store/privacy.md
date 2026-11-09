@@ -113,6 +113,10 @@ you confirm.
   off after one delete or 10 minutes.
 - GitHub Setup and Portable builds only: these builds have no Safe Mode.
   Permanent deletion works straight away, after the confirmation described below.
+- GitHub Setup and Portable builds only: these builds have a terminal, where you
+  run commands of your own as in any other terminal, with your own rights. What
+  you type and what the commands print stay in the app's window: the app does
+  not record, log or send them. The Microsoft Store edition has no terminal.
 - Every delete shows the exact files that will and will not be removed, and
   needs a typed confirmation. Every path is validated again right before it is
   removed. Project folders are never deleted.

@@ -15,6 +15,7 @@ import enSettings from './en/settings.json'
 import enStorage from './en/storage.json'
 import enUpdater from './en/updater.json'
 import enMessages from './en/messages.json'
+import enTerminal from './en/terminal.json'
 import viCommon from './vi/common.json'
 import viSessions from './vi/sessions.json'
 import viInspector from './vi/inspector.json'
@@ -24,6 +25,7 @@ import viSettings from './vi/settings.json'
 import viStorage from './vi/storage.json'
 import viUpdater from './vi/updater.json'
 import viMessages from './vi/messages.json'
+import viTerminal from './vi/terminal.json'
 import zhCommon from './zh-CN/common.json'
 import zhSessions from './zh-CN/sessions.json'
 import zhInspector from './zh-CN/inspector.json'
@@ -33,9 +35,10 @@ import zhSettings from './zh-CN/settings.json'
 import zhStorage from './zh-CN/storage.json'
 import zhUpdater from './zh-CN/updater.json'
 import zhMessages from './zh-CN/messages.json'
+import zhTerminal from './zh-CN/terminal.json'
 import type { SupportedLocale } from '../locale'
 
-export const NAMESPACES = ['common', 'sessions', 'inspector', 'deletion', 'safety', 'settings', 'storage', 'updater', 'messages'] as const
+export const NAMESPACES = ['common', 'sessions', 'inspector', 'deletion', 'safety', 'settings', 'storage', 'updater', 'messages', 'terminal'] as const
 export type Namespace = (typeof NAMESPACES)[number]
 
 export type LocaleTree = { [k: string]: string | LocaleTree }
@@ -50,7 +53,8 @@ export const RESOURCES: Record<SupportedLocale, Record<Namespace, LocaleTree>> =
     settings: enSettings,
     storage: enStorage,
     updater: enUpdater,
-    messages: enMessages
+    messages: enMessages,
+    terminal: enTerminal
   },
   vi: {
     common: viCommon,
@@ -61,7 +65,8 @@ export const RESOURCES: Record<SupportedLocale, Record<Namespace, LocaleTree>> =
     settings: viSettings,
     storage: viStorage,
     updater: viUpdater,
-    messages: viMessages
+    messages: viMessages,
+    terminal: viTerminal
   },
   'zh-CN': {
     common: zhCommon,
@@ -72,6 +77,7 @@ export const RESOURCES: Record<SupportedLocale, Record<Namespace, LocaleTree>> =
     settings: zhSettings,
     storage: zhStorage,
     updater: zhUpdater,
-    messages: zhMessages
+    messages: zhMessages,
+    terminal: zhTerminal
   }
 }

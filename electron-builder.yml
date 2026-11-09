@@ -18,7 +18,20 @@ files:
   - out/**/*
   - package.json
   - "!**/*.map"
+  # The terminal's node-pty: only what Windows x64 loads (no sources, build
+  # headers, other platforms, debug symbols, or the optional ConPTY DLL).
+  - "!**/node_modules/node-pty/{src,deps,third_party,scripts,typings,build}/**/*"
+  - "!**/node_modules/node-pty/binding.gyp"
+  - "!**/node_modules/node-pty/prebuilds/{darwin-arm64,darwin-x64,win32-arm64}/**/*"
+  - "!**/node_modules/node-pty/prebuilds/win32-x64/conpty/**/*"
+  - "!**/node_modules/node-pty/**/*.pdb"
+  - "!**/node_modules/node-addon-api/**/*"
 asar: true
+# node-pty's native files, and the worker script each shell starts, must be
+# real files: src/main/services/terminal/nodePty.ts loads it from here.
+asarUnpack:
+  - "**/node_modules/node-pty/**/*"
+# node-pty ships prebuilt Node-API binaries, which Electron loads as they are.
 npmRebuild: false
 
 # Distribution channel marker, read at runtime (src/shared/distribution.ts).

@@ -6,6 +6,7 @@ import { PROVIDER_NAMES, ProviderLogo } from './BrandLogos'
 import { UpdatePill } from './Updates'
 import { appBrand } from '../../../shared/appIdentity'
 import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
+import { TERMINAL_SHORTCUT, toggleTerminal, useTerminal } from '../stores/terminalStore'
 import {
   AppMark,
   IconAlert,
@@ -18,7 +19,8 @@ import {
   IconFolder,
   IconLayers,
   IconSettings,
-  IconSwap
+  IconSwap,
+  IconTerminal
 } from './Icons'
 
 const FILTERS: Array<{ id: SessionFilter; icon: (p: { size?: number }) => ReactElement }> = [
@@ -42,6 +44,8 @@ export function Sidebar(): ReactElement {
   const provider = useAppState((s) => s.provider) ?? 'claude'
   const context = useAppState(toolContext)
   const [projectsOpen, setProjectsOpen] = useState(true)
+  const terminalAvailable = useTerminal((s) => s.support?.available ?? false)
+  const terminalOpen = useTerminal((s) => s.open)
   // The product name depends on the distribution (the Microsoft Store edition has its own).
   const brand = appInfo ? appBrand(appInfo.distribution) : null
 
@@ -139,6 +143,18 @@ export function Sidebar(): ReactElement {
           <IconSettings size={16} />
           <span className="nav-text">{t('common:nav.settings')}</span>
         </button>
+        {terminalAvailable && (
+          <button
+            className="nav-item terminal-toggle"
+            aria-pressed={terminalOpen}
+            onClick={toggleTerminal}
+            title={`${t('terminal:toggle')} (${TERMINAL_SHORTCUT})`}
+          >
+            <IconTerminal size={16} />
+            <span className="nav-text">{t('terminal:toggle')}</span>
+            <kbd className="nav-kbd">{TERMINAL_SHORTCUT}</kbd>
+          </button>
+        )}
 
         <div className="sidebar-status">
           <UpdatePill />

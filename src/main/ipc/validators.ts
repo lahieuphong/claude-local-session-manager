@@ -1,3 +1,4 @@
+import { SHELL_IDS, TERMINAL_LIMITS, type ShellId, type TerminalOpenRequest } from '../../shared/terminal'
 import { PROVIDERS, type ExportFormat, type Provider } from '../../shared/types'
 import { SESSION_ID_RE } from '../services/sessionBuilder'
 
@@ -47,5 +48,61 @@ export function assertProvider(v: unknown): Provider {
 export function assertString(v: unknown, max = 200): string {
   if (typeof v !== 'string' || v.length > max) throw new Error('Invalid argument')
   return v
+}
+
+// ---------------------------------------------------------------------------
+// The integrated terminal (shared/terminal.ts)
+// ---------------------------------------------------------------------------
+
+const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max
+
+export function assertTerminalId(v: unknown): number {
+  if (!isInt(v, 1, Number.MAX_SAFE_INTEGER)) throw new Error('Invalid terminal id')
+  return v
+}
+
+export function assertTerminalSize(cols: unknown, rows: unknown): { cols: number; rows: number } {
+  const { cols: c, rows: r } = TERMINAL_LIMITS
+  if (!isInt(cols, c.min, c.max) || !isInt(rows, r.min, r.max)) throw new Error('Invalid terminal size')
+  return { cols, rows }
+}
+
+/** A shell by its ID and a session by its ID: never a program, a command line or a folder. */
+export function assertTerminalOpen(v: unknown): TerminalOpenRequest {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('Invalid terminal request')
+  const { shell, sessionId, resume, cols, rows, ...rest } = v as Record<string, unknown>
+  if (Object.keys(rest).length) throw new Error('Invalid terminal request')
+  if (shell !== undefined && !(SHELL_IDS as readonly unknown[]).includes(shell)) throw new Error('Invalid shell')
+  // Resuming is of a session: there is nothing to resume without one.
+  if (resume !== undefined && (typeof resume !== 'boolean' || (resume && sessionId === undefined))) throw new Error('Invalid terminal request')
+  return {
+    shell: shell as ShellId | undefined,
+    sessionId: sessionId === undefined ? undefined : assertId(sessionId),
+    ...(resume ? { resume: true } : {}),
+    ...assertTerminalSize(cols, rows)
+  }
+}
+
+export function assertTerminalInput(v: unknown): string {
+  if (typeof v !== 'string' || v.length > TERMINAL_LIMITS.maxInput) throw new Error('Invalid terminal input')
+  return v
+}
+
+export function assertCharCount(v: unknown): number {
+  if (!isInt(v, 0, Number.MAX_SAFE_INTEGER)) throw new Error('Invalid character count')
+  return v
+}
+
+/** A web address from the terminal's output: http or https, nothing else (no file:, no ms-settings:). */
+export function assertWebLink(v: unknown): string {
+  if (typeof v !== 'string' || v.length > TERMINAL_LIMITS.maxLink) throw new Error('Invalid link')
+  let url: URL
+  try {
+    url = new URL(v)
+  } catch {
+    throw new Error('Invalid link')
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Only web links can be opened')
+  return url.href
 }
 

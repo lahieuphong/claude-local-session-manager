@@ -21,13 +21,14 @@
 //   broken-image   an image that did not load
 //   contrast       text too faint for its background (WCAG 3:1 is an error, 4.5:1 a warning)
 //   no-tooltip     text cut with an ellipsis and no way to read all of it (warning)
+//   empty-gap      a settings label taller than its text, leaving empty space under it
 
 /* eslint-disable */
 export function auditPage() {
   const problems = []
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const NS = 'common|deletion|inspector|messages|safety|sessions|settings|storage|updater'
+  const NS = 'common|deletion|inspector|messages|safety|sessions|settings|storage|terminal|updater'
   const styles = new Map()
   const style = (el) => {
     let s = styles.get(el)
@@ -76,7 +77,8 @@ export function auditPage() {
   // A dialog makes the app behind it inert: only the topmost dialog can be used.
   const backdrops = [...document.querySelectorAll('.modal-backdrop')]
   const scope = backdrops.length ? backdrops[backdrops.length - 1] : document.body
-  const all = [...scope.querySelectorAll('*')].filter((el) => !el.closest('svg') && !/^(SCRIPT|STYLE|OPTION|NOSCRIPT)$/.test(el.tagName))
+  // A terminal's screen (xterm.js) is what its shell draws, not the app's layout: the panel around it is checked.
+  const all = [...scope.querySelectorAll('*')].filter((el) => !el.closest('svg, .xterm') && !/^(SCRIPT|STYLE|OPTION|NOSCRIPT)$/.test(el.tagName))
   const live = all.filter(rendered)
   const INTERACTIVE = 'button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=combobox], [role=option], [role=menuitem], [role=menuitemradio], [role=radio], [role=switch], [role=tab]'
   const controls = live.filter((el) => el.matches(INTERACTIVE))
@@ -209,13 +211,13 @@ export function auditPage() {
     const text = node.textContent.trim()
     if (!text) continue
     const el = node.parentElement
-    if (!el || el.closest('svg, script, style, option') || !rendered(el)) continue
+    if (!el || el.closest('svg, script, style, option, .xterm') || !rendered(el)) continue
     const range = document.createRange()
     range.selectNodeContents(node)
     const rects = [...range.getClientRects()]
     if (!rects.length) continue
 
-    const technical = !!el.closest('pre, code, .mono, kbd, .row-title, .inspector-title, .row-model, .row-project, .preview, .path-value, .account-trigger-name, .account-item-name, .account-item-email, .account-item-plan, .data-folder-account')
+    const technical = !!el.closest('pre, code, .mono, kbd, .row-title, .inspector-title, .row-model, .row-project, .preview, .path-value, .account-trigger-name, .account-item-name, .account-item-email, .account-item-plan, .data-folder-account, .terminal-tab-name, .terminal-tab-folder')
     if (!technical) {
       if (new RegExp(`^(${NS}):`).test(text) || /^[a-z][A-Za-z]*(\.[A-Za-z0-9_-]+)+$/.test(text)) add('raw-text', el, `looks like an untranslated key: "${text}"`)
       if (/\{\{|\}\}|\bundefined\b|\bNaN\b|\[object Object\]|Invalid Date|\b(ENOENT|EACCES|EPERM|EBUSY)\b/.test(text)) add('raw-text', el, `"${text.slice(0, 60)}"`)
@@ -310,6 +312,13 @@ export function auditPage() {
     return !!(el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent?.trim())
   }
   for (const el of controls) if (!accessibleName(el)) add('no-name', el, el.outerHTML.slice(0, 80))
+  // A settings label is as tall as its text (a stacked row once stretched it to 220px).
+  for (const el of live) {
+    if (!el.matches('.setting-text')) continue
+    const box = el.getBoundingClientRect()
+    const content = Math.max(box.top, ...[...el.children].map((c) => c.getBoundingClientRect().bottom))
+    if (box.bottom - content > 4) add('empty-gap', el, `${Math.round(box.bottom - content)}px of empty space under "${snippet(el)}"`)
+  }
   const ids = new Map()
   for (const el of document.querySelectorAll('[id]')) ids.set(el.id, (ids.get(el.id) ?? 0) + 1)
   for (const [id, count] of ids) if (count > 1) problems.push({ rule: 'dup-id', severity: 'error', where: `#${id}`, detail: `${count} elements` })

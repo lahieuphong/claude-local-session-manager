@@ -1,8 +1,10 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { resumeCommand } from '../../../shared/terminal'
 import type { ClaudeSession, ExportFormat, RawTitle, SessionDetails } from '../../../shared/types'
 import { useFmt } from '../i18n'
 import { archive, copyToClipboard, errText, exportOne, hasSafeMode, hideInManager, openDelete, runAction, toolContext, useAppState } from '../stores/appStore'
+import { resumeInTerminal, useTerminal } from '../stores/terminalStore'
 import { displayPath } from '../utils/paths'
 import { SessionBadges } from './Badges'
 import { EmptyState } from './EmptyState'
@@ -18,6 +20,7 @@ import {
   IconFolder,
   IconInfo,
   IconRestore,
+  IconTerminal,
   IconTrash
 } from './Icons'
 import { useSessionTitle } from './SessionList'
@@ -118,6 +121,7 @@ function SessionInspector({ session: s, details, error }: { session: ClaudeSessi
           </div>
         </header>
 
+        <ResumeButton session={s} />
         <div className="actions" role="toolbar" aria-label={t('inspector:actions')}>
           <button className="btn" disabled={!s.projectPath} onClick={() => void runAction(() => api().openProject(s.id))} title={t('inspector:action.openProjectHint')}>
             <IconFolder size={14} /> {t('inspector:action.openProject')}
@@ -444,6 +448,28 @@ function PathRow({ label, path, raw, size, onReveal }: { label: string; path?: s
         {displayPath(path, raw)}
       </div>
     </div>
+  )
+}
+
+/** Takes the session up again in the app's terminal: its CLI's resume command, typed in, in its project folder. Not in the Store edition. */
+function ResumeButton({ session: s }: { session: ClaudeSession }): ReactElement | null {
+  const { t } = useTranslation()
+  const available = useTerminal((st) => st.support?.available ?? false)
+  const starting = useTerminal((st) => st.starting)
+  const context = useAppState(toolContext)
+  if (!available) return null
+  const command = s.cliSessionId ? resumeCommand(s.provider, s.cliSessionId) : null
+  const blocked = !command
+    ? t('terminal:resume.noId')
+    : s.provider !== 'codex' && !s.hasTranscript
+      ? t('terminal:resume.noTranscript')
+      : s.live
+        ? t('terminal:resume.live', { context })
+        : null
+  return (
+    <button className="btn resume-btn" disabled={!!blocked || starting} onClick={() => void resumeInTerminal(s.id)} title={blocked ?? t('terminal:resume.hint', { command })}>
+      <IconTerminal size={14} /> {t('terminal:resume.button')}
+    </button>
   )
 }
 

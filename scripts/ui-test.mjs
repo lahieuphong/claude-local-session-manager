@@ -242,7 +242,10 @@ async function runVariant(channel) {
   writeFileSync(path.join(userData, 'settings.json'), JSON.stringify({ language: 'en', refreshMode: 'manual' }))
   const profile = writeUiTestProfile(home, { livePid: process.pid })
   const { roles } = profile
-  const codexProfile = writeCodexProfile(home)
+  // Real project folders in the throw-away profile: a terminal opened from a Codex session starts in its folder.
+  const codexCwds = ['185', 'OCR', 'CMS'].map((name) => path.join(home, 'projects', name))
+  for (const dir of codexCwds) mkdirSync(dir, { recursive: true })
+  const codexProfile = writeCodexProfile(home, { cwds: codexCwds })
   const cxRoles = codexProfile.roles
   const env = sandboxEnv(home, userData, channel)
 
@@ -290,7 +293,7 @@ async function runVariant(channel) {
     await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...mouse })
   }
   const click = (selector) => clickEl(`document.querySelector(${quote(selector)})`, selector)
-  const KEY_CODES = { Escape: 27, Tab: 9, ArrowDown: 40, ArrowUp: 38, ArrowRight: 39, Home: 36, End: 35, Enter: 13, k: 75, '/': 191 }
+  const KEY_CODES = { Escape: 27, Tab: 9, ArrowDown: 40, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Home: 36, End: 35, Enter: 13, c: 67, k: 75, '/': 191 }
   const press = async (key, modifiers = 0) => {
     const common = { key, code: key.length === 1 ? `Key${key.toUpperCase()}` : key, windowsVirtualKeyCode: KEY_CODES[key], nativeVirtualKeyCode: KEY_CODES[key], modifiers }
     await page.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...common })
@@ -400,6 +403,8 @@ async function runVariant(channel) {
       await page.waitFor(`!document.querySelector('.modal-backdrop')`, 'the dialog to close', 5000).catch(() => {})
     }
     if (await has('.menu')) await press('Escape')
+    // Its terminals keep running, out of sight.
+    if (await terminalShown()) await hideTerminalPanel()
     await closeToasts()
     if ((await has('.account-trigger')) && (await accountOnScreen()) !== ACCOUNT_LABELS[0]) await selectAccount(0)
     await clickEl(filterEl('all'), 'the All sessions filter')
@@ -440,6 +445,43 @@ async function runVariant(channel) {
     await clickEl(STORAGE_EL, 'the Storage item')
     await page.waitFor(`document.querySelector('.page.storage')`, 'the storage page')
   }
+
+  // The integrated terminal (not in the Store edition).
+  const terminalShown = () => has('.terminal-panel:not([hidden])')
+  const terminalText = () => page.evaluate(`document.querySelector('.terminal-view.active .xterm-rows')?.textContent ?? ''`)
+  /** Each tab as "<program> <folder>", e.g. "pwsh ~". */
+  const terminalTabs = () => page.evaluate(`[...document.querySelectorAll('.terminal-tab')].map((t) => t.querySelector('.terminal-tab-name').textContent + ' ' + t.querySelector('.terminal-tab-folder').textContent)`)
+  const activeTab = () => text('.terminal-tab.on .terminal-tab-name')
+  const waitForPrompt = (what = 'a shell prompt') =>
+    page.waitFor(`document.querySelector('.terminal-panel:not([hidden]) .terminal-tab') && /\\S/.test(document.querySelector('.terminal-view.active .xterm-rows')?.textContent ?? '')`, what, 30_000)
+  /** Ctrl+` (Ctrl+Shift+` with shift), as the keyboard sends it. */
+  const pressBackquote = async (shift = false) => {
+    const common = { key: '`', code: 'Backquote', windowsVirtualKeyCode: 192, nativeVirtualKeyCode: 192, modifiers: 2 | (shift ? 8 : 0) }
+    await page.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...common })
+    await page.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common })
+  }
+  /** Shows the panel with its sidebar item; the first terminal starts by itself. */
+  const showTerminal = async () => {
+    if (!(await terminalShown())) await clickEl(`document.querySelector('.terminal-toggle')`, 'the Terminal item')
+    await waitForPrompt()
+    await settle()
+  }
+  const MAXIMIZE = '.terminal-actions > .icon-btn[aria-pressed]'
+  const hideTerminalPanel = async () => {
+    if (await has('.terminal-panel.maximized')) {
+      await click(MAXIMIZE)
+      // The panel moves down as it shrinks: find the Hide button where it ends up.
+      await page.waitFor(`!document.querySelector('.terminal-panel.maximized')`, 'the panel to restore')
+      await settle()
+    }
+    if (await terminalShown()) await clickEl(`document.querySelector('.terminal-actions > .icon-btn:last-child')`, 'the Hide panel button')
+    await page.waitFor(`!document.querySelector('.terminal-panel:not([hidden])')`, 'the terminal panel to hide')
+  }
+  /** Types a command into the terminal that has the focus, and runs it. */
+  const runInTerminal = async (command) => {
+    await page.send('Input.insertText', { text: command })
+    await pressEnter()
+  }
   const setLocale = async (locale) => {
     await reset()
     await goSettings()
@@ -466,7 +508,8 @@ async function runVariant(channel) {
     // The toolbar of the details panel: a two-by-two grid, edge to edge, in every language and size.
     const bar = await page.evaluate(`(() => {
       const bar = document.querySelector('.inspector .actions')
-      if (!bar) return null
+      // Not on screen (a maximized terminal hides the page): nothing to measure.
+      if (!bar?.checkVisibility()) return null
       const box = bar.getBoundingClientRect()
       return { left: box.left, right: box.right, cells: [...bar.children].map((c) => { const r = c.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, height: r.height } }) }
     })()`)
@@ -599,6 +642,8 @@ async function runVariant(channel) {
     await withDefect('text sticking out of its button', 'spill', '.list-title-row .btn { width: 16px; overflow: visible; white-space: nowrap; flex: none }')
     await withDefect('an untranslated key', 'raw-text', null, '<span>sessions:filter.all</span>')
     await withDefect('a button with no name', 'no-name', null, '<button></button>')
+    // The Settings defect that was reported: a stacked row's label stretched to 220px.
+    await withDefect('empty space under a settings label', 'empty-gap', '.setting-row.stacked .setting-text { flex: 1 1 220px !important }', '<div class="setting-row stacked"><div class="setting-text"><div class="setting-label">Label</div></div></div>')
 
     // The update screens, with the fake updater. It stays "downloaded" for the layout pass,
     // so the sidebar also carries the update message there.
@@ -657,6 +702,11 @@ async function runVariant(channel) {
       { name: 'codex-storage', enter: async () => { await reset(); await goTool('codex'); await goStorage() } },
       { name: 'codex-settings', enter: async () => { await reset(); await goTool('codex'); await goSettings() } },
       { name: 'codex-settings-advanced', enter: async () => { await reset(); await goTool('codex'); await goSettings(); await openAdvanced() } },
+      { name: 'terminal', needs: () => !isStore, enter: async () => { await reset(); await showTerminal() } },
+      { name: 'terminal-over-details', needs: () => !isStore, enter: async () => { await reset(); await selectRow(roles.longEn); await showTerminal() } },
+      { name: 'terminal-shell-menu', needs: () => !isStore, enter: async () => { await reset(); await showTerminal(); await click('.terminal-shell-trigger'); await page.waitFor(`document.querySelector('.terminal-shell-menu')`, 'the list of shells') } },
+      { name: 'terminal-maximized', needs: () => !isStore, enter: async () => { await reset(); await showTerminal(); await click(MAXIMIZE); await page.waitFor(`document.querySelector('.terminal-panel.maximized')`, 'the maximized panel') } },
+      { name: 'codex-terminal-on-settings', needs: () => !isStore, enter: async () => { await reset(); await goTool('codex'); await goSettings(); await showTerminal() } },
       { name: 'sidebar-scrolled-to-end', enter: async () => { await reset(); await scrollToEnd('.nav') } },
       { name: 'sidebar-projects-collapsed', enter: async () => { await reset(); await click('.nav-label-button') } },
       { name: 'account-menu', enter: async () => { await reset(); await openAccounts() } },
@@ -791,7 +841,7 @@ async function runVariant(channel) {
     }
 
     // Text that is the same as English in another language was probably never translated.
-    const SAME_EVERYWHERE = /^(Claude( Desktop| Code| Local)?( Session Manager)?|Codex( CLI)?|Claude Desktop \(.*\)|Session Manager|LHP( Local)?( Session Manager)?|Local Session Manager|DELETE( \d+)?|ENABLE DELETE|JSON|JSONL|Markdown|PID|CLI|GitHub|Microsoft Store|APPDATA|Ctrl K|English|Tiếng Việt|简体中文|[\d\s.,:/%·—-]+)$/
+    const SAME_EVERYWHERE = /^(Claude( Desktop| Code| Local)?( Session Manager)?|Codex( CLI)?|Terminal|PowerShell 7|Windows PowerShell|Git Bash|Claude Desktop \(.*\)|Session Manager|LHP( Local)?( Session Manager)?|Local Session Manager|DELETE( \d+)?|ENABLE DELETE|JSON|JSONL|Markdown|PID|CLI|GitHub|Microsoft Store|APPDATA|Ctrl K|English|Tiếng Việt|简体中文|[\d\s.,:/%·—-]+)$/
     for (const [state, perLocale] of strings) {
       const english = perLocale.get('en')
       if (!english) continue
@@ -1470,6 +1520,128 @@ async function runVariant(channel) {
     await page.waitFor(`document.querySelector('.list-pane')`, 'the project list')
     await settle()
     check('storage: clicking a project opens it', (await text('.page-title')) === topProject, topProject)
+
+    // The integrated terminal: real shells, as in VS Code (the Store edition has none).
+    if (isStore) {
+      const support = await page.evaluate('window.terminal.info()')
+      check('Store edition: no terminal, not even its item', !(await has('.terminal-toggle')) && !(await has('.terminal-panel')) && support.available === false)
+      await reset()
+      await selectRow(roles.longEn)
+      check('Store edition: no "Continue in terminal" in the details', !(await has('.resume-btn')))
+    } else {
+      // From nothing: the layout pass left a terminal running.
+      await reset()
+      await showTerminal()
+      while ((await count('.terminal-tab')) > 0) {
+        await click('.terminal-tab.on .terminal-tab-close')
+        await settle()
+      }
+      check('terminal: closing the last tab closes the panel, and the focus goes to its item', !(await terminalShown()) && (await page.evaluate(`document.activeElement === document.querySelector('.terminal-toggle')`)))
+      check('terminal: the sidebar item shows its key', (await text('.terminal-toggle .nav-kbd')) === 'Ctrl+`')
+
+      await pressBackquote()
+      await waitForPrompt()
+      const [first] = await terminalTabs()
+      check('terminal: Ctrl+` opens a shell in the home folder', /^(pwsh|powershell|cmd) ~$/.test(first ?? ''), first)
+      check('terminal: typing goes to the shell', await page.evaluate(`document.activeElement?.classList.contains('xterm-helper-textarea')`))
+      await runInTerminal('echo clsm-ui-terminal-ok')
+      // Twice: the command as typed, then what it printed.
+      const ran = await page
+        .waitFor(`(document.querySelector('.terminal-view.active .xterm-rows').textContent.match(/clsm-ui-terminal-ok/g) ?? []).length >= 2`, 'the command and its output', 20_000)
+        .then(() => true, () => false)
+      check('terminal: a command runs and prints its output', ran, (await terminalText()).replace(/\s+/g, ' ').slice(-120))
+      await press('k', 2)
+      check('terminal: Ctrl+K stays in the shell (it does not jump to the search box)', await page.evaluate(`document.activeElement?.classList.contains('xterm-helper-textarea')`))
+
+      await click('.terminal-shell-trigger')
+      await page.waitFor(`document.querySelector('.terminal-shell-menu')`, 'the list of shells')
+      const shellNames = await page.evaluate(`[...document.querySelectorAll('.terminal-shell-item')].map((b) => b.textContent)`)
+      check('terminal: the list offers the shells of this PC, Command Prompt among them', shellNames.includes('Command Prompt') && shellNames.length >= 2, shellNames.join(', '))
+      await clickEl(`[...document.querySelectorAll('.terminal-shell-item')].find((b) => b.textContent === 'Command Prompt')`, 'Command Prompt in the list')
+      await page.waitFor(`document.querySelectorAll('.terminal-tab').length === 2`, 'a second terminal')
+      await waitForPrompt('the Command Prompt')
+      check('terminal: a second shell opens in its own tab, on screen', (await activeTab()) === 'cmd')
+      await page.evaluate(`document.querySelector('.terminal-tab.on .terminal-tab-main').focus()`)
+      await press('ArrowLeft')
+      check('terminal: the arrow keys move between the tabs', (await activeTab()) === (first ?? '').split(' ')[0])
+
+      // From a Codex session: its project folder, with the shell chosen last ("+" remembers it).
+      await goTool('codex')
+      check('terminal: going to Codex keeps the terminals', (await count('.terminal-tab')) === 2 && (await terminalShown()))
+      await selectRow(cxRoles.named)
+      await pressBackquote(true)
+      await page.waitFor(`document.querySelectorAll('.terminal-tab').length === 3`, 'a third terminal')
+      await waitForPrompt('the Command Prompt in the project')
+      await page.waitFor(`document.querySelector('.terminal-view.active .xterm-rows').textContent.includes('185>')`, 'the prompt in the project folder', 20_000).catch(() => {})
+      check('terminal: Ctrl+Shift+` opens one in the project folder of the session on screen', (await terminalTabs())[2] === 'cmd 185' && (await terminalText()).includes(`${path.join('projects', '185')}>`), (await terminalTabs()).join(' | '))
+      await runInTerminal('exit')
+      await page.waitFor(`document.querySelectorAll('.terminal-tab').length === 2`, 'the tab to close', 15_000).catch(() => {})
+      check('terminal: `exit` closes its tab', (await count('.terminal-tab')) === 2)
+
+      await click(MAXIMIZE)
+      await page.waitFor(`document.querySelector('.terminal-panel.maximized')`, 'the maximized panel')
+      check('terminal: maximized, it takes the place of the page', !(await page.evaluate(`document.querySelector('.sessions-layout').checkVisibility()`)))
+      await click(MAXIMIZE)
+      await page.waitFor(`!document.querySelector('.terminal-panel.maximized')`, 'the panel to restore')
+      const before = await page.evaluate(`document.querySelector('.terminal-panel').getBoundingClientRect().height`)
+      await page.evaluate(`document.querySelector('.terminal-resizer').focus()`)
+      await press('ArrowUp')
+      await settle()
+      const after = await page.evaluate(`document.querySelector('.terminal-panel').getBoundingClientRect().height`)
+      check('terminal: the arrow keys on its edge change its height', Math.round(after - before) === 24, `${before} → ${after}`)
+
+      await pressBackquote()
+      await page.waitFor(`!document.querySelector('.terminal-panel:not([hidden])')`, 'the panel to hide')
+      await pressBackquote()
+      await waitForPrompt()
+      // The focus goes back to the shell once the panel is drawn again (a frame later).
+      const refocused = await page
+        .waitFor(`document.activeElement?.classList.contains('xterm-helper-textarea')`, 'the focus back in the shell', 5000)
+        .then(() => true, () => false)
+      check('terminal: Ctrl+` hides and shows it, its shells still there, with the focus', (await count('.terminal-tab')) === 2 && refocused)
+
+      // "Continue in terminal": the session's resume command, typed in for the user to run, in its account.
+      await reset()
+      await selectAccount(2)
+      await selectRow(roles.third[0])
+      const tabsBefore = await count('.terminal-tab')
+      await click('.resume-btn')
+      await page.waitFor(`document.querySelectorAll('.terminal-tab').length === ${tabsBefore + 1}`, 'the terminal to resume in')
+      const claudeCommand = `claude --resume ${roles.third[0]}`
+      const typed = await page
+        .waitFor(`document.querySelector('.terminal-view.active .xterm-rows').textContent.includes(${quote(claudeCommand)})`, 'the resume command', 20_000)
+        .then(() => true, () => false)
+      await sleep(1500)
+      check('resume: the command is typed in, and left for the user to run', typed && (await terminalText()).trimEnd().endsWith(claudeCommand), (await terminalText()).replace(/\s+/g, ' ').slice(-120))
+      // Not run: cancel it, and look at the account the shell was given.
+      await press('c', 2)
+      const shellName = await activeTab()
+      await runInTerminal(shellName === 'cmd' ? 'echo %CLAUDE_CONFIG_DIR%' : shellName === 'bash' ? 'echo $CLAUDE_CONFIG_DIR' : 'echo $env:CLAUDE_CONFIG_DIR')
+      const third = path.join(home, '.claude-accounts', 'third-account')
+      const account = await page
+        .waitFor(`document.querySelector('.terminal-view.active .xterm-rows').textContent.includes(${quote(third)})`, 'the account folder', 15_000)
+        .then(() => true, () => false)
+      check('resume: a session of another account resumes in that account (CLAUDE_CONFIG_DIR)', account, shellName)
+      await reset()
+      await selectRow(roles.metadataOnly, 'problems')
+      check('resume: not offered for a session whose conversation is not on this PC', await page.evaluate(`document.querySelector('.resume-btn').disabled`))
+      await reset()
+      await selectRow(roles.live)
+      check('resume: not offered for a session open right now', await page.evaluate(`document.querySelector('.resume-btn').disabled`))
+      await goTool('codex')
+      await selectRow(cxRoles.aiTitle)
+      await click('.resume-btn')
+      const codexCommand = `codex resume ${cxRoles.aiTitle}`
+      const codexTyped = await page
+        .waitFor(`document.querySelector('.terminal-view.active .xterm-rows').textContent.includes(${quote(codexCommand)})`, 'the Codex resume command', 20_000)
+        .then(() => true, () => false)
+      check('resume: a Codex session gets `codex resume <id>`, in its project folder', codexTyped && (await terminalTabs()).at(-1)?.endsWith(' OCR'), (await terminalTabs()).join(' | '))
+      while ((await count('.terminal-tab')) > 0) {
+        await click('.terminal-tab.on .terminal-tab-close')
+        await settle()
+      }
+      await reset()
+    }
 
     // The delete dialog.
     await reset()

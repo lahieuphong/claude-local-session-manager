@@ -1,0 +1,33 @@
+{
+  "title": "Terminal",
+  "toggle": "Terminal",
+  "tabs": "Open terminals",
+  "new": "New terminal ({{shell}})",
+  "chooseShell": "Choose a shell",
+  "shellsHeading": "Open a terminal with",
+  "shellNote": "A new terminal starts in the project folder of the session on screen. + opens the shell you chose last.",
+  "shell": {
+    "pwsh": "PowerShell 7",
+    "powershell": "Windows PowerShell",
+    "cmd": "Command Prompt",
+    "gitbash": "Git Bash"
+  },
+  "close": "Close terminal {{name}}",
+  "maximize": "Maximize panel",
+  "restore": "Restore panel size",
+  "hide": "Hide panel",
+  "resize": "Panel height",
+  "exited": "The shell ended with exit code {{code}}.",
+  "startFailed": "The terminal could not start: {{error}}",
+  "link": {
+    "hint": "Ctrl+click to open the link"
+  },
+  "resume": {
+    "button": "Continue in terminal",
+    "hint": "Opens a terminal in the project folder with “{{command}}” typed in. Press Enter to run it.",
+    "noId": "This session has no ID its CLI can resume.",
+    "noTranscript": "Its conversation is not on this PC, so Claude Code cannot resume it.",
+    "live": "It is open in a program right now.",
+    "live_codex": "Codex wrote to it a moment ago: it may still be running."
+  }
+}

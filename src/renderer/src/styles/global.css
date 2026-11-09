@@ -1574,6 +1574,29 @@ html[lang='zh-CN'] .group-label {
   overflow-wrap: anywhere;
 }
 
+/* Above the toolbar, full width: taking the session up again in the app's terminal. */
+.btn.resume-btn {
+  width: 100%;
+  height: 32px;
+  margin-bottom: var(--space-3);
+  border-color: var(--accent-border);
+  background: var(--accent-subtle);
+}
+.btn.resume-btn svg {
+  color: var(--accent);
+}
+.btn.resume-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(217, 119, 87, 0.2);
+}
+.btn.resume-btn:disabled {
+  border-color: var(--border-subtle);
+  background: transparent;
+}
+.btn.resume-btn:disabled svg {
+  color: inherit;
+}
+
 /* Two by two, edge to edge: using the session on top, tidying it away below. */
 .actions {
   --action-height: 32px;
@@ -1838,7 +1861,8 @@ html[lang='zh-CN'] .group-label {
   color: var(--text-secondary);
   font-size: 11.5px;
   line-height: 1.5;
-  white-space: pre-wrap;
+  /* Runs of spaces wrap too (an error page in the log is indented): with pre-wrap they hang past the edge. */
+  white-space: break-spaces;
   overflow-wrap: anywhere;
 }
 .code-block.log {
@@ -2085,6 +2109,10 @@ html[lang='zh-CN'] .group-label {
 .setting-row.stacked {
   flex-direction: column;
   gap: var(--space-3);
+}
+/* Stacked, the label is only as tall as its text (its flex-basis is a width when side by side). */
+.setting-row.stacked .setting-text {
+  flex: none;
 }
 .setting-text {
   flex: 1 1 220px;
@@ -3005,6 +3033,305 @@ html[lang='zh-CN'] .plan-group-label {
 }
 .req.bad {
   color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------------- terminal */
+/*
+ * The integrated terminal, under the page as in VS Code. Its top edge is
+ * dragged to change its height; it always leaves 220px of the page above it
+ * (KEEP_ABOVE in TerminalPanel.tsx). Maximized, it takes the page's place.
+ */
+.terminal-panel {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+  max-height: calc(100% - 220px);
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-sidebar);
+}
+.terminal-panel[hidden] {
+  display: none;
+}
+.terminal-panel.maximized {
+  flex: 1;
+  max-height: none;
+}
+.main.terminal-max > :not(.status-strip, .terminal-panel) {
+  display: none;
+}
+
+/* On the top border, inside the panel: it never covers the page above it, nor the tabs below. */
+.terminal-resizer {
+  position: absolute;
+  z-index: 3;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  touch-action: none;
+}
+/* An accent line on the border while it is pointed at, dragged or focused. */
+.terminal-resizer::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity var(--dur-hover) var(--ease);
+}
+.terminal-resizer:hover::after,
+.terminal-resizer.dragging::after,
+.terminal-resizer:focus-visible::after {
+  opacity: 0.75;
+}
+.terminal-resizer:focus-visible {
+  box-shadow: none;
+}
+
+.terminal-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.terminal-title {
+  flex: none;
+  margin-right: var(--space-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: var(--label-tracking);
+  text-transform: var(--label-transform);
+  color: var(--text-muted);
+}
+html[lang='zh-CN'] .terminal-title {
+  font-size: 12px;
+}
+.terminal-tabs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  /* Many tabs scroll sideways, as in a browser; the actions stay in place. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.terminal-tab {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition:
+    background-color var(--dur-hover) var(--ease),
+    color var(--dur-hover) var(--ease);
+}
+.terminal-tab:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+}
+.terminal-tab.on {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+/* The tab on screen is underlined in the accent colour. */
+.terminal-tab.on::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.terminal-tab-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 4px 0 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.terminal-tab-main svg {
+  color: var(--text-muted);
+}
+.terminal-tab.on .terminal-tab-main svg {
+  color: var(--accent);
+}
+.terminal-tab.exited .terminal-tab-main svg {
+  color: var(--danger);
+}
+.terminal-tab-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.terminal-tab-folder {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+}
+.terminal-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--text-muted);
+  opacity: 0;
+  transition:
+    opacity var(--dur-hover) var(--ease),
+    background-color var(--dur-hover) var(--ease),
+    color var(--dur-hover) var(--ease);
+}
+/* Shown on the tab on screen and on the one pointed at, as in VS Code. */
+.terminal-tab.on .terminal-tab-close,
+.terminal-tab:hover .terminal-tab-close,
+.terminal-tab-close:focus-visible {
+  opacity: 1;
+}
+.terminal-tab-close:hover {
+  background: var(--border-default);
+  color: var(--text-primary);
+}
+
+.terminal-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.terminal-new {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.terminal-shell-trigger {
+  width: 16px;
+}
+.terminal-shell-chev {
+  transform: rotate(90deg);
+}
+.terminal-max-icon.up {
+  transform: rotate(-90deg);
+}
+.terminal-max-icon.down {
+  transform: rotate(90deg);
+}
+.menu.terminal-shell-menu {
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  width: max-content;
+  min-width: 230px;
+  max-width: 300px;
+}
+.menu.terminal-shell-menu.up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+.terminal-shell-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 13px;
+  transition:
+    background-color var(--dur-hover) var(--ease),
+    color var(--dur-hover) var(--ease);
+}
+.terminal-shell-item:hover,
+.terminal-shell-item:focus-visible {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+.terminal-shell-item svg {
+  color: var(--text-muted);
+}
+.terminal-shell-name {
+  flex: 1;
+}
+.terminal-shell-item .terminal-shell-check {
+  color: var(--accent);
+}
+
+/* Each terminal's view (terminal/terminalViews.ts) fills the body; only the one on screen is shown. */
+.terminal-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.terminal-view {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+.terminal-view.active {
+  display: block;
+}
+/* The padding is on xterm's own element, which its fit addon allows for. */
+.terminal-view .xterm {
+  height: 100%;
+  padding: 8px 4px 4px var(--space-4);
+}
+/* xterm.css paints its scroll layer black: the space past the last column and row would show it. */
+.terminal-view .xterm .xterm-viewport {
+  background-color: transparent;
+}
+/* Text being composed in an input method (Vietnamese Telex, Chinese Pinyin) in the app's colours. */
+.terminal-view .xterm .composition-view {
+  padding: 0 2px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+/* The Terminal item in the sidebar: a switch, so "on" is not the look of the page on screen. */
+.nav-item.terminal-toggle[aria-pressed='true'] {
+  color: var(--text-primary);
+}
+.nav-item.terminal-toggle[aria-pressed='true'] svg {
+  color: var(--accent);
+}
+.nav-kbd {
+  margin-left: auto;
+  padding: 0 5px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 /* ---------------------------------------------------------------- toasts */

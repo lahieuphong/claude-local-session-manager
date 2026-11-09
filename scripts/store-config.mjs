@@ -19,7 +19,11 @@ export const STORE_LANGUAGE_MAP = { en: 'en-US', vi: 'vi-VN', 'zh-CN': 'zh-CN' }
 export const STORE_MIN_WINDOWS = '10.0.19041.0'
 export const STORE_MAX_TESTED_WINDOWS = '10.0.26100.0'
 export const STORE_APPLICATION_ID = 'ClaudeLocalSessionManager'
-export const STORE_EXCLUDED_FILES = '!**/node_modules/electron-updater/**/*'
+/**
+ * Left out of the Store package: the self-updater (the Store updates the app)
+ * and the terminal's node-pty (the Store edition has no terminal).
+ */
+export const STORE_EXCLUDED_FILES = ['!**/node_modules/electron-updater/**/*', '!**/node_modules/node-pty/**/*']
 /**
  * The only capability of the Store package. electron-builder always adds it
  * (the app is a full-trust desktop process); nothing else is requested.
@@ -208,8 +212,8 @@ export function storeBuilderConfig({ identity, version, test = false }) {
     executableName: identity.displayName,
     directories: { output: test ? STORE_TEST_OUTPUT : STORE_OUTPUT },
     // Appended to electron-builder.yml `files`: the Store package carries no
-    // self-updater code at all (the Store channel never loads it anyway).
-    files: [STORE_EXCLUDED_FILES],
+    // self-updater and no terminal code at all (the Store channel never loads either).
+    files: STORE_EXCLUDED_FILES,
     extraMetadata: {
       distributionChannel: 'store',
       storeProductId: identity.storeProductId || '',

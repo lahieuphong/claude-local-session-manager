@@ -146,6 +146,18 @@ export const IconX = (p: IconProps): ReactElement => (
     <path d="M5 5l14 14M19 5 5 19" />
   </Icon>
 )
+export const IconPlus = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Icon>
+)
+/** A window with a prompt: the integrated terminal. */
+export const IconTerminal = (p: IconProps): ReactElement => (
+  <Icon {...p}>
+    <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
+    <path d="m7.5 9.5 3 2.5-3 2.5M12.5 15h4" />
+  </Icon>
+)
 export const IconChevron = (p: IconProps): ReactElement => (
   <Icon {...p}>
     <path d="m9 6 6 6-6 6" />

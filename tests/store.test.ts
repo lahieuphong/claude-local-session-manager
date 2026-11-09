@@ -345,7 +345,8 @@ describe('Store languages, assets and manifest', () => {
     expect(cfg.appx.capabilities).toEqual([]) // runFullTrust is added by electron-builder
     expect(cfg.appx.customManifestPath).toBeUndefined()
     expect(cfg.appx.addAutoLaunchExtension).toBe(false)
-    expect(cfg.files).toEqual(['!**/node_modules/electron-updater/**/*']) // no self-updater code in the Store package
+    // No self-updater and no terminal code in the Store package.
+    expect(cfg.files).toEqual(['!**/node_modules/electron-updater/**/*', '!**/node_modules/node-pty/**/*'])
     expect(cfg.directories.output.replace(/\\/g, '/')).toBe('dist/store')
     expect(storeBuilderConfig({ identity: FIXTURE_IDENTITY, version: '1.2.3', test: true }).directories.output.replace(/\\/g, '/')).toBe('dist/store-test')
     const template = read(DEFAULT_TEMPLATE)

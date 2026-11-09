@@ -105,6 +105,8 @@ export function SessionList(): ReactElement {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (document.getElementById('root')?.hasAttribute('inert')) return // a dialog is open
+      // Every key typed in the terminal is the shell's (Ctrl+K, Ctrl+F and F5 included).
+      if ((e.target as Element | null)?.closest?.('.terminal-panel')) return
       const key = e.key.toLowerCase()
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (key === 'k' || key === 'f')) {
         e.preventDefault()

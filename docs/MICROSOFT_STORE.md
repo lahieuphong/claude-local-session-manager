@@ -51,6 +51,11 @@ Partner Center. Certification is decided by Microsoft and is **not guaranteed**.
   Store"* with an **Open Microsoft Store** button (official
   `ms-windows-store://downloadsandupdates` URI). A **View in Microsoft Store**
   button appears only when a real Store ID is configured (§4).
+- **No terminal.** GitHub Setup and Portable have a terminal at the bottom of
+  the window (real shells through node-pty). A command run from inside the Store
+  package would see that package's private AppData instead of the real one, so
+  the Store edition has none: the main process never creates it, the UI has no
+  Terminal item, and node-pty is left out of the Store package.
 - **Safe Mode only in the Store edition.** Every launch of the Store edition
   starts in SAFE MODE and Real Delete Armed is never saved; GitHub Setup and
   Portable have no arming step. Delete plans, hashing, expiry, path validation,
@@ -75,6 +80,7 @@ Partner Center. Certification is decided by Microsoft and is **not guaranteed**.
 | Safe Mode on every launch | No | No | Yes |
 | Languages (English, Tiếng Việt, 简体中文) | Yes | Yes | Yes |
 | GitHub updater (electron-updater) | Yes | Notify only | **No** (not included) |
+| Terminal (PowerShell, Command Prompt, Git Bash) | Yes | Yes | **No** (not included) |
 | Store-managed updates | No | No | **Yes** |
 | Install location | `%LOCALAPPDATA%\Programs\…` | wherever you run it | Windows app package |
 
@@ -245,7 +251,7 @@ new Store package.
    `FileSystemWriteVirtualization` override, no third-party product name in the
    Store-facing names, languages `en-US, vi-VN, zh-CN`, all visual assets, no
    `app-update.yml`, the `store` channel marker, the Store product name in the
-   app metadata and no electron-updater in the package.
+   app metadata, no electron-updater and no node-pty (the terminal) in the package.
 2. Optional local install test (requires **Developer Mode**; Settings → System →
    For developers). An unsigned package cannot be installed with a double-click.
    With Developer Mode on you can register the unpacked layout:

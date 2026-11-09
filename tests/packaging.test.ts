@@ -66,6 +66,17 @@ describe('installer configuration', () => {
     expect(files).not.toMatch(/src\/|tests\/|fixtures\//)
   })
 
+  it('the terminal\'s node-pty is unpacked from the archive and carries only what Windows x64 loads', () => {
+    expect(pkg.dependencies?.['node-pty']).toBeDefined()
+    expect(builder).toMatch(/^asarUnpack:\s*\n\s*- "\*\*\/node_modules\/node-pty\/\*\*\/\*"/m)
+    const files = builder.slice(builder.indexOf('files:'), builder.indexOf('asar:'))
+    expect(files).toMatch(/node-pty\/\{src,deps,third_party,scripts,typings,build\}/)
+    expect(files).toMatch(/node-pty\/prebuilds\/\{darwin-arm64,darwin-x64,win32-arm64\}/)
+    expect(files).toMatch(/node-pty\/\*\*\/\*\.pdb/)
+    // Loaded from there, so its worker script is a real file (src/main/services/terminal/nodePty.ts).
+    expect(read('src/main/services/terminal/nodePty.ts')).toMatch(/'app\.asar\.unpacked', 'node_modules', 'node-pty'/)
+  })
+
   it('updates come only from this project\'s GitHub Releases over HTTPS', () => {
     expect(yamlValue('provider', 'publish')).toBe('github')
     expect(yamlValue('owner', 'publish')).toBe(GITHUB_OWNER)

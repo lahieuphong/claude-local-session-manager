@@ -100,7 +100,7 @@ const review = reviewManifest(readFileSync(manifestCopy, 'utf8'), {
   assets: Object.keys(STORE_ASSETS),
   entries: inspection.entries
 })
-// The app archive itself: Store channel marker, and no GitHub updater code.
+// The app archive itself: Store channel marker, no GitHub updater code and no terminal.
 const asar = await import('@electron/asar')
 const asarFile = path.join(outDir, 'win-unpacked', 'resources', 'app.asar')
 const asarFiles = (asar.default ?? asar).listPackage(asarFile).map((f) => f.replace(/\\/g, '/'))
@@ -108,7 +108,11 @@ const packaged = JSON.parse((asar.default ?? asar).extractFile(asarFile, 'packag
 const extra = [
   ['App metadata distributionChannel is "store"', packaged.distributionChannel === 'store'],
   [`App metadata productName is "${identity.displayName}"`, packaged.productName === identity.displayName],
-  ['No electron-updater in the Store package', !asarFiles.some((f) => f.includes('/node_modules/electron-updater/'))]
+  ['No electron-updater in the Store package', !asarFiles.some((f) => f.includes('/node_modules/electron-updater/'))],
+  [
+    'No terminal (node-pty) in the Store package',
+    !asarFiles.some((f) => f.includes('/node_modules/node-pty/')) && !existsSync(path.join(outDir, 'win-unpacked', 'resources', 'app.asar.unpacked', 'node_modules', 'node-pty'))
+  ]
 ]
 for (const [label, ok] of extra) review.text += `\n  ${ok ? 'PASS' : 'FAIL'}  ${label}`
 review.ok = review.ok && extra.every(([, ok]) => ok)

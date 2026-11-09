@@ -17,6 +17,7 @@ export or permanently delete sessions.
 - Automatic discovery of Claude storage. Nothing is hard-coded: everything comes from `USERPROFILE` / `APPDATA` / `LOCALAPPDATA` (and `CLAUDE_CONFIG_DIR` if set).
 - **Claude and OpenAI Codex**: every start asks which tool's sessions to manage. Codex sessions get the same list, search, projects, details, export, hide, archive and delete; Codex itself does the archiving and deleting (see [OpenAI Codex](#openai-codex)).
 - **Several Claude accounts**: every sign-in on this PC (`~/.claude` and `~/.claude-accounts/<name>`) is listed in a dropdown at the top right, and the list, projects and storage follow it.
+- **Terminal** (Setup, Portable and development builds): a real terminal at the bottom of the window, as in VS Code: PowerShell, Command Prompt or Git Bash, one tab each, starting in the project folder of the session on screen (see [Terminal](#terminal)).
 - Session list with search (title, prompts, project, paths, IDs, accent-insensitive: `nha hat` finds `Nhà hát`), sorting, grouping by date or project, and filters (All / Active / Archived / Transcript only / Metadata only & problems / per project).
 - Details panel:
   - what you need to recognise a session: project path, dates, model, message counts, first and last message
@@ -41,7 +42,8 @@ export or permanently delete sessions.
 - UI in **English, Tiếng Việt and 简体中文** (see [UI languages](#ui-languages)).
 - Keyboard: <kbd>Ctrl</kbd>+<kbd>K</kbd>, <kbd>Ctrl</kbd>+<kbd>F</kbd> or <kbd>/</kbd> focus search
   (<kbd>Esc</kbd> clears it), <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>Home</kbd>/<kbd>End</kbd> move through
-  the list, <kbd>F5</kbd> rescans, <kbd>Esc</kbd> closes dialogs.
+  the list, <kbd>F5</kbd> rescans, <kbd>Esc</kbd> closes dialogs, <kbd>Ctrl</kbd>+<kbd>`</kbd> shows or hides
+  the terminal and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>`</kbd> opens a new one.
 
 ## UI languages
 
@@ -379,6 +381,41 @@ Codex app may stay open: Codex changes its own data.
 logos (from the publishers' VS Code extensions) are shown only to tell the two
 tools apart. This unofficial app is not affiliated with either company.
 
+## Terminal
+
+Setup, Portable and development builds have a terminal at the bottom of the
+window, as in VS Code: a real shell on Windows' own pseudo-console (ConPTY,
+through [node-pty](https://github.com/microsoft/node-pty)), drawn by
+[xterm.js](https://xtermjs.org).
+
+- **Terminal** in the sidebar, or <kbd>Ctrl</kbd>+<kbd>`</kbd>, shows or hides it. Its shells keep
+  running while it is hidden, and while you switch between Claude and Codex.
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>`</kbd> opens another one.
+- One tab per shell: PowerShell 7, Windows PowerShell, Command Prompt or Git Bash,
+  whichever this PC has. **+** opens the shell chosen last; the arrow next to it lists them all.
+- A new terminal starts in the project folder of the session on screen, else in your home folder.
+- **Continue in terminal**, in the details panel, opens a terminal in the session's project
+  folder with `claude --resume <id>` (Codex: `codex resume <id>`) typed in: press Enter to run
+  it. A session of another account gets that account's folder (`CLAUDE_CONFIG_DIR` for Claude,
+  `CODEX_HOME` for Codex). It is greyed out for a session whose conversation is not on this PC,
+  or that is open in a program right now.
+- <kbd>Ctrl</kbd>+<kbd>C</kbd> copies a selection (with nothing selected it stops the running
+  program), <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes, a right-click copies or pastes, and
+  <kbd>Ctrl</kbd>+click opens a web address.
+- Drag the panel's top edge, or use the arrow keys on it, to change its height; the arrow at
+  the top right maximizes it. `exit` closes a tab; closing a tab ends its shell and whatever runs in it.
+
+What you type goes only to the shell: the app never records or logs it, nor what
+the shell prints. A shell runs with your own rights, like any terminal. The page
+cannot name a program, a command line or a folder: it asks for a shell by its ID
+from the list the main process found, and for a folder by a session's ID
+([src/shared/terminal.ts](src/shared/terminal.ts)). Closing the window or
+reloading the page ends every shell.
+
+The Microsoft Store edition has no terminal, and its package does not contain
+node-pty: Windows isolates that package's AppData, so a command run from it
+would not behave as in any other terminal.
+
 ## How sessions are recognised
 
 - **Desktop session** (`local_*.json`): linked to its transcript by
@@ -578,9 +615,11 @@ src/
       packagingPolicy.ts   what a build may write (Store edition: no changes to Claude Desktop's AppData files)
       cacheService.ts      parsed-transcript index in userData
       watchService.ts      throttled fs.watch / interval refresh
-  preload/           contextBridge API (named session-ID operations only)
+      terminal/            the terminal: shells found on this PC, node-pty sessions, flow control
+  preload/           contextBridge API (named session-ID operations; the terminal's own bridge)
   renderer/          React UI (sidebar, list, details, delete modal, pages)
     src/i18n/        i18next setup, locale-aware formatting (Intl)
+    src/terminal/    xterm.js views (loaded with the first terminal)
     src/styles/      design tokens (colors, type, spacing, motion)
 tests/               Vitest safety tests (temp fixture trees only)
 fixtures/            sample metadata + transcripts (incl. Vietnamese text)
@@ -599,6 +638,11 @@ Security model:
 - The preload exposes named operations only (`archiveSession(id)`,
   `createDeletePlan(id)`, …). There is no generic `deleteFile(path)`,
   `writeFile` or `exec`.
+- The terminal is a bridge of its own (`window.terminal`), absent from the
+  Store edition: a shell is chosen by its ID from those the main process found,
+  a folder by a session ID, and what is typed goes to the terminal it was typed
+  in. Its main-process side checks every argument and never logs what is typed
+  or printed (see [Terminal](#terminal)).
 - The main process keeps a registry `sessionId → exact files` built by the
   scanner. The renderer sends only internal session IDs (validated as
   20-hex strings). Every path used for any action comes from that

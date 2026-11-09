@@ -1,0 +1,33 @@
+{
+  "title": "Terminal",
+  "toggle": "Terminal",
+  "tabs": "Các terminal đang mở",
+  "new": "Terminal mới ({{shell}})",
+  "chooseShell": "Chọn shell",
+  "shellsHeading": "Mở terminal bằng",
+  "shellNote": "Terminal mới mở tại thư mục dự án của phiên đang xem. Nút + mở shell bạn chọn gần nhất.",
+  "shell": {
+    "pwsh": "PowerShell 7",
+    "powershell": "Windows PowerShell",
+    "cmd": "Dấu nhắc Lệnh",
+    "gitbash": "Git Bash"
+  },
+  "close": "Đóng terminal {{name}}",
+  "maximize": "Phóng to khung",
+  "restore": "Thu khung về như cũ",
+  "hide": "Ẩn khung",
+  "resize": "Chiều cao khung",
+  "exited": "Shell đã dừng với mã thoát {{code}}.",
+  "startFailed": "Không mở được terminal: {{error}}",
+  "link": {
+    "hint": "Ctrl + bấm để mở liên kết"
+  },
+  "resume": {
+    "button": "Tiếp tục trong terminal",
+    "hint": "Mở terminal tại thư mục dự án, gõ sẵn “{{command}}”. Nhấn Enter để chạy.",
+    "noId": "Phiên này không có mã để CLI tiếp tục.",
+    "noTranscript": "Cuộc trò chuyện không có trên máy này, nên Claude Code không tiếp tục được.",
+    "live": "Phiên đang mở trong một chương trình khác.",
+    "live_codex": "Codex vừa ghi vào phiên này: có thể nó vẫn đang chạy."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "title": "终端",
+  "toggle": "终端",
+  "tabs": "已打开的终端",
+  "new": "新建终端（{{shell}}）",
+  "chooseShell": "选择 Shell",
+  "shellsHeading": "用以下 Shell 打开终端",
+  "shellNote": "新终端在当前会话的项目文件夹中打开。“+”打开你上次选择的 Shell。",
+  "shell": {
+    "pwsh": "PowerShell 7",
+    "powershell": "Windows PowerShell",
+    "cmd": "命令提示符",
+    "gitbash": "Git Bash"
+  },
+  "close": "关闭终端 {{name}}",
+  "maximize": "最大化面板",
+  "restore": "恢复面板大小",
+  "hide": "隐藏面板",
+  "resize": "面板高度",
+  "exited": "Shell 已退出，退出代码为 {{code}}。",
+  "startFailed": "无法启动终端：{{error}}",
+  "link": {
+    "hint": "按住 Ctrl 单击可打开链接"
+  },
+  "resume": {
+    "button": "在终端中继续",
+    "hint": "在项目文件夹中打开终端，并预先输入“{{command}}”。按 Enter 运行。",
+    "noId": "此会话没有可供 CLI 继续的 ID。",
+    "noTranscript": "此电脑上没有它的对话记录，Claude Code 无法继续。",
+    "live": "它当前正在某个程序中打开。",
+    "live_codex": "Codex 刚刚写入了此会话：它可能仍在运行。"
+  }
+}

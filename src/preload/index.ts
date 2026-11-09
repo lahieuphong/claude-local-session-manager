@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { IPC, type ScanState, type SessionManagerApi } from '../shared/ipc'
+import { TERMINAL_IPC, type TerminalApi } from '../shared/terminal'
 import type { SafetyModeState, ScanSnapshot, UpdateState } from '../shared/types'
 
 /**
@@ -78,3 +79,32 @@ const api: SessionManagerApi = {
 }
 
 contextBridge.exposeInMainWorld('sessionManager', api)
+
+/**
+ * The integrated terminal, a bridge of its own (see shared/terminal.ts): a
+ * shell is chosen by its ID, a folder by a session ID, and what the user
+ * types goes to the terminal it was typed in. The main process answers
+ * "not available" in the Microsoft Store edition.
+ */
+const terminal: TerminalApi = {
+  info: () => ipcRenderer.invoke(TERMINAL_IPC.info),
+  open: (request) => ipcRenderer.invoke(TERMINAL_IPC.open, request),
+  close: (id) => ipcRenderer.invoke(TERMINAL_IPC.close, id),
+  clipboardText: () => ipcRenderer.invoke(TERMINAL_IPC.clipboardText),
+  openLink: (url) => ipcRenderer.invoke(TERMINAL_IPC.openLink, url),
+  input: (id, data) => ipcRenderer.send(TERMINAL_IPC.input, id, data),
+  resize: (id, cols, rows) => ipcRenderer.send(TERMINAL_IPC.resize, id, cols, rows),
+  ack: (id, chars) => ipcRenderer.send(TERMINAL_IPC.ack, id, chars),
+  onOutput: (listener) => {
+    const wrapped = (_e: IpcRendererEvent, id: number, data: string): void => listener(id, data)
+    ipcRenderer.on(TERMINAL_IPC.output, wrapped)
+    return () => ipcRenderer.removeListener(TERMINAL_IPC.output, wrapped)
+  },
+  onExit: (listener) => {
+    const wrapped = (_e: IpcRendererEvent, id: number, exitCode: number): void => listener(id, exitCode)
+    ipcRenderer.on(TERMINAL_IPC.exit, wrapped)
+    return () => ipcRenderer.removeListener(TERMINAL_IPC.exit, wrapped)
+  }
+}
+
+contextBridge.exposeInMainWorld('terminal', terminal)
