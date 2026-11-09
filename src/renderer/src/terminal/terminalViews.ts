@@ -24,10 +24,7 @@ const api = (): Window['terminal'] => window.terminal
 const THEME: ITheme = {
   background: '#0e0f0f',
   foreground: '#dcdcdc',
-  cursor: '#d97757',
   cursorAccent: '#0e0f0f',
-  selectionBackground: 'rgba(217, 119, 87, 0.32)',
-  selectionInactiveBackground: 'rgba(217, 119, 87, 0.18)',
   scrollbarSliderBackground: 'rgba(255, 255, 255, 0.10)',
   scrollbarSliderHoverBackground: 'rgba(255, 255, 255, 0.18)',
   scrollbarSliderActiveBackground: 'rgba(255, 255, 255, 0.26)',
@@ -47,6 +44,13 @@ const THEME: ITheme = {
   brightMagenta: '#dbb2f8',
   brightCyan: '#7fdede',
   brightWhite: '#f5f5f5'
+}
+
+/** The cursor and the selection in the accent of the tool on screen: Claude orange, Codex blue (global.css). */
+function theme(): ITheme {
+  const css = getComputedStyle(document.documentElement)
+  const rgb = css.getPropertyValue('--accent-rgb').trim()
+  return { ...THEME, cursor: css.getPropertyValue('--accent').trim(), selectionBackground: `rgba(${rgb}, 0.32)`, selectionInactiveBackground: `rgba(${rgb}, 0.18)` }
 }
 
 const views = new Map<number, TerminalView>()
@@ -79,7 +83,7 @@ export function createView(windowsBuild: number): TerminalView {
     // Dim text stays readable on the dark background, as in VS Code.
     minimumContrastRatio: 4.5,
     windowsPty: { backend: 'conpty', buildNumber: windowsBuild },
-    theme: THEME
+    theme: theme()
   })
   const fit = new FitAddon()
   term.loadAddon(fit)
@@ -133,6 +137,12 @@ export function showOnly(id: number | null): void {
   for (const [key, v] of views) v.el.classList.toggle('active', key === id)
   const view = id === null ? undefined : views.get(id)
   if (view) show(view)
+}
+
+/** After the tool on screen changed: its accent for every terminal. */
+export function applyTheme(): void {
+  const next = theme()
+  for (const v of views.values()) v.term.options.theme = next
 }
 
 /** Fits the view on screen to its space (after a resize of the panel or the window). */

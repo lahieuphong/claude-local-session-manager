@@ -8,6 +8,7 @@ import {
   closeTerminal,
   fitTerminal,
   hideTerminal,
+  refreshTerminalTheme,
   newTerminal,
   savePanelHeight,
   selectTerminal,
@@ -35,7 +36,11 @@ export function TerminalPanel(): ReactElement | null {
   const height = useTerminal((s) => s.height)
   const tabs = useTerminal((s) => s.tabs)
   const activeId = useTerminal((s) => s.activeId)
+  const provider = useAppState((s) => s.provider)
   const bodyId = useId()
+
+  // The cursor and selection follow the accent: Claude orange, Codex blue.
+  useEffect(refreshTerminalTheme, [provider])
 
   // The views are xterm.js elements outside React (terminal/terminalViews.ts): this is their place.
   const attachBody = useCallback((el: HTMLDivElement) => {

@@ -12,22 +12,35 @@
 :root {
   color-scheme: dark;
 
+  /*
+   * The accent: Claude orange, and blue while Codex is on screen
+   * (:root[data-provider='codex'] below). Every shade of it is made from
+   * --accent-rgb here, so it follows the tool everywhere, dialogs and
+   * dropdowns included.
+   */
+  --accent-rgb: 217, 119, 87;
+  --accent: #d97757;
+  --accent-hover: #e48b6c;
+  --accent-contrast: #2a0e05;
+  /* The tint of the sheen on a newly selected item. */
+  --sheen-rgb: 255, 240, 232;
+
   /* Surfaces */
   --bg-root: #0b0c0c;
   --bg-sidebar: #0e0f0f;
   --bg-surface: #121313;
   --bg-surface-hover: #1a1b1b;
   /* Selected item (sidebar, session row, segmented option): one shared look. */
-  --bg-selected: linear-gradient(90deg, rgba(217, 119, 87, 0.17) 0%, rgba(217, 119, 87, 0.07) 55%, rgba(217, 119, 87, 0.03) 100%);
-  --sel-border: rgba(217, 119, 87, 0.26);
-  --sel-glow: 0 0 10px rgba(217, 119, 87, 0.55);
+  --bg-selected: linear-gradient(90deg, rgba(var(--accent-rgb), 0.17) 0%, rgba(var(--accent-rgb), 0.07) 55%, rgba(var(--accent-rgb), 0.03) 100%);
+  --sel-border: rgba(var(--accent-rgb), 0.26);
+  --sel-glow: 0 0 10px rgba(var(--accent-rgb), 0.55);
   /* Mirror-like highlight that sweeps once across an item when it becomes selected. */
   --sheen: linear-gradient(
     110deg,
     transparent 40%,
-    rgba(255, 236, 226, 0.08) 45%,
-    rgba(255, 246, 240, 0.34) 50%,
-    rgba(255, 236, 226, 0.08) 55%,
+    rgba(var(--sheen-rgb), 0.08) 45%,
+    rgba(var(--sheen-rgb), 0.34) 50%,
+    rgba(var(--sheen-rgb), 0.08) 55%,
     transparent 60%
   );
   --dur-sheen: 950ms;
@@ -46,12 +59,9 @@
   --text-muted: #878787;
   --text-disabled: #5a5c5c;
 
-  /* Accent (Claude orange) */
-  --accent: #d97757;
-  --accent-hover: #e48b6c;
-  --accent-subtle: rgba(217, 119, 87, 0.13);
-  --accent-border: rgba(217, 119, 87, 0.38);
-  --accent-contrast: #2a0e05;
+  /* Accent shades (the accent itself is at the top) */
+  --accent-subtle: rgba(var(--accent-rgb), 0.13);
+  --accent-border: rgba(var(--accent-rgb), 0.38);
 
   /* Semantic */
   --success: #4cc38a;
@@ -105,7 +115,16 @@
   --sidebar-w: 240px;
   --inspector-w: 400px;
   --strip-h: 38px;
-  --focus-ring: 0 0 0 2px var(--bg-root), 0 0 0 4px rgba(217, 119, 87, 0.75);
+  --focus-ring: 0 0 0 2px var(--bg-root), 0 0 0 4px rgba(var(--accent-rgb), 0.75);
+}
+
+/* Codex on screen: a blue accent, so the two tools are told apart at a glance. */
+:root[data-provider='codex'] {
+  --accent-rgb: 76, 141, 255;
+  --accent: #4c8dff;
+  --accent-hover: #6ea4ff;
+  --accent-contrast: #04122b;
+  --sheen-rgb: 232, 240, 255;
 }
 
 /* Simplified Chinese: CJK-capable stack; no uppercase or wide tracking. */
@@ -219,7 +238,7 @@ p {
 }
 
 ::selection {
-  background: rgba(217, 119, 87, 0.3);
+  background: rgba(var(--accent-rgb), 0.3);
 }
 
 ::-webkit-scrollbar {
@@ -688,7 +707,7 @@ html[lang='zh-CN'] .btn.caps {
   padding: var(--space-6, 24px);
   overflow: auto;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(217, 119, 87, 0.07), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(var(--accent-rgb), 0.07), transparent 70%),
     var(--bg-root);
 }
 .picker-inner {
@@ -941,7 +960,7 @@ details[open] > summary .chev {
   transition: background-color var(--dur-hover) var(--ease);
 }
 .update-pill:hover {
-  background: rgba(217, 119, 87, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
 }
 
 /* ------------------------------------------------------------ status strip */
@@ -977,6 +996,11 @@ details[open] > summary .chev {
 .strip-claude {
   flex: 0 1 auto;
   color: var(--text-muted);
+}
+/* The text gives way when space runs out, never the icon next to it. */
+.strip-safety > svg,
+.strip-claude > svg {
+  flex: none;
 }
 /* "Closed" is short and has no ellipsis: shrunk, it would push the button into the next control. */
 .strip-claude:not(.warn) {
@@ -1248,7 +1272,7 @@ html[lang='zh-CN'] .group-label {
   background: var(--bg-surface);
 }
 .row.checked {
-  background: rgba(217, 119, 87, 0.06);
+  background: rgba(var(--accent-rgb), 0.06);
 }
 .row {
   overflow: hidden;
@@ -1276,7 +1300,7 @@ html[lang='zh-CN'] .group-label {
   border-radius: var(--radius-xs);
 }
 .row-main:focus-visible {
-  box-shadow: inset 0 0 0 2px rgba(217, 119, 87, 0.65);
+  box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), 0.65);
 }
 .row-title {
   grid-column: 1;
@@ -1587,7 +1611,7 @@ html[lang='zh-CN'] .group-label {
 }
 .btn.resume-btn:hover:not(:disabled) {
   border-color: var(--accent);
-  background: rgba(217, 119, 87, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
 }
 .btn.resume-btn:disabled {
   border-color: var(--border-subtle);

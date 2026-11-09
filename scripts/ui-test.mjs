@@ -584,11 +584,18 @@ async function runVariant(channel) {
 
     const info = await page.evaluate('window.sessionManager.getAppInfo()')
     const processStatus = await page.evaluate('window.sessionManager.getClaudeProcessStatus(true)')
-    const canChange = !processStatus.desktopRunning && !processStatus.error
+    /**
+     * Claude Desktop blocks archive and delete while it runs, so those steps are skipped then.
+     * Asked again before each of them: Desktop may be opened, or closed, during the run.
+     */
+    const canChange = async () => {
+      const status = await page.evaluate('window.sessionManager.getClaudeProcessStatus(true)')
+      return !status.desktopRunning && !status.error
+    }
     const isStore = info.distribution === 'store'
     const updateState = await page.evaluate('window.sessionManager.getUpdateState()')
     console.log(`channel=${info.distribution} version=${info.version} claudeDesktopRunning=${processStatus.desktopRunning} updates=${updateState.mode}/${updateState.status}`)
-    if (!canChange) console.log('Claude Desktop is running on this PC (or cannot be checked): archive and delete steps are skipped.')
+    if (processStatus.desktopRunning || processStatus.error) console.log('Claude Desktop is running on this PC (or cannot be checked): archive and delete steps are skipped while it is.')
 
     const frame = await page.evaluate(`({ width: window.outerWidth - window.innerWidth, height: window.outerHeight - window.innerHeight })`)
     const minSize = { width: MIN_WINDOW.width - frame.width, height: MIN_WINDOW.height - frame.height }
@@ -767,7 +774,7 @@ async function runVariant(channel) {
       },
       {
         name: 'delete-dialog',
-        needs: () => canChange,
+        needs: canChange,
         enter: async () => {
           await reset()
           await selectRow(roles.longEn)
@@ -823,7 +830,7 @@ async function runVariant(channel) {
         sizeName = size.name
         await setSize(size)
         for (const state of states) {
-          if (state.needs && !state.needs()) continue
+          if (state.needs && !(await state.needs())) continue
           try {
             await state.enter()
             await settle()
@@ -988,6 +995,20 @@ async function runVariant(channel) {
     // OpenAI Codex: the same app on Codex's own data, which only Codex changes,
     // through its CLI (here the stand-in scripts/ui-test-codex.mjs).
     // -----------------------------------------------------------------------
+    // The accent tells the tools apart: Claude orange, Codex blue, also in a dropdown (drawn outside the app's frame).
+    const accentOf = (selector) => page.evaluate(`getComputedStyle(document.querySelector(${quote(selector)})).color`)
+    const ORANGE = 'rgb(217, 119, 87)'
+    const BLUE = 'rgb(76, 141, 255)'
+    await reset()
+    const claudeAccent = await accentOf('.nav > .nav-item.active svg')
+    await goTool('codex')
+    const codexAccent = await accentOf('.nav > .nav-item.active svg')
+    await openSelect('sort')
+    const codexMenuAccent = await accentOf('.select-menu [aria-selected="true"] .select-option-check')
+    await press('Escape')
+    check('accent: orange for Claude, blue for Codex, dropdowns included', claudeAccent === ORANGE && codexAccent === BLUE && codexMenuAccent === BLUE, `${claudeAccent} / ${codexAccent} / ${codexMenuAccent}`)
+    await goTool('claude')
+    check('accent: back to orange with Claude', (await accentOf('.nav > .nav-item.active svg')) === ORANGE)
     await goTool('codex')
     const cxDb = (file) => new DatabaseSync(path.join(codexProfile.main, file))
     const cxThread = (id) => {
@@ -1414,7 +1435,7 @@ async function runVariant(channel) {
       check('Store edition: no archive button for Desktop sessions', (await page.evaluate(`[...document.querySelectorAll('.inspector .actions .btn')].length`)) === 3)
       check('Store edition: delete is disabled for Desktop sessions', await page.evaluate(`document.querySelector('.inspector .actions .btn.danger').disabled`))
       check('Store edition: the read-only note is shown', await has('.inspector .notice.subtle'))
-    } else if (canChange) {
+    } else if (await canChange()) {
       const archivedBefore = await page.evaluate(`Number(${filterEl('archived')}.querySelector('.nav-count').textContent)`)
       await clickEl(STATE_BUTTON, 'Archive')
       check('archive: writes to the metadata file at once', await until(() => isArchivedOnDisk() === true, 'the archived flag'))
@@ -1643,50 +1664,54 @@ async function runVariant(channel) {
       await reset()
     }
 
-    // The delete dialog.
-    await reset()
-    await selectRow(roles.longVi)
-    await click('.inspector .actions .btn.danger')
-    await page.waitFor(`document.querySelector('.plan-session')`, 'the delete plan')
-    await settle()
-    const keptInside = []
-    for (let i = 0; i < 14; i++) {
-      await press('Tab')
-      keptInside.push(await page.evaluate(`!!document.activeElement.closest('.modal')`))
-    }
-    check('delete dialog: Tab stays inside it', keptInside.every(Boolean))
-    const closeLook = await page.evaluate(`(() => {
-      const head = document.querySelector('.modal-header')
-      const size = (el) => Math.round(el.getBoundingClientRect().width)
-      const close = head.querySelector('.modal-close')
-      const title = head.querySelector(':scope > svg').getBoundingClientRect()
-      const x = close.querySelector('svg').getBoundingClientRect()
-      return { titleIcon: size(head.querySelector(':scope > svg')), closeIcon: size(close.querySelector('svg')), button: size(close), offset: Math.round((x.top + x.height / 2) - (title.top + title.height / 2)) }
-    })()`)
-    check('delete dialog: the close icon is as big as the title icon, level with it', closeLook.closeIcon === closeLook.titleIcon && closeLook.button >= 30 && Math.abs(closeLook.offset) <= 1, JSON.stringify(closeLook))
-    check('delete dialog: the app behind it cannot be used', await page.evaluate(`document.getElementById('root').hasAttribute('inert')`))
-    // A message can appear while a dialog is open (copying the plan, for one). It must leave the dialog's controls free.
-    for (const size of [allSizes[0], allSizes[2]]) {
-      await setSize(size)
-      const under = await page.evaluate(`(() => {
-        const message = document.createElement('div')
-        message.className = 'toast toast-error'
-        message.innerHTML = '<span class="toast-text">' + 'A long message shown while a dialog is open. '.repeat(3) + '</span>'
-        document.querySelector('.toasts').append(message)
-        const m = message.getBoundingClientRect()
-        const under = [...document.querySelectorAll('.modal button, .modal input')].filter((b) => {
-          const r = b.getBoundingClientRect()
-          return r.left < m.right && m.left < r.right && r.top < m.bottom && m.top < r.bottom
-        })
-        message.remove()
-        return under.map((b) => b.className)
+    // The delete dialog (Claude Desktop, while it runs, keeps it closed).
+    if (!(await canChange())) {
+      skip('the delete dialog', 'Claude Desktop is running')
+    } else {
+      await reset()
+      await selectRow(roles.longVi)
+      await click('.inspector .actions .btn.danger')
+      await page.waitFor(`document.querySelector('.plan-session')`, 'the delete plan')
+      await settle()
+      const keptInside = []
+      for (let i = 0; i < 14; i++) {
+        await press('Tab')
+        keptInside.push(await page.evaluate(`!!document.activeElement.closest('.modal')`))
+      }
+      check('delete dialog: Tab stays inside it', keptInside.every(Boolean))
+      const closeLook = await page.evaluate(`(() => {
+        const head = document.querySelector('.modal-header')
+        const size = (el) => Math.round(el.getBoundingClientRect().width)
+        const close = head.querySelector('.modal-close')
+        const title = head.querySelector(':scope > svg').getBoundingClientRect()
+        const x = close.querySelector('svg').getBoundingClientRect()
+        return { titleIcon: size(head.querySelector(':scope > svg')), closeIcon: size(close.querySelector('svg')), button: size(close), offset: Math.round((x.top + x.height / 2) - (title.top + title.height / 2)) }
       })()`)
-      check(`delete dialog: a message leaves its controls free (${size.name} window)`, under.length === 0, under.join(', '))
+      check('delete dialog: the close icon is as big as the title icon, level with it', closeLook.closeIcon === closeLook.titleIcon && closeLook.button >= 30 && Math.abs(closeLook.offset) <= 1, JSON.stringify(closeLook))
+      check('delete dialog: the app behind it cannot be used', await page.evaluate(`document.getElementById('root').hasAttribute('inert')`))
+      // A message can appear while a dialog is open (copying the plan, for one). It must leave the dialog's controls free.
+      for (const size of [allSizes[0], allSizes[2]]) {
+        await setSize(size)
+        const under = await page.evaluate(`(() => {
+          const message = document.createElement('div')
+          message.className = 'toast toast-error'
+          message.innerHTML = '<span class="toast-text">' + 'A long message shown while a dialog is open. '.repeat(3) + '</span>'
+          document.querySelector('.toasts').append(message)
+          const m = message.getBoundingClientRect()
+          const under = [...document.querySelectorAll('.modal button, .modal input')].filter((b) => {
+            const r = b.getBoundingClientRect()
+            return r.left < m.right && m.left < r.right && r.top < m.bottom && m.top < r.bottom
+          })
+          message.remove()
+          return under.map((b) => b.className)
+        })()`)
+        check(`delete dialog: a message leaves its controls free (${size.name} window)`, under.length === 0, under.join(', '))
+      }
+      await press('Escape')
+      await page.waitFor(`!document.querySelector('.modal-backdrop')`, 'the dialog to close')
+      await settle()
+      check('delete dialog: Escape closes it and returns focus to the button', await page.evaluate(`document.activeElement === document.querySelector('.inspector .actions .btn.danger')`), await page.evaluate(`'focus is on ' + document.activeElement.tagName + '.' + document.activeElement.className`))
     }
-    await press('Escape')
-    await page.waitFor(`!document.querySelector('.modal-backdrop')`, 'the dialog to close')
-    await settle()
-    check('delete dialog: Escape closes it and returns focus to the button', await page.evaluate(`document.activeElement === document.querySelector('.inspector .actions .btn.danger')`), await page.evaluate(`'focus is on ' + document.activeElement.tagName + '.' + document.activeElement.className`))
 
     /** What the plan on screen deletes. Stops the run, before any delete, if it touches anything outside the throw-away folder. */
     const planPaths = async () => {
@@ -1710,7 +1735,7 @@ async function runVariant(channel) {
       await closeToasts()
     }
 
-    if (!canChange) {
+    if (!(await canChange())) {
       skip('deleting', 'Claude Desktop is running')
     } else if (isStore) {
       // Store edition: Safe Mode on, a delete is only a rehearsal until it is armed.

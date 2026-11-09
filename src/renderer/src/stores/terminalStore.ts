@@ -106,6 +106,11 @@ export function fitTerminal(): void {
   views?.fitActive()
 }
 
+/** After the tool on screen (and so the accent) changed. */
+export function refreshTerminalTheme(): void {
+  views?.applyTheme()
+}
+
 /** What this build offers, and Ctrl+` from anywhere in the app. */
 export async function initTerminal(): Promise<void> {
   const support = await window.terminal.info().catch(() => UNAVAILABLE)

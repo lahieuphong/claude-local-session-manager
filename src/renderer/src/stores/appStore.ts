@@ -192,6 +192,12 @@ function reportResult(r: ActionResult): void {
 // Language and motion (saved in the main-process settings file)
 // ---------------------------------------------------------------------------
 
+/** The accent follows the tool on screen: Claude orange, Codex blue (global.css). */
+function applyProvider(provider: Provider | null): void {
+  if (provider) document.documentElement.dataset.provider = provider
+  else delete document.documentElement.dataset.provider
+}
+
 function applyMotion(motion: MotionPreference | undefined): void {
   document.documentElement.dataset.motion = motion === 'reduced' ? 'reduced' : 'system'
 }
@@ -304,6 +310,7 @@ export async function init(): Promise<void> {
 /** Show this tool's sessions (from the picker, or the switch at the top of the sidebar). */
 export async function chooseProvider(provider: Provider): Promise<void> {
   if (state.provider === provider && state.snapshot) return
+  applyProvider(provider)
   setState({
     provider,
     snapshot: null,
@@ -330,6 +337,7 @@ export async function chooseProvider(provider: Provider): Promise<void> {
 
 /** Back to the picker. */
 export function leaveProvider(): void {
+  applyProvider(null)
   setState({ provider: null, snapshot: null, selectedId: null, checked: [], search: '', view: { kind: 'sessions', filter: 'all' }, deleteRequest: null, scanning: false })
 }
 
