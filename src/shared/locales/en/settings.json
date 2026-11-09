@@ -1,6 +1,7 @@
 {
   "title": "Settings",
   "section": {
+    "usage": "Usage",
     "general": "General",
     "data": "Claude data",
     "data_codex": "Codex data",
@@ -90,5 +91,23 @@
   },
   "storeEdition": {
     "limits": "Microsoft Store edition: sessions that have Claude Desktop metadata are view- and export-only. Archive, Restore and Delete are unavailable for them because Windows Store packaging isolates certain AppData writes. Transcript-only sessions can be hidden or deleted as usual."
+  },
+  "usage": {
+    "window": {
+      "fiveHours": "5 hours",
+      "week": "Week",
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days"
+    },
+    "used": "{{percent}}% used",
+    "resets": "Resets {{date}} · {{until}}",
+    "reset": "Reset {{date}}",
+    "recorded": "Recorded by Claude Code {{time}}",
+    "recorded_codex": "Recorded by Codex {{time}}",
+    "none": "Claude Code has not recorded any usage yet.",
+    "none_codex": "Codex has not recorded any usage yet.",
+    "apiKey": "API key: no plan limits."
   }
 }

@@ -4,6 +4,7 @@ import { confirmationPhrases } from '../../shared/confirm'
 import { IPC } from '../../shared/ipc'
 import { INTL_LOCALE, type SupportedLocale } from '../../shared/locale'
 import type {
+  AccountUsage,
   ActionResult,
   AppInfo,
   AppSettings,
@@ -270,6 +271,8 @@ export function createScreenshotHandlers(opts: { appInfo: AppInfo; fixture: Scre
 
     [IPC.getClaudeProcessStatus]: () => fixture.processStatus,
     [IPC.getStorageInfo]: (_accountId, provider) => computeStorageInfo(snapshotFor(provider), appInfo.cachePath),
+    // Demo data reads nothing: no usage has been recorded.
+    [IPC.getUsage]: (): AccountUsage[] => [],
 
     // Kept in memory for this run only (no settings file is read or written).
     [IPC.getSettings]: () => ({ ...settings }),

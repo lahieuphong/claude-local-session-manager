@@ -25,7 +25,7 @@
 //
 // A window opens during the run. Report and screenshots: .ui-test/report/
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AUDIT_SCRIPT } from './ui-test-audit.mjs'
@@ -431,7 +431,8 @@ async function runVariant(channel) {
   const refreshSnapshot = () => page.evaluate('window.sessionManager.refreshSessions()')
   const goSettings = async () => {
     await clickEl(SETTINGS_EL, 'the Settings item')
-    await page.waitFor(`document.querySelector('.page.settings')`, 'the settings page')
+    // The usage at the top is in place: nothing below it moves any more.
+    await page.waitFor(`document.querySelector('.page.settings') && !document.querySelector('.usage-pending')`, 'the settings page')
   }
   /** A refresh option in Settings: 1 manual, 2 watch, 3 interval. */
   const refreshOption = (n) => `document.querySelector('.settings .segmented[data-name="refresh"] label:nth-child(${n})')`
@@ -1470,6 +1471,49 @@ async function runVariant(channel) {
     await reset()
     await selectRow(roles.live)
     check('running session: delete is disabled with a reason', (await page.evaluate(`document.querySelector('.inspector .actions .btn.danger').disabled`)) && (await has('.inspector .notice.warn')))
+
+    // Settings → Usage: each account's limits as its tool recorded them (scripts/ui-test-profile.mjs, ui-test-codex.mjs).
+    const usageOnScreen = () =>
+      page.evaluate(`[...document.querySelectorAll('.usage-account')].map((a) =>
+        [...a.querySelectorAll('.usage-meter')].map((m) => m.querySelector('.usage-window').textContent + ' ' + m.querySelector('.usage-percent').textContent + ' ' + m.querySelector('.usage-fill').classList[1]).join(', ') ||
+        a.querySelector('.usage-empty').textContent)`)
+    await reset()
+    await goSettings()
+    await page.waitFor(`document.querySelector('.usage-panel')`, 'the usage')
+    const claudeUsage = await usageOnScreen()
+    check(
+      'usage: each Claude account shows its limits, in the colour of how close they are',
+      JSON.stringify(claudeUsage) === JSON.stringify(['5 hours 42% normal, Week 81% warning', 'Week 100% critical', 'Claude Code has not recorded any usage yet.']),
+      JSON.stringify(claudeUsage)
+    )
+    check('usage: it says when Claude Code recorded it', /^Recorded by Claude Code /.test(await text('.usage-account .usage-recorded')))
+    const resetLine = await text('.usage-account .usage-reset')
+    check('usage: each limit says the day and time it resets, and how long until then', /^Resets \w+day, \d{1,2}\/\d{1,2}\/\d{4}, \d{2}:\d{2} [AP]M · in \d+ (min|hr)\.$/.test(resetLine), resetLine)
+    // Live: what Claude Code records while Settings is open shows up by itself.
+    const configFile = path.join(home, '.claude.json')
+    const config = JSON.parse(readFileSync(configFile, 'utf8'))
+    config.cachedUsageUtilization.utilization.limits[0].percent = 57
+    config.cachedUsageUtilization.fetchedAtMs = Date.now()
+    writeFileSync(configFile, JSON.stringify(config))
+    const claudeLive = await page
+      .waitFor(`document.querySelector('.usage-account .usage-percent')?.textContent === '57%'`, 'the new Claude usage', 20_000)
+      .then(() => true, () => false)
+    check('usage: what Claude Code records shows up by itself, within seconds', claudeLive && /just now|now|\d+ sec/.test(await text('.usage-account .usage-recorded')), await text('.usage-account .usage-recorded'))
+    await goTool('codex')
+    await goSettings()
+    await page.waitFor(`document.querySelector('.usage-panel')`, 'the Codex usage')
+    const codexUsage = await usageOnScreen()
+    check('usage: Codex shows its five-hour and weekly limits, and an API key has none', JSON.stringify(codexUsage) === JSON.stringify(['5 hours 23% normal, Week 64% normal', 'API key: no plan limits.']), JSON.stringify(codexUsage))
+    // Live: Codex answers again and records its usage at the end of the session file.
+    const resetsSoon = Math.floor((Date.now() + 3_600_000) / 1000)
+    appendFileSync(
+      cxThread(cxRoles.recent).rollout_path,
+      JSON.stringify({ timestamp: new Date().toISOString(), type: 'event_msg', payload: { type: 'token_count', rate_limits: { primary: { used_percent: 31, window_minutes: 300, resets_at: resetsSoon }, secondary: { used_percent: 65, window_minutes: 10080, resets_at: resetsSoon + 200_000 } } } }) + '\n'
+    )
+    const codexLive = await page
+      .waitFor(`document.querySelector('.usage-account .usage-percent')?.textContent === '31%'`, 'the new Codex usage', 20_000)
+      .then(() => true, () => false)
+    check('usage: what Codex records shows up by itself, within seconds', codexLive, JSON.stringify(await usageOnScreen()))
 
     // Settings.
     await reset()

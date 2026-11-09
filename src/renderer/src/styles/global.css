@@ -2392,6 +2392,89 @@ code.phrase {
   margin-top: 4px;
 }
 
+/* Settings → Usage: a bar per limit, each account under its name. */
+.usage-account {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-3) var(--space-4);
+}
+.usage-account + .usage-account {
+  border-top: 1px solid var(--border-subtle);
+}
+.usage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 12.5px;
+}
+.usage-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.usage-plan {
+  color: var(--text-muted);
+}
+.usage-recorded {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+/* The window, its bar and how much is used; under the bar, the day and time it resets. */
+.usage-meter {
+  display: grid;
+  grid-template-columns: 7.5em minmax(80px, 1fr) 3em;
+  align-items: center;
+  gap: 3px 12px;
+  font-size: 12.5px;
+}
+.usage-window {
+  min-width: 0;
+  color: var(--text-secondary);
+}
+.usage-model::before {
+  content: ' · ';
+}
+.usage-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--border-default);
+}
+.usage-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width var(--dur-modal) var(--ease);
+}
+.usage-fill.warning {
+  background: var(--warning);
+}
+.usage-fill.critical {
+  background: var(--danger);
+}
+.usage-percent {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.usage-reset {
+  grid-column: 2 / -1;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.usage-empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.usage-pending {
+  padding: var(--space-3) var(--space-4);
+}
+
 .update-panel {
   display: flex;
   flex-direction: column;

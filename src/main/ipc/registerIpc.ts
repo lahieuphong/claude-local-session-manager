@@ -19,6 +19,7 @@ import type { CodexRepository } from '../services/codex/codexRepository'
 import type { SessionRepository } from '../services/sessionRepository'
 import type { SettingsService } from '../services/settingsService'
 import { computeStorageInfo } from '../services/storageService'
+import { claudeUsage, codexUsage } from '../services/usage'
 
 export interface IpcContext {
   repo: SessionRepository
@@ -155,6 +156,20 @@ export function registerIpc(ctx: IpcContext): void {
     const id = assertAccountId(accountId)
     const snapshot = await snapshotOf(provider)
     return computeStorageInfo(id ? { ...snapshot, sessions: snapshot.sessions.filter((s) => s.accountIds.includes(id)) } : snapshot, ctx.appInfo.cachePath)
+  })
+
+  handle(IPC.getUsage, async (provider) => {
+    if (assertProvider(provider) === 'claude') {
+      return claudeUsage((ctx.repo.getRoots()?.accounts ?? []).map(({ id, configFiles }) => ({ id, configFiles })))
+    }
+    // Codex's newest numbers are in the session files it wrote to last: the active sessions it knows of help find them.
+    const { sessions } = await snapshotOf('codex')
+    const filesOf = (homeId: string): string[] =>
+      sessions
+        .filter((s) => s.accountIds.includes(homeId))
+        .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+        .flatMap((s) => (s.transcriptFile ? [s.transcriptFile] : []))
+    return codexUsage(codex.repo.getHomes().map((h) => ({ id: h.id, home: h.path, known: filesOf(h.id) })))
   })
 
   handle(IPC.getSettings, () => ctx.settings.get())

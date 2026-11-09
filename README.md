@@ -17,6 +17,7 @@ export or permanently delete sessions.
 - Automatic discovery of Claude storage. Nothing is hard-coded: everything comes from `USERPROFILE` / `APPDATA` / `LOCALAPPDATA` (and `CLAUDE_CONFIG_DIR` if set).
 - **Claude and OpenAI Codex**: every start asks which tool's sessions to manage. Codex sessions get the same list, search, projects, details, export, hide, archive and delete; Codex itself does the archiving and deleting (see [OpenAI Codex](#openai-codex)). The accent tells them apart: orange for Claude, blue for Codex.
 - **Several Claude accounts**: every sign-in on this PC (`~/.claude` and `~/.claude-accounts/<name>`) is listed in a dropdown at the top right, and the list, projects and storage follow it.
+- **Usage** (Settings): how much of each account's plan limits (five hours, a week) is used and the day and time each resets, as Claude Code and Codex last recorded it on this PC. It follows what they record, read again every 10 seconds while on screen; no server is asked.
 - **Terminal** (Setup, Portable and development builds): a real terminal at the bottom of the window, as in VS Code: PowerShell, Command Prompt or Git Bash, one tab each, starting in the project folder of the session on screen (see [Terminal](#terminal)).
 - Session list with search (title, prompts, project, paths, IDs, accent-insensitive: `nha hat` finds `Nhà hát`), sorting, grouping by date or project, and filters (All / Active / Archived / Transcript only / Metadata only & problems / per project).
 - Details panel:

@@ -1,4 +1,5 @@
 import type {
+  AccountUsage,
   ActionResult,
   AppInfo,
   AppSettings,
@@ -52,6 +53,7 @@ export const IPC = {
   openProject: 'sessions:open-project',
   getClaudeProcessStatus: 'process:status',
   getStorageInfo: 'storage:info',
+  getUsage: 'usage:get',
   getSettings: 'settings:get',
   updateSettings: 'settings:update',
   clearCache: 'cache:clear',
@@ -117,6 +119,8 @@ export interface SessionManagerApi {
   getClaudeProcessStatus(force?: boolean): Promise<ProcessStatus>
   /** Totals of one account of a tool, or of every session of it without an ID. */
   getStorageInfo(accountId?: string, provider?: Provider): Promise<StorageInfo>
+  /** Each account's plan limits, as the tool last recorded them (nothing is asked of a server). */
+  getUsage(provider: Provider): Promise<AccountUsage[]>
 
   getSettings(): Promise<AppSettings>
   updateSettings(patch: Partial<AppSettings>): Promise<AppSettings>

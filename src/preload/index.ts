@@ -40,6 +40,7 @@ const api: SessionManagerApi = {
 
   getClaudeProcessStatus: (force) => ipcRenderer.invoke(IPC.getClaudeProcessStatus, force === true),
   getStorageInfo: (accountId, provider) => ipcRenderer.invoke(IPC.getStorageInfo, accountId, provider),
+  getUsage: (provider) => ipcRenderer.invoke(IPC.getUsage, provider),
 
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.updateSettings, patch),

@@ -1,6 +1,7 @@
 {
   "title": "设置",
   "section": {
+    "usage": "用量",
     "general": "常规",
     "data": "Claude 数据",
     "data_codex": "Codex 数据",
@@ -87,5 +88,21 @@
   },
   "storeEdition": {
     "limits": "Microsoft Store 版：带有 Claude Desktop 元数据的会话只能查看和导出。由于 Windows 应用商店的打包机制会隔离部分 AppData 写入，这些会话无法归档、恢复或删除。仅有会话记录的会话仍可照常隐藏或删除。"
+  },
+  "usage": {
+    "window": {
+      "fiveHours": "5 小时",
+      "week": "每周",
+      "hours_other": "{{count}} 小时",
+      "days_other": "{{count}} 天"
+    },
+    "used": "已用 {{percent}}%",
+    "resets": "{{date}} 重置 · {{until}}",
+    "reset": "已于 {{date}} 重置",
+    "recorded": "Claude Code 记录于{{time}}",
+    "recorded_codex": "Codex 记录于{{time}}",
+    "none": "Claude Code 尚未记录用量。",
+    "none_codex": "Codex 尚未记录用量。",
+    "apiKey": "API 密钥：没有套餐限制。"
   }
 }

@@ -109,7 +109,7 @@ describe('Codex folders and CLI', () => {
     expect(identityFromAuth(JSON.stringify({ OPENAI_API_KEY: null, tokens: chatgpt.tokens }))).toEqual({ email: 'a@b.c', plan: 'Pro' })
     expect(identityFromAuth(JSON.stringify({ OPENAI_API_KEY: 'sk-x' }))).toEqual({ apiKey: true })
     // Saved by a Windows editor, with a byte-order mark.
-    expect(identityFromAuth('﻿' + JSON.stringify(chatgpt))).toEqual({ email: 'a@b.c', plan: 'Pro' })
+    expect(identityFromAuth('\uFEFF' + JSON.stringify(chatgpt))).toEqual({ email: 'a@b.c', plan: 'Pro' })
     // Anything broken names nothing.
     for (const text of ['', 'not json', 'null', '[]', '{"tokens":{"id_token":"a.b.c"}}', '{"tokens":{"id_token":42}}']) expect(identityFromAuth(text)).toEqual({})
   })

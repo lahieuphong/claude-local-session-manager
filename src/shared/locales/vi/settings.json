@@ -1,6 +1,7 @@
 {
   "title": "Cài đặt",
   "section": {
+    "usage": "Mức sử dụng",
     "general": "Chung",
     "data": "Dữ liệu Claude",
     "data_codex": "Dữ liệu Codex",
@@ -87,5 +88,21 @@
   },
   "storeEdition": {
     "limits": "Bản Microsoft Store: các phiên có siêu dữ liệu Claude Desktop chỉ xem và xuất được. Không thể Lưu trữ, Khôi phục hay Xóa các phiên này vì cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData. Phiên chỉ có bản ghi hội thoại vẫn ẩn hoặc xóa được như bình thường."
+  },
+  "usage": {
+    "window": {
+      "fiveHours": "5 giờ",
+      "week": "Tuần",
+      "hours_other": "{{count}} giờ",
+      "days_other": "{{count}} ngày"
+    },
+    "used": "đã dùng {{percent}}%",
+    "resets": "Đặt lại lúc {{date}} · {{until}}",
+    "reset": "Đã đặt lại lúc {{date}}",
+    "recorded": "Claude Code ghi lại {{time}}",
+    "recorded_codex": "Codex ghi lại {{time}}",
+    "none": "Claude Code chưa ghi lại mức sử dụng nào.",
+    "none_codex": "Codex chưa ghi lại mức sử dụng nào.",
+    "apiKey": "Khóa API: không có giới hạn theo gói."
   }
 }

@@ -120,7 +120,18 @@ export function writeUiTestProfile(home, { now = Date.now(), livePid } = {}) {
   writeFileSync(path.join(claudeHome, UI_TEST_MARKER), 'Synthetic data written by scripts/ui-test-profile.mjs. Safe to delete.\n')
 
   const roles = { metadataFiles: {} }
-  writeFileSync(path.join(root, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'first.account@example.com', displayName: 'First Account', planDisplayName: 'Ultra', organizationRateLimitTier: 'default_claude_max_20x' } }))
+  // The usage Claude Code keeps for its /usage view: its list of limits (an inactive one for a single model too).
+  const usage = {
+    fetchedAtMs: now - 12 * MIN,
+    utilization: {
+      limits: [
+        { kind: 'five_hour', group: 'session', percent: 42, severity: 'normal', resets_at: new Date(now + 150 * MIN).toISOString(), scope: null, is_active: true },
+        { kind: 'weekly_all', group: 'weekly', percent: 81, severity: 'warning', resets_at: new Date(now + 4 * 24 * 60 * MIN).toISOString(), scope: null, is_active: true },
+        { kind: 'weekly_scoped', group: 'weekly', percent: 0, severity: 'normal', resets_at: null, scope: { model: { id: null, display_name: 'Opus' } }, is_active: false }
+      ]
+    }
+  }
+  writeFileSync(path.join(root, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'first.account@example.com', displayName: 'First Account', planDisplayName: 'Ultra', organizationRateLimitTier: 'default_claude_max_20x' }, cachedUsageUtilization: usage }))
   let n = 0
   /** Sessions are at least 10 minutes old: the delete guard refuses files written in the last 30 seconds. */
   const addTranscript = ({ project, title, turns = 3, bytes = 40 * KB, ageMin, withData = false, longPrompt = false }) => {
@@ -200,7 +211,9 @@ export function writeUiTestProfile(home, { now = Date.now(), livePid } = {}) {
   // The profile can be written again over itself.
   if (!existsSync(path.join(second, 'projects'))) symlinkSync(projects, path.join(second, 'projects'), 'junction')
   if (!existsSync(path.join(second, 'file-history'))) symlinkSync(path.join(claudeHome, 'file-history'), path.join(second, 'file-history'), 'junction')
-  writeFileSync(path.join(second, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'second.account@example.com', displayName: 'Second Account', planDisplayName: 'Pro', organizationName: UI_TEST_SECRET }, secretField: UI_TEST_SECRET }))
+  // An older Claude Code: named windows only, and the week used up.
+  const usedUp = { fetchedAtMs: now - 3 * 60 * MIN, utilization: { five_hour: null, seven_day: { utilization: 100, resets_at: new Date(now + 20 * 60 * MIN).toISOString() } } }
+  writeFileSync(path.join(second, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'second.account@example.com', displayName: 'Second Account', planDisplayName: 'Pro', organizationName: UI_TEST_SECRET }, secretField: UI_TEST_SECRET, cachedUsageUtilization: usedUp }))
   writeFileSync(path.join(second, '.credentials.json'), JSON.stringify({ token: UI_TEST_SECRET }))
   const envIn = (accountHome, uuid) => write(path.join(accountHome, 'session-env', uuid, 'env.json'), JSON.stringify({ note: 'synthetic UI test data' }), new Date(now - 30 * MIN))
   const secondProject = PROJECT_PATHS[5]

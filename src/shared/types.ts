@@ -234,6 +234,32 @@ export interface ClaudeAccount {
   path: string
 }
 
+/** The windows plan limits count over, in minutes: Claude's and Codex's session limit, and their weekly one. */
+export const FIVE_HOURS = 300
+export const ONE_WEEK = 10_080
+
+/** One limit of an account's plan, as the tool itself last recorded it (Claude Code's /usage, Codex's /status). */
+export interface UsageLimit {
+  /** What it counts over: 300 (five hours), 10080 (a week), or another length the tool names. */
+  windowMinutes: number
+  /** Set for a limit on one model only ("Fable"). */
+  model?: string
+  /** How much of it is used, 0 to 100. */
+  percent: number
+  /** When the window starts again. */
+  resetsAt?: number
+  severity: 'normal' | 'warning' | 'critical'
+}
+
+/** How much of one account's plan limits is used. */
+export interface AccountUsage {
+  accountId: string
+  /** When the tool recorded these numbers; absent when it never has. */
+  recordedAt?: number
+  /** Empty for an account without plan limits (an API key) or that has none recorded. */
+  limits: UsageLimit[]
+}
+
 export interface StorageRoots {
   /** Every Claude account found on this PC, the main folder first. */
   accounts: ClaudeAccount[]

@@ -42,6 +42,8 @@ export interface AccountRoots extends ClaudeAccount {
   fileHistoryRoot: string | null
   sessionEnvRoot: string | null
   liveSessionsDir: string | null
+  /** Where Claude Code may keep this account's `.claude.json`; the one written last is in use. Main process only. */
+  configFiles: string[]
 }
 
 export interface DiscoveredRoots {
@@ -179,7 +181,7 @@ export async function discoverRoots(env: DiscoveryEnv): Promise<DiscoveredRoots>
     .filter((e) => e.isDirectory() || e.isSymbolicLink())
     .map((e) => path.join(accountsDir, e.name))
     .sort()
-  const found: Array<Omit<AccountRoots, 'label'> & { identityFiles: string[] }> = []
+  const found: Array<Omit<AccountRoots, 'label'>> = []
   const seenAccounts = new Set<string>()
   for (const raw of [claudeHomeRaw, defaultHome, ...otherFolders]) {
     const main = pathKey(raw) === pathKey(claudeHomeRaw)
@@ -201,8 +203,8 @@ export async function discoverRoots(env: DiscoveryEnv): Promise<DiscoveredRoots>
       // Claude Code keeps `.claude.json` in the folder when CLAUDE_CONFIG_DIR names it, and for
       // the default folder one level up, in the user's home (the newest of the two is read).
       const inside = path.join(canonical, '.claude.json')
-      const identityFiles = pathKey(raw) === pathKey(defaultHome) ? [path.join(env.homedir, '.claude.json'), inside] : [inside]
-      found.push({ identityFiles, id: createHash('sha1').update(pathKey(canonical)).digest('hex').slice(0, 12), path: canonical, ...folders })
+      const configFiles = pathKey(raw) === pathKey(defaultHome) ? [path.join(env.homedir, '.claude.json'), inside] : [inside]
+      found.push({ configFiles, id: createHash('sha1').update(pathKey(canonical)).digest('hex').slice(0, 12), path: canonical, ...folders })
     } catch (err) {
       // An extra account that cannot be read is skipped; only the main one may stop the scan.
       if (main) throw err
@@ -213,7 +215,7 @@ export async function discoverRoots(env: DiscoveryEnv): Promise<DiscoveredRoots>
   const listed = usable.length ? usable : found
   // With one account there is nothing to tell apart, so its sign-in file is not even opened.
   const accounts = markSharedStores(
-    labelAccounts(await Promise.all(listed.map(async ({ identityFiles, ...a }) => ({ ...a, ...(listed.length > 1 ? await readIdentity(identityFiles) : {}) }))))
+    labelAccounts(await Promise.all(listed.map(async (a) => ({ ...a, ...(listed.length > 1 ? await readIdentity(a.configFiles) : {}) }))))
   )
 
   // --- Claude Desktop ------------------------------------------------------

@@ -80,7 +80,8 @@ export function codexAuth({ email, plan } = {}) {
 /**
  * One Codex folder. `threads`: { id, name?, title?, first?, cwd, model?, archived?, updatedAt, createdAt?,
  * source?, threadSource? ('user' by default), parent?, file? (write a session file), items?: [[type, text]],
- * turnInProgressAt? (a turn Codex still marks as running, started then) }. Items are written from createdAt on,
+ * turnInProgressAt? (a turn Codex still marks as running, started then), rateLimits? (the usage Codex records
+ * after an answer: a token_count event at the end of the session file) }. Items are written from createdAt on,
  * a second apart; a session file's time is the session's updatedAt, as if Codex last wrote it then.
  * `auth`: the sign-in (see codexAuth), an API key by default.
  */
@@ -106,7 +107,8 @@ export function createCodexHome(dir, threads, auth = codexAuth()) {
           timestamp: new Date(created).toISOString(),
           type: 'response_item',
           payload: { type: 'message', role: type === 'userMessage' ? 'user' : 'assistant', content: [{ type: type === 'userMessage' ? 'input_text' : 'output_text', text }] }
-        }))
+        })),
+        ...(t.rateLimits ? [{ timestamp: new Date(t.updatedAt).toISOString(), type: 'event_msg', payload: { type: 'token_count', info: null, rate_limits: t.rateLimits } }] : [])
       ]
       writeFileSync(rollout, lines.map((l) => JSON.stringify(l)).join('\n') + '\n')
       utimesSync(rollout, new Date(t.updatedAt), new Date(t.updatedAt))
@@ -160,6 +162,10 @@ export function writeCodexProfile(home, { now = Date.now(), cwds = ['C:\\UiTest\
     secondActive: codexUuid(21),
     secondArchived: codexUuid(22)
   }
+  // What Codex records after an answer: a Plus or Pro plan's five-hour and weekly limits; nothing for an API key.
+  const resets = (ms) => Math.floor((now + ms) / 1000)
+  const planLimits = { primary: { used_percent: 23, window_minutes: 300, resets_at: resets(2 * H) }, secondary: { used_percent: 64, window_minutes: 10080, resets_at: resets(75 * H) }, plan_type: 'pro' }
+  const noLimits = { primary: null, secondary: null, plan_type: null }
   const talk = (n) => [
     ['userMessage', 'Refactor the payment module and keep the public API'],
     ['agentMessage', 'I will start by reading the payment module.'],
@@ -173,13 +179,13 @@ export function writeCodexProfile(home, { now = Date.now(), cwds = ['C:\\UiTest\
     { id: roles.withAgents, name: 'Audit every service with helpers', first: 'Audit every service', cwd: cwds[0], updatedAt: now - 5 * H, items: talk(2) },
     { id: roles.agentA, title: 'helper A', cwd: cwds[0], updatedAt: now - 5 * H, parent: roles.withAgents, items: [['agentMessage', 'Service A is fine.']] },
     { id: roles.agentB, title: 'helper B', cwd: cwds[0], updatedAt: now - 5 * H, parent: roles.withAgents, items: [['agentMessage', 'Service B needs work.']] },
-    { id: roles.recent, name: 'Session Codex is working in', first: 'Keep going', cwd: cwds[1], updatedAt: now - 20_000, createdAt: now - 40_000, items: talk(0) },
+    { id: roles.recent, name: 'Session Codex is working in', first: 'Keep going', cwd: cwds[1], updatedAt: now - 20_000, createdAt: now - 40_000, items: talk(0), rateLimits: planLimits },
     { id: roles.longVi, name: 'Tối ưu hóa toàn bộ quy trình dựng mô hình ba chiều cho nhà hát thành phố và kiểm tra lại hiệu năng', first: 'Tối ưu hóa toàn bộ quy trình', cwd: cwds[2], updatedAt: now - 30 * H, items: talk(1) },
     // Codex's own automatic review: not a session of the user's.
     { id: roles.guardian, title: 'guardian', cwd: cwds[0], updatedAt: now - 3 * H, source: '{"subagent":{"other":"guardian"}}', threadSource: 'guardian_review', file: false }
   ], codexAuth({ email: CODEX_TEST_EMAIL, plan: 'pro' }))
   const second = createCodexHome(path.join(home, '.codex-account-2'), [
-    { id: roles.secondActive, name: 'Second account: release checklist', first: 'Prepare the release', cwd: cwds[0], updatedAt: now - 10 * H, items: talk(0) },
+    { id: roles.secondActive, name: 'Second account: release checklist', first: 'Prepare the release', cwd: cwds[0], updatedAt: now - 10 * H, items: talk(0), rateLimits: noLimits },
     { id: roles.secondArchived, name: 'Second account: archived plan', first: 'Plan', cwd: cwds[1], updatedAt: now - 90 * H, archived: true, items: talk(0) }
   ])
   return { main, second, roles, userSessions: { main: 6, second: 2 } }

@@ -6,6 +6,7 @@ import { IconCheck, IconChevron, IconX } from '../components/Icons'
 import { DeletionSafetySection } from '../components/SafetyMode'
 import { Select } from '../components/Select'
 import { AboutSection, UpdatesSection } from '../components/Updates'
+import { UsageSection } from '../components/Usage'
 import { useFmt } from '../i18n'
 import { clearCache, errText, hasSafeMode, setLanguage, setMotion, toast, toolContext, updateSettings, useAppState } from '../stores/appStore'
 import { displayPath } from '../utils/paths'
@@ -17,8 +18,9 @@ const INTERVALS = [15, 30, 60, 120, 300, 600]
 const MOTIONS: MotionPreference[] = ['system', 'reduced']
 
 /**
- * Settings: what people change (language, motion, refresh), where the
- * sessions come from, deletion safety and updates. Paths, cache, debug mode
+ * Settings: how much of the plan's limits is used, what people change
+ * (language, motion, refresh), where the sessions come from, deletion safety
+ * and updates. Paths, cache, debug mode
  * and logs are for troubleshooting and wait, closed, under "Advanced".
  */
 export function SettingsPage(): ReactElement {
@@ -39,6 +41,10 @@ export function SettingsPage(): ReactElement {
       <header className="page-header">
         <h1 className="page-title">{t('settings:title')}</h1>
       </header>
+
+      <SettingsSection title={t('settings:section.usage')}>
+        <UsageSection />
+      </SettingsSection>
 
       <SettingsSection title={t('settings:section.general')}>
         <SettingRow label={t('settings:language.label')} id={langName}>

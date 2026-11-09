@@ -45,9 +45,9 @@ behave differently, this page says so.
   a local, read-only Windows query.
 - **The name and plan of each Claude sign-in**, if you have more than one on this
   PC: the email address, display name and plan name (such as "Max 20x") from each
-  account's `.claude.json` file. The app reads that file, keeps only these three
-  values and uses them only to tell the accounts apart on your screen. It never
-  opens `.credentials.json`, the file with your sign-in tokens.
+  account's `.claude.json` file. For this the app keeps only these three values
+  from that file, and uses them only to tell the accounts apart on your screen.
+  It never opens `.credentials.json`, the file with your sign-in tokens.
 - **The email and plan of each Codex sign-in**, if you have more than one Codex
   folder on this PC: from each folder's `auth.json`, the file with your Codex
   sign-in, the app reads the email address and the plan name (such as "Pro")
@@ -56,6 +56,11 @@ behave differently, this page says so.
   stored, logged, shown or sent anywhere, and the file is never changed. These
   values are only used to tell the accounts apart on your screen. With a single
   Codex folder the file is not opened.
+- **How much of your plans' limits is used**, shown in Settings: from each Claude
+  account's `.claude.json`, the usage Claude Code saved for its own /usage view;
+  from Codex's session files, the usage Codex records after each answer. For each
+  limit (five hours, a week) the app takes how much of it is used, when it starts
+  again and when the tool recorded it, nothing else. It asks no server for them.
 - **The paths of your project folders**, as recorded in the session files. The
   app does not read the files inside your projects.
 

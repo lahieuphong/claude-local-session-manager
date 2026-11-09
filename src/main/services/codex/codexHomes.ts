@@ -128,7 +128,7 @@ function claimsOf(token: unknown): Record<string, unknown> | null {
 export function identityFromAuth(text: string): CodexIdentity {
   let auth: unknown
   try {
-    auth = JSON.parse(text.replace(/^﻿/, ''))
+    auth = JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch {
     return {}
   }

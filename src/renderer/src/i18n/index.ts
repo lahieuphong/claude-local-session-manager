@@ -15,7 +15,8 @@ import {
   formatBytesIntl,
   formatCountIntl,
   formatDateTimeIntl,
-  formatRelativeIntl
+  formatRelativeIntl,
+  formatUntilIntl
 } from '../../../shared/format'
 
 /**
@@ -75,8 +76,12 @@ export interface Formatters {
   count(n: number | undefined | null): string
   dateTime(ms: number | undefined | null): string
   fullDateTime(ms: number | undefined | null): string
+  /** With the day of the week: "08:59 Thứ Ba, 10/11/2026". */
+  weekdayDateTime(ms: number | undefined | null): string
   date(ms: number | undefined | null): string
   relative(ms: number | undefined | null): string
+  /** A moment still to come: "in 3 hr". */
+  until(ms: number | undefined | null): string
   msg(ref: MessageRef | undefined, fallback: string): string
 }
 
@@ -92,8 +97,10 @@ export function useFmt(): Formatters {
       count: (n) => formatCountIntl(n, tag),
       dateTime: (ms) => formatDateTimeIntl(ms, tag),
       fullDateTime: (ms) => formatDateTimeIntl(ms, tag, 'full'),
+      weekdayDateTime: (ms) => formatDateTimeIntl(ms, tag, 'weekday'),
       date: (ms) => formatDateTimeIntl(ms, tag, 'date'),
       relative: (ms) => formatRelativeIntl(ms, tag),
+      until: (ms) => formatUntilIntl(ms, tag),
       msg: (ref, fallback) => translateMsg(t, ref, fallback)
     }
   }, [locale, t])

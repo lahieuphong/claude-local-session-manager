@@ -54,24 +54,27 @@ export function formatCountIntl(n: number | undefined | null, locale: string): s
   return numberFormat(locale, 0).format(n)
 }
 
+type DateKind = 'datetime' | 'date' | 'full' | 'weekday'
+const DATE_OPTIONS: Record<DateKind, Intl.DateTimeFormatOptions> = {
+  date: { year: 'numeric', month: 'short', day: 'numeric' },
+  datetime: { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' },
+  full: { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' },
+  /** A moment to plan around, with its day of the week: "08:59 Thứ Ba, 10/11/2026". */
+  weekday: { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+}
+
 const dateFormats = new Map<string, Intl.DateTimeFormat>()
-function dateFormat(locale: string, kind: 'datetime' | 'date' | 'full'): Intl.DateTimeFormat {
+function dateFormat(locale: string, kind: DateKind): Intl.DateTimeFormat {
   const key = `${locale}|${kind}`
   let f = dateFormats.get(key)
   if (!f) {
-    const opts: Intl.DateTimeFormatOptions =
-      kind === 'date'
-        ? { year: 'numeric', month: 'short', day: 'numeric' }
-        : kind === 'full'
-          ? { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }
-          : { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
-    f = new Intl.DateTimeFormat(locale, opts)
+    f = new Intl.DateTimeFormat(locale, DATE_OPTIONS[kind])
     dateFormats.set(key, f)
   }
   return f
 }
 
-export function formatDateTimeIntl(ms: number | undefined | null, locale: string, kind: 'datetime' | 'date' | 'full' = 'datetime'): string {
+export function formatDateTimeIntl(ms: number | undefined | null, locale: string, kind: DateKind = 'datetime'): string {
   if (!ms || !Number.isFinite(ms)) return '—'
   return dateFormat(locale, kind).format(new Date(ms))
 }
@@ -86,13 +89,28 @@ export function formatRelativeIntl(ms: number | undefined | null, locale: string
   const hour = 60 * min
   const day = 24 * hour
   if (diff < 0 || diff >= 7 * day) return formatDateTimeIntl(ms, locale, 'date')
+  const rtf = relativeFormat(locale)
+  if (diff < min) return rtf.format(0, 'second')
+  if (diff < hour) return rtf.format(-Math.floor(diff / min), 'minute')
+  if (diff < day) return rtf.format(-Math.floor(diff / hour), 'hour')
+  return rtf.format(-Math.floor(diff / day), 'day')
+}
+
+/** "in 3 hr" / "sau 3 giờ" / "3小时后": a moment still to come (a limit that resets). */
+export function formatUntilIntl(ms: number | undefined | null, locale: string, now = Date.now()): string {
+  if (!ms || !Number.isFinite(ms)) return '—'
+  const diff = Math.max(0, ms - now)
+  const rtf = relativeFormat(locale)
+  if (diff < 60 * 60_000) return rtf.format(Math.max(1, Math.ceil(diff / 60_000)), 'minute')
+  if (diff < 24 * 60 * 60_000) return rtf.format(Math.round(diff / (60 * 60_000)), 'hour')
+  return rtf.format(Math.round(diff / (24 * 60 * 60_000)), 'day')
+}
+
+function relativeFormat(locale: string): Intl.RelativeTimeFormat {
   let rtf = relativeFormats.get(locale)
   if (!rtf) {
     rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
     relativeFormats.set(locale, rtf)
   }
-  if (diff < min) return rtf.format(0, 'second')
-  if (diff < hour) return rtf.format(-Math.floor(diff / min), 'minute')
-  if (diff < day) return rtf.format(-Math.floor(diff / hour), 'hour')
-  return rtf.format(-Math.floor(diff / day), 'day')
+  return rtf
 }
