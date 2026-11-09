@@ -1,9 +1,7 @@
 {
   "loading": "Reading update status…",
   "version": "Version {{version}}",
-  "current": "Current version",
-  "latest": "Latest version",
-  "lastChecked": "Last checked",
+  "checkedAt": "checked {{time}}",
   "status": {
     "idle": "Not checked yet",
     "checking": "Checking for updates…",
@@ -31,8 +29,7 @@
     "openStore": "Open Microsoft Store",
     "viewInStore": "View in Microsoft Store"
   },
-  "storeNote": "This copy was installed from Microsoft Store. The Store downloads and installs new versions; the app never runs the GitHub installer.",
-  "portableNote": "Portable builds are never replaced automatically. Download the new Setup (recommended) or Portable build from GitHub Releases.",
+  "portableNote": "The Portable build never updates itself. Download the new version from GitHub Releases.",
   "confirm": {
     "title": "Install the update?",
     "text": "{{appName}} will close and restart to install version {{version}}."

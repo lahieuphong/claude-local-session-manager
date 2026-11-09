@@ -269,7 +269,7 @@ export class CodexRepository extends EventEmitter {
       scannedAt: Date.now(),
       durationMs: Date.now() - started,
       roots: {
-        accounts: homes.map(({ id, label, path }) => ({ id, label, path })),
+        accounts: homes.map(({ id, label, path, email, plan, apiKey }) => ({ id, label, path, email, plan, apiKey })),
         claudeHome: main?.path ?? '',
         projectsRoot: null,
         fileHistoryRoot: null,

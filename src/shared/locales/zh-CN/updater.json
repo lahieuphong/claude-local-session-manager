@@ -1,9 +1,7 @@
 {
   "loading": "正在读取更新状态…",
   "version": "版本 {{version}}",
-  "current": "当前版本",
-  "latest": "最新版本",
-  "lastChecked": "上次检查",
+  "checkedAt": "检查于 {{time}}",
   "status": {
     "idle": "尚未检查",
     "checking": "正在检查更新…",
@@ -31,8 +29,7 @@
     "openStore": "打开 Microsoft Store",
     "viewInStore": "在 Microsoft Store 中查看"
   },
-  "storeNote": "此副本是从 Microsoft Store 安装的。新版本由 Store 下载并安装；本应用从不运行 GitHub 安装程序。",
-  "portableNote": "便携版永远不会被自动替换。请从 GitHub Releases 下载新的 Setup（推荐）或便携版。",
+  "portableNote": "便携版不会自动更新。请从 GitHub Releases 下载新版本。",
   "confirm": {
     "title": "安装更新？",
     "text": "{{appName}} 将关闭并重启以安装版本 {{version}}。"

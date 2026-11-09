@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { realpath, stat } from 'node:fs/promises'
+import { readFile, realpath, stat } from 'node:fs/promises'
 import path from 'node:path'
 import type { CandidatePath, ClaudeAccount } from '../../../shared/types'
 import { isDirectory, pathKey, readdirSafe } from '../../util/fsx'
@@ -12,7 +12,9 @@ import { isDirectory, pathKey, readdirSafe } from '../../util/fsx'
  * Codex keeps each session as a row in `state_<n>.sqlite` and its conversation
  * in `thread_history_<n>.sqlite`; older sessions also have a file under
  * sessions/ (archived ones under archived_sessions/), and session_index.jsonl
- * lists named sessions. `auth.json` holds the sign-in and is never opened.
+ * lists named sessions. `auth.json` holds the sign-in: with more than one
+ * folder, the email and plan are read from it to tell them apart, nothing else
+ * (see readCodexIdentity).
  */
 export interface CodexHome extends ClaudeAccount {
   main: boolean
@@ -64,10 +66,116 @@ async function newestDb(dir: string, prefix: string): Promise<string | null> {
 const idOf = (folder: string): string => createHash('sha1').update('codex|' + pathKey(folder)).digest('hex').slice(0, 12)
 
 /** "codex" for the main folder; "account-2" for ~/.codex-account-2. */
-function labelOf(folder: string, main: boolean): string {
+function folderLabelOf(folder: string, main: boolean): string {
   const name = path.basename(folder)
   if (main && name.toLowerCase() === '.codex') return 'codex'
   return name.replace(/^\.codex[-_.]/i, '').replace(/^\./, '') || name
+}
+
+// ---------------------------------------------------------------------------
+// Who each folder is signed in as
+// ---------------------------------------------------------------------------
+
+/** What the app takes from a Codex sign-in: the account's email and plan, or that it is an API key. */
+export interface CodexIdentity {
+  email?: string
+  plan?: string
+  apiKey?: true
+}
+
+/** A Codex sign-in file is a few KB; anything far bigger is not one. */
+const MAX_AUTH_FILE = 256 * 1024
+const identities = new Map<string, { stamp: string; identity: CodexIdentity }>()
+
+const pick = (v: unknown, max = 200): string | undefined => (typeof v === 'string' && v.trim() && v.length <= max ? v.trim() : undefined)
+
+/** ChatGPT plan names as ChatGPT shows them; Codex records them in lower case ("pro", "edu_plus"). */
+const PLAN_NAMES: Record<string, string> = { free: 'Free', go: 'Go', plus: 'Plus', pro: 'Pro', team: 'Team', business: 'Business', enterprise: 'Enterprise', edu: 'Edu' }
+
+function planName(v: unknown): string | undefined {
+  const plan = pick(v, 60)?.toLowerCase()
+  if (!plan || plan === 'unknown' || !/^[a-z0-9_]+$/.test(plan)) return undefined
+  if (PLAN_NAMES[plan]) return PLAN_NAMES[plan]
+  if (plan.startsWith('self_serve_business')) return 'Business'
+  if (plan.startsWith('enterprise') || /^ent\d+$/.test(plan)) return 'Enterprise'
+  // "edu_plus" → "Edu Plus"
+  return plan
+    .split('_')
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+/** The claims of a JWT (its middle part), not checked: they are only shown. */
+function claimsOf(token: unknown): Record<string, unknown> | null {
+  if (typeof token !== 'string') return null
+  const part = token.split('.')[1]
+  if (!part || part.length > 64 * 1024) return null
+  try {
+    const claims: unknown = JSON.parse(Buffer.from(part, 'base64url').toString('utf8'))
+    return claims && typeof claims === 'object' ? (claims as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The account details in the text of a Codex `auth.json`. A ChatGPT sign-in
+ * names its account in the ID token: its `email` claim and the plan Codex
+ * shows (`chatgpt_plan_type`). Only those two values leave this function; the
+ * tokens and the API key are never kept, logged or sent anywhere.
+ */
+export function identityFromAuth(text: string): CodexIdentity {
+  let auth: unknown
+  try {
+    auth = JSON.parse(text.replace(/^﻿/, ''))
+  } catch {
+    return {}
+  }
+  if (!auth || typeof auth !== 'object') return {}
+  const a = auth as Record<string, unknown>
+  const mode = typeof a.auth_mode === 'string' ? a.auth_mode.toLowerCase().replace(/[^a-z]/g, '') : ''
+  const hasKey = typeof a.OPENAI_API_KEY === 'string' && a.OPENAI_API_KEY.length > 0
+  if (mode === 'apikey') return hasKey ? { apiKey: true } : {}
+  const tokens = a.tokens && typeof a.tokens === 'object' ? (a.tokens as Record<string, unknown>) : null
+  const claims = claimsOf(tokens?.id_token)
+  if (claims) {
+    const info = claims['https://api.openai.com/auth']
+    const plan = planName(info && typeof info === 'object' ? (info as Record<string, unknown>).chatgpt_plan_type : undefined)
+    const email = pick(claims.email)
+    return { ...(email ? { email } : {}), ...(plan ? { plan } : {}) }
+  }
+  return hasKey ? { apiKey: true } : {}
+}
+
+/**
+ * Who a Codex folder is signed in as, read from its `auth.json`. Read again
+ * only when the file changes; nothing is written.
+ */
+export async function readCodexIdentity(folder: string): Promise<CodexIdentity> {
+  const file = path.join(folder, 'auth.json')
+  try {
+    const s = await stat(file)
+    if (!s.isFile() || s.size > MAX_AUTH_FILE) return {}
+    const stamp = `${s.size}|${s.mtimeMs}`
+    const known = identities.get(file)
+    if (known?.stamp === stamp) return known.identity
+    const identity = identityFromAuth(await readFile(file, 'utf8'))
+    identities.set(file, { stamp, identity })
+    return identity
+  } catch {
+    // Never the error itself: it could quote the file.
+    return {}
+  }
+}
+
+/**
+ * Names like Claude accounts have: the email's name ("codex.user"), else the
+ * folder's ("account-api"); a name two folders share gets the folder too.
+ */
+function labelHomes(homes: CodexHome[]): CodexHome[] {
+  const short = homes.map((h) => h.email?.split('@')[0] || folderLabelOf(h.path, h.main))
+  return homes.map((h, i) => (short.filter((s) => s === short[i]).length > 1 ? { ...h, label: `${short[i]} (${folderLabelOf(h.path, h.main)})` } : { ...h, label: short[i] }))
 }
 
 export async function discoverCodexHomes(env: CodexEnv): Promise<{ homes: CodexHome[]; candidates: CandidatePath[] }> {
@@ -105,7 +213,7 @@ export async function discoverCodexHomes(env: CodexEnv): Promise<{ homes: CodexH
     candidates.push({ path: sessionsDir, exists: await isDirectory(sessionsDir), note: 'Codex session files', noteKey: 'codexSessions' })
     homes.push({
       id: idOf(folder),
-      label: labelOf(folder, main),
+      label: folderLabelOf(folder, main),
       path: folder,
       main,
       stateDb,
@@ -117,7 +225,10 @@ export async function discoverCodexHomes(env: CodexEnv): Promise<{ homes: CodexH
   }
   // The main folder first, as for Claude accounts.
   homes.sort((a, b) => Number(b.main) - Number(a.main))
-  return { homes, candidates }
+  // With one folder there is nothing to tell apart, so its sign-in file is not even opened.
+  if (homes.length < 2) return { homes, candidates }
+  const named = await Promise.all(homes.map(async (h) => ({ ...h, ...(await readCodexIdentity(h.path)) })))
+  return { homes: labelHomes(named), candidates }
 }
 
 // ---------------------------------------------------------------------------

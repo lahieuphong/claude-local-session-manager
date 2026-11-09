@@ -3,11 +3,11 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { CODEX_TEST_SECRET, codexUuid, createCodexHome, runFakeCodex, writeCodexProfile } from '../scripts/ui-test-codex.mjs'
+import { CODEX_TEST_EMAIL, CODEX_TEST_SECRET, codexAuth, codexUuid, createCodexHome, runFakeCodex, writeCodexProfile } from '../scripts/ui-test-codex.mjs'
 import { CodexActions, type CodexRunner } from '../src/main/services/codex/codexActions'
 import { CodexDeleteService, codexPlanItems } from '../src/main/services/codex/codexDelete'
 import { CodexExportService } from '../src/main/services/codex/codexExport'
-import { discoverCodexHomes, findCodexCli, type CodexEnv } from '../src/main/services/codex/codexHomes'
+import { discoverCodexHomes, findCodexCli, identityFromAuth, type CodexEnv } from '../src/main/services/codex/codexHomes'
 import { CodexRepository } from '../src/main/services/codex/codexRepository'
 import { ManagerHiddenStore } from '../src/main/services/managerHiddenStore'
 import { buildProcessStatus, classifyCodexProcess, globalGuard } from '../src/main/services/processService'
@@ -68,16 +68,57 @@ describe('Codex folders and CLI', () => {
   it('finds ~/.codex first, then every ~/.codex-<name> that holds sessions, and nothing else', async () => {
     const { homes } = await discoverCodexHomes(env)
     expect(homes.map((h) => [h.label, h.main, !!h.stateDb, !!h.historyDb])).toEqual([
-      ['codex', true, true, true],
+      ['codex.user', true, true, true],
       ['account-2', false, true, true]
     ])
+  })
+
+  it('names each folder after its sign-in: the email and plan of a ChatGPT account, or an API key', async () => {
+    const { homes } = await discoverCodexHomes(env)
+    expect(homes.map((h) => ({ label: h.label, email: h.email, plan: h.plan, apiKey: h.apiKey }))).toEqual([
+      { label: 'codex.user', email: CODEX_TEST_EMAIL, plan: 'Pro', apiKey: undefined },
+      { label: 'account-2', email: undefined, plan: undefined, apiKey: true }
+    ])
+    expect(JSON.stringify(homes)).not.toContain(CODEX_TEST_SECRET)
+  })
+
+  it('tells two folders of one account apart by their folder', async () => {
+    writeFileSync(path.join(profile.second, 'auth.json'), JSON.stringify(codexAuth({ email: CODEX_TEST_EMAIL, plan: 'plus' })))
+    const { homes } = await discoverCodexHomes(env)
+    expect(homes.map((h) => [h.label, h.plan])).toEqual([
+      ['codex.user (codex)', 'Pro'],
+      ['codex.user (account-2)', 'Plus']
+    ])
+  })
+
+  it('with a single folder, does not even open its sign-in file', async () => {
+    rmSync(profile.second, { recursive: true, force: true })
+    const { homes } = await discoverCodexHomes(env)
+    expect(homes).toHaveLength(1)
+    expect(homes[0]).toMatchObject({ label: 'codex' })
+    expect(homes[0].email).toBeUndefined()
+  })
+
+  it('takes only the email and plan from a sign-in file, whatever else it holds', () => {
+    expect(identityFromAuth(JSON.stringify(codexAuth({ email: 'a@b.c', plan: 'edu_plus' })))).toEqual({ email: 'a@b.c', plan: 'Edu Plus' })
+    expect(identityFromAuth(JSON.stringify(codexAuth({ email: 'a@b.c', plan: 'self_serve_business_usage_based' })))).toEqual({ email: 'a@b.c', plan: 'Business' })
+    expect(identityFromAuth(JSON.stringify(codexAuth({ email: 'a@b.c', plan: 'unknown' })))).toEqual({ email: 'a@b.c' })
+    expect(identityFromAuth(JSON.stringify(codexAuth()))).toEqual({ apiKey: true })
+    // An older file with no auth_mode: the ID token decides; a key alone means an API key.
+    const chatgpt = codexAuth({ email: 'a@b.c', plan: 'pro' })
+    expect(identityFromAuth(JSON.stringify({ OPENAI_API_KEY: null, tokens: chatgpt.tokens }))).toEqual({ email: 'a@b.c', plan: 'Pro' })
+    expect(identityFromAuth(JSON.stringify({ OPENAI_API_KEY: 'sk-x' }))).toEqual({ apiKey: true })
+    // Saved by a Windows editor, with a byte-order mark.
+    expect(identityFromAuth('﻿' + JSON.stringify(chatgpt))).toEqual({ email: 'a@b.c', plan: 'Pro' })
+    // Anything broken names nothing.
+    for (const text of ['', 'not json', 'null', '[]', '{"tokens":{"id_token":"a.b.c"}}', '{"tokens":{"id_token":42}}']) expect(identityFromAuth(text)).toEqual({})
   })
 
   it('honours CODEX_HOME for the main folder', async () => {
     const custom = createCodexHome(path.join(root, 'elsewhere'), [{ id: codexUuid(50), name: 'Elsewhere', cwd: 'C:\\x', updatedAt: NOW - 1e7 }])
     const { homes } = await discoverCodexHomes({ ...env, codexHome: custom })
     expect(homes[0]).toMatchObject({ main: true, label: 'elsewhere' })
-    expect(homes.map((h) => h.label)).toContain('codex')
+    expect(homes.map((h) => h.label)).toContain('codex.user')
   })
 
   it('takes the test stand-in only in a UI test profile', async () => {
@@ -207,8 +248,12 @@ describe('Codex sessions', () => {
     expect(byThread(repo, profile.roles.named)?.live).toEqual({ pid: 0, state: 'recent' })
   })
 
-  it('never reads the Codex sign-in file', async () => {
+  it('takes nothing but the email and plan from the Codex sign-in files', async () => {
     const snap = await repoWith().scan()
+    expect(snap.roots.accounts.map((a) => [a.email, a.plan, a.apiKey])).toEqual([
+      [CODEX_TEST_EMAIL, 'Pro', undefined],
+      [undefined, undefined, true]
+    ])
     expect(JSON.stringify(snap)).not.toContain(CODEX_TEST_SECRET)
   })
 

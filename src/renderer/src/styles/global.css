@@ -2063,22 +2063,31 @@ html[lang='zh-CN'] .group-label {
 .settings-section.safety .settings-card {
   padding: var(--space-4);
 }
+/* Label and control side by side; the control moves under the label only when the row is too narrow for both. */
 .setting-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: var(--space-6);
+  gap: var(--space-3) var(--space-6);
   padding: var(--space-4);
 }
-.setting-row + .setting-row,
-.about + .setting-row {
+.setting-row + .setting-row {
   border-top: 1px solid var(--border-subtle);
+}
+/* A note that belongs to the row above it. */
+.setting-note {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 .setting-row.stacked {
   flex-direction: column;
   gap: var(--space-3);
 }
 .setting-text {
-  flex: 1;
+  flex: 1 1 220px;
   min-width: 0;
 }
 .setting-label {
@@ -2187,43 +2196,85 @@ html[lang='zh-CN'] .group-label {
   box-shadow: var(--focus-ring);
 }
 
-.radio-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.radio {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 7px 8px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background-color var(--dur-hover) var(--ease);
-}
-.radio:hover {
-  background: var(--bg-surface-hover);
-}
-.radio input {
-  margin: 3px 0 0;
-  accent-color: var(--accent);
-}
-.radio-title {
-  display: block;
-  font-size: 13px;
-}
-.radio-hint {
-  display: block;
-  font-size: 12px;
-  color: var(--text-muted);
-}
 .inline-field {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-left: 8px;
   color: var(--text-secondary);
   font-size: 13px;
+}
+.inline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+/* Settings → data: one folder per line, its account next to it. */
+.data-folders {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 420px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  text-align: right;
+}
+.data-folders li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px 8px;
+  min-width: 0;
+}
+.data-folders code {
+  color: var(--text-secondary);
+}
+
+/* Settings → Advanced: closed until opened, then a card like the others. */
+.settings-advanced {
+  margin-bottom: var(--space-6);
+}
+.settings-advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  list-style: none;
+  cursor: pointer;
+}
+.settings-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+.settings-advanced > summary:hover,
+.settings-advanced > summary:hover .section-label {
+  color: var(--text-secondary);
+}
+.settings-advanced > summary:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.settings-advanced > summary .section-label {
+  margin: 0;
+}
+.advanced-sub {
+  min-width: 0;
+  font-size: 12px;
+}
+.advanced-sub::before {
+  content: '·';
+  margin-right: 6px;
+}
+.settings-advanced:not([open]) {
+  margin-bottom: var(--space-4);
+}
+.settings-advanced[open] > .settings-card {
+  animation: fade var(--dur-modal) var(--ease);
 }
 
 .roots dd code,
@@ -2298,25 +2349,21 @@ code.phrase {
 .update-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 10px var(--space-3);
   flex-wrap: wrap;
+}
+.update-text {
+  flex: 1 1 260px;
+  min-width: 0;
 }
 .update-title {
   font-size: 13.5px;
   font-weight: 600;
 }
-.update-mode {
-  margin-left: auto;
-  font-family: var(--font);
-  font-size: 11px;
+.update-facts {
+  margin-top: 2px;
+  font-size: 12px;
   color: var(--text-muted);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xs);
-  padding: 2px 6px;
-  white-space: nowrap;
-}
-html[lang='zh-CN'] .update-mode {
-  font-family: var(--font);
 }
 .update-dot {
   width: 8px;
@@ -2354,10 +2401,13 @@ html[lang='zh-CN'] .update-mode {
   transition: width 300ms var(--ease);
 }
 
+/* Settings, at the bottom: name, version, disclaimer. */
 .about {
   display: flex;
-  gap: var(--space-4);
-  padding: var(--space-4);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 0;
+  border-top: 1px solid var(--border-subtle);
 }
 /* The mark keeps its size however long the text next to it is. */
 .about > svg {
@@ -2366,15 +2416,22 @@ html[lang='zh-CN'] .update-mode {
 .about-body {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
+.about-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
 .about-name {
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 650;
 }
 .about-version {
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* Storage */
@@ -3156,13 +3213,6 @@ body:has(.modal-backdrop) .toasts {
   .scan-stat:nth-last-child(-n + 2) {
     border-bottom: none;
   }
-  .setting-row {
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-  .setting-control {
-    align-items: flex-start;
-  }
   .strip-claude .strip-text {
     max-width: 220px;
   }
@@ -3198,7 +3248,7 @@ body:has(.modal-backdrop) .toasts {
 /* ------------------------------------------------------- selected state */
 /*
  * One look for everything that is "the current choice": sidebar items,
- * the selected session row, the chosen segmented option and radio row.
+ * the selected session row and the chosen segmented option.
  * Warm gradient + hairline + glowing indicator, and a mirror-like sheen
  * that sweeps once when the item becomes selected (none with reduced motion).
  */
@@ -3211,10 +3261,6 @@ body:has(.modal-backdrop) .toasts {
 .row.selected {
   box-shadow: inset 0 1px 0 var(--sel-border), inset 0 -1px 0 var(--sel-border);
 }
-.radio:has(input:checked) {
-  background: var(--bg-selected);
-}
-
 .nav-item.active::before,
 .row.selected::before {
   content: '';

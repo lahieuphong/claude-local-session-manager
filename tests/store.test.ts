@@ -195,12 +195,10 @@ describe('Store UI copy', () => {
     for (const l of SUPPORTED_LOCALES) {
       const r = RESOURCES[l] as Record<string, Record<string, unknown>>
       const updater = r.updater as { status: Record<string, string>; mode: Record<string, string>; action: Record<string, string> }
-      const settings = r.settings as { updatesSource: Record<string, string>; distribution: Record<string, string> }
       expect(updater.status.storeManaged).toMatch(/Microsoft Store/)
       expect(updater.action.openStore).toMatch(/Microsoft Store/)
-      expect(settings.updatesSource.store).toMatch(/Microsoft Store/)
-      expect(settings.updatesSource.github).toBe('GitHub Releases')
-      expect(Object.keys(settings.distribution).sort()).toEqual(['development', 'github', 'label', 'store'])
+      expect(updater.mode.store).toMatch(/Microsoft Store/)
+      expect(Object.keys(updater.mode).sort()).toEqual(['development', 'installed', 'portable', 'store'])
     }
     expect((RESOURCES.en.messages as { update: Record<string, string> }).update.storeManaged).toBe('Updates are managed by Microsoft Store.')
   })

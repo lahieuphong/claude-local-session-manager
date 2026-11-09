@@ -2,42 +2,48 @@
   "title": "设置",
   "section": {
     "general": "常规",
-    "appearance": "外观",
-    "discovery": "会话发现",
+    "data": "Claude 数据",
+    "data_codex": "Codex 数据",
     "deletionSafety": "删除安全",
     "updates": "更新",
-    "about": "关于"
+    "advanced": "高级"
   },
   "language": {
     "label": "语言",
-    "hint": "首次启动时跟随 Windows（{{language}}）。你的选择会被保存并立即生效。",
     "useSystem": "使用系统语言"
   },
   "motion": {
     "label": "动画",
-    "hint": "“减少动画”会关闭本应用中的过渡效果。“跟随系统”会遵循 Windows 的动画设置。",
     "system": "跟随系统",
     "reduced": "减少动画"
   },
   "rawPaths": {
     "label": "显示完整路径",
-    "hint": "显示完整的绝对路径，而不是 ~ 和 %LOCALAPPDATA% 简写。删除对话框始终显示完整路径。"
+    "hint": "显示完整路径，而不是 ~ 和 %LOCALAPPDATA% 简写。删除对话框始终显示完整路径。"
   },
   "refresh": {
     "label": "刷新",
-    "manual": "仅手动",
-    "manualHint": "在启动时以及点击“刷新”(F5) 时扫描。",
+    "manual": "手动",
+    "manualHint": "在启动时以及按“刷新”(F5) 时扫描。",
     "watch": "监视文件",
-    "watchHint": "Claude 或 Codex 写入其存储文件夹后很快重新扫描（已防抖，监视器很少）。",
+    "watchHint": "Claude 或 Codex 写入新内容后立即重新扫描。",
     "interval": "定时",
     "intervalHint": "按固定间隔重新扫描。",
     "seconds_other": "{{count}} 秒",
-    "minutes_other": "{{count}} 分钟"
+    "minutes_other": "{{count}} 分钟",
+    "every": "每隔"
+  },
+  "data": {
+    "folder": "文件夹",
+    "hint": "每次扫描时自动查找。应用只会更改你所操作会话的文件。",
+    "hint_codex": "每次扫描时自动查找。应用只读取；归档和删除由 Codex CLI 完成。",
+    "cli": "Codex CLI",
+    "cliHint": "用于归档、恢复和删除。",
+    "cliReady": "就绪"
   },
   "roots": {
     "accounts": "Claude 账户",
-    "label": "存储根目录",
-    "hint": "每次扫描时根据 USERPROFILE、APPDATA 和 LOCALAPPDATA 检测，无法编辑：应用只会修改这些根目录内的文件，并且只修改扫描器归属到某个会话的路径。",
+    "label": "全部文件夹",
     "claudeHome": "Claude Code 主目录",
     "transcripts": "会话记录根目录",
     "fileHistory": "文件历史",
@@ -59,36 +65,25 @@
   },
   "cache": {
     "label": "扫描缓存",
-    "hint": "加快重新扫描。清除缓存不会触碰 Claude 文件。",
+    "hint": "加快重新扫描。清除缓存不会触碰 Claude 或 Codex 的数据。",
     "clear": "清除扫描缓存"
   },
   "debug": {
-    "label": "开发者 / 调试模式",
-    "hint": "详细日志、在详情中显示规范化的会话 JSON，以及 DevTools (F12)。"
+    "label": "调试模式",
+    "hint": "详细日志、在详情面板中显示会话 JSON，以及 DevTools (F12)。"
   },
   "logs": {
-    "label": "诊断",
+    "label": "应用文件夹和日志",
+    "hint": "用于排查问题。仅在此处显示，不会发送到任何地方。",
+    "userData": "应用数据 (userData)",
     "cache": "缓存",
     "logFile": "日志文件",
+    "runtime": "运行环境",
     "show": "显示日志",
-    "empty": "（空）",
-    "hint": "用于排查问题的本地路径。仅在此处显示，不会发送到任何地方。",
-    "userHome": "用户主目录",
-    "transcriptRoot": "Claude 会话记录根目录",
-    "metadataRoots": "Claude 元数据根目录",
-    "userData": "应用数据 (userData)"
+    "empty": "（空）"
   },
-  "distribution": {
-    "label": "分发渠道",
-    "github": "GitHub",
-    "store": "Microsoft Store",
-    "development": "开发版本"
-  },
-  "updatesSource": {
-    "label": "更新",
-    "github": "GitHub Releases",
-    "store": "由 Microsoft Store 管理",
-    "development": "开发版本中已禁用"
+  "advanced": {
+    "summary": "路径、扫描缓存、调试模式和日志"
   },
   "storeEdition": {
     "limits": "Microsoft Store 版：带有 Claude Desktop 元数据的会话只能查看和导出。由于 Windows 应用商店的打包机制会隔离部分 AppData 写入，这些会话无法归档、恢复或删除。仅有会话记录的会话仍可照常隐藏或删除。"

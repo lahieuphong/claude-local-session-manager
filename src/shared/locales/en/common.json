@@ -1,7 +1,7 @@
 {
   "app": {
     "tagline": "Unofficial · local only",
-    "disclaimer": "Unofficial local utility · Not affiliated with Anthropic"
+    "disclaimer": "Unofficial local utility · Not affiliated with Anthropic or OpenAI"
   },
   "nav": {
     "sidebar": "Main navigation",
@@ -21,6 +21,9 @@
     "sessions_other": "{{count}} sessions",
     "open_one": "{{count}} open",
     "open_other": "{{count}} open",
+    "open_codex_one": "{{count}} active just now",
+    "open_codex_other": "{{count}} active just now",
+    "apiKey": "API key",
     "role": {
       "original": "original",
       "shared": "shared store"

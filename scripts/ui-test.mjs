@@ -30,7 +30,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AUDIT_SCRIPT } from './ui-test-audit.mjs'
 import { LONG_TITLE_EN, UI_TEST_SECRET, UI_UUID_RE, writeUiTestProfile } from './ui-test-profile.mjs'
-import { CODEX_TEST_SECRET, CODEX_UUID_RE, writeCodexProfile } from './ui-test-codex.mjs'
+import { CODEX_TEST_EMAIL, CODEX_TEST_SECRET, CODEX_UUID_RE, writeCodexProfile } from './ui-test-codex.mjs'
 import { DatabaseSync } from 'node:sqlite'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -428,6 +428,14 @@ async function runVariant(channel) {
     await clickEl(SETTINGS_EL, 'the Settings item')
     await page.waitFor(`document.querySelector('.page.settings')`, 'the settings page')
   }
+  /** A refresh option in Settings: 1 manual, 2 watch, 3 interval. */
+  const refreshOption = (n) => `document.querySelector('.settings .segmented[data-name="refresh"] label:nth-child(${n})')`
+  /** Settings keeps paths, cache, debug mode and logs under Advanced, closed: open it with the mouse. */
+  const openAdvanced = async () => {
+    if (!(await page.evaluate(`document.querySelector('.settings-advanced').open`))) await clickEl(`document.querySelector('.settings-advanced > summary')`, 'the Advanced heading')
+    await page.waitFor(`document.querySelector('.settings-advanced[open]')`, 'the Advanced part open')
+    await settle()
+  }
   const goStorage = async () => {
     await clickEl(STORAGE_EL, 'the Storage item')
     await page.waitFor(`document.querySelector('.page.storage')`, 'the storage page')
@@ -648,6 +656,7 @@ async function runVariant(channel) {
       { name: 'codex-delete-dialog', enter: async () => { await reset(); await goTool('codex'); await selectRow(cxRoles.withAgents); await click('.inspector .actions .btn.danger'); await page.waitFor(`document.querySelector('.plan-session')`, 'the Codex delete plan') } },
       { name: 'codex-storage', enter: async () => { await reset(); await goTool('codex'); await goStorage() } },
       { name: 'codex-settings', enter: async () => { await reset(); await goTool('codex'); await goSettings() } },
+      { name: 'codex-settings-advanced', enter: async () => { await reset(); await goTool('codex'); await goSettings(); await openAdvanced() } },
       { name: 'sidebar-scrolled-to-end', enter: async () => { await reset(); await scrollToEnd('.nav') } },
       { name: 'sidebar-projects-collapsed', enter: async () => { await reset(); await click('.nav-label-button') } },
       { name: 'account-menu', enter: async () => { await reset(); await openAccounts() } },
@@ -677,7 +686,7 @@ async function runVariant(channel) {
         enter: async () => {
           await reset()
           await goSettings()
-          await clickEl(`document.querySelectorAll('.radio-list input')[2]`, 'the interval refresh option')
+          await clickEl(refreshOption(3), 'the interval refresh option')
           await page.waitFor(selectEl('refresh-interval'), 'the interval field')
           await openSelect('refresh-interval')
         }
@@ -693,17 +702,17 @@ async function runVariant(channel) {
         enter: async () => {
           await reset()
           await goSettings()
-          await clickEl(`document.querySelectorAll('.radio-list input')[2]`, 'the interval refresh option')
+          await clickEl(refreshOption(3), 'the interval refresh option')
           await page.waitFor(`document.querySelector('.inline-field .select')`, 'the interval field')
           await page.evaluate(`document.querySelectorAll('.settings details').forEach((d) => { d.open = true })`)
-          await clickEl(`[...document.querySelectorAll('.row-actions .btn')].at(-1)`, 'the Show logs button')
+          await clickEl(`document.querySelector('[data-action="show-logs"]')`, 'the Show logs button')
           await page.waitFor(`document.querySelector('.code-block.log')`, 'the log')
           await page.evaluate(`document.querySelector('.page').scrollTop = 1e9`)
         },
         leave: async () => {
           await reset()
           await goSettings()
-          await clickEl(`document.querySelectorAll('.radio-list input')[0]`, 'the manual refresh option')
+          await clickEl(refreshOption(1), 'the manual refresh option')
         }
       },
       {
@@ -955,7 +964,14 @@ async function runVariant(channel) {
     check('codex: the top strip tells about the Codex app and never blocks', /Codex/.test(cxStrip.text) && !cxStrip.warn, cxStrip.text)
     await openAccounts()
     const cxAccounts = await page.evaluate(`[...document.querySelectorAll('.account-item-name')].map((n) => n.textContent)`)
-    check('codex: one row per Codex sign-in, under a Codex heading', cxAccounts.join() === 'codex,account-2' && /Codex/.test(await text('.account-menu .menu-heading')), cxAccounts.join())
+    check('codex: one row per Codex sign-in, named like Claude accounts, under a Codex heading', cxAccounts.join() === 'codex.user,account-2' && /Codex/.test(await text('.account-menu .menu-heading')), cxAccounts.join())
+    const accountMeta = () => page.evaluate(`[...document.querySelectorAll('.account-item-meta')].map((m) => [...m.children].map((c) => c.className + '=' + c.textContent).join('|'))`)
+    const cxMeta = await accountMeta()
+    check(
+      'codex: each row has the email and plan, or "API key", and its sessions',
+      cxMeta[0]?.startsWith(`account-item-email=${CODEX_TEST_EMAIL}|account-item-plan=Pro|account-item-count=6 sessions`) && cxMeta[1] === 'account-item-plan=API key|account-item-count=2 sessions',
+      JSON.stringify(cxMeta)
+    )
     await press('Escape')
 
     await selectRow(cxRoles.named)
@@ -974,6 +990,10 @@ async function runVariant(channel) {
     }
     await page.evaluate(`window.sessionManager.refreshSessions('codex')`)
     await settle()
+    await openAccounts()
+    const cxOpen = await accountMeta()
+    check('codex: the account row counts the session Codex is working in', cxOpen[0]?.endsWith('|account-item-open=1 active just now') && !cxOpen[1]?.includes('account-item-open'), JSON.stringify(cxOpen))
+    await press('Escape')
     await selectRow(cxRoles.recent)
     check(
       'codex: a session Codex wrote to a moment ago cannot be archived or deleted, and says why',
@@ -1037,9 +1057,11 @@ async function runVariant(channel) {
     await goStorage()
     check('codex: the storage page counts Codex sessions', (await has('.stat-cells.four')) && (await count('.stat-cell')) === 4)
     await goSettings()
-    check('codex: Settings shows the Codex CLI the app runs', (await page.evaluate(`document.querySelector('.kv.roots').innerText`)).includes(process.execPath))
+    check('codex: Settings says the Codex CLI is ready', (await has('.settings-section .inline-status.ok-text')) && !(await page.evaluate(`document.querySelector('.settings-advanced').open`)))
+    await openAdvanced()
+    check('codex: Advanced shows the Codex CLI the app runs', (await page.evaluate(`document.querySelector('.kv.roots').innerText`)).includes(process.execPath))
     const cxLeak = JSON.stringify(await page.evaluate(`window.sessionManager.scanSessions('codex')`)) + (await page.evaluate('document.body.innerText')) + (await page.evaluate(`window.sessionManager.getLogs().then(JSON.stringify)`))
-    check('codex: the Codex sign-in file is never read', !cxLeak.includes(CODEX_TEST_SECRET))
+    check('codex: nothing but the email and plan is read from the Codex sign-in files', !cxLeak.includes(CODEX_TEST_SECRET))
     await goTool('claude')
     check('codex: back to Claude, its sessions again', (await toolOnScreen()) === 'claude' && (await count('.row')) > 0)
     await reset()
@@ -1383,6 +1405,9 @@ async function runVariant(channel) {
     await goSettings()
     const settings = () => page.evaluate('window.sessionManager.getSettings()')
     const switches = `document.querySelectorAll('.switch input')`
+    check('settings: paths, cache, debug and logs wait under Advanced, closed', (await count('.settings-advanced:not([open])')) === 1 && (await count('.settings-section .switch')) === 0)
+    check('settings: the data folder is shown in one place', (await count('.settings-section .data-folders li')) >= 1)
+    await openAdvanced()
     await clickEl(`${switches}[0].closest('.switch')`, 'the raw paths switch')
     await settle()
     check('settings: the raw paths switch is saved', (await settings()).showRawPaths === true)
@@ -1393,13 +1418,13 @@ async function runVariant(channel) {
     check('settings: the motion option applies', (await page.evaluate(`document.documentElement.dataset.motion`)) === 'reduced')
     await clickEl(`document.querySelector('.settings .segmented:not(:has([lang])) label:first-child')`, 'the system motion option')
     await settle()
-    await clickEl(`document.querySelectorAll('.radio-list input')[2]`, 'the interval option')
+    await clickEl(refreshOption(3), 'the interval option')
     await page.waitFor(`document.querySelector('.inline-field .select')`, 'the interval field')
     check('settings: the interval option shows its field and is saved', (await settings()).refreshMode === 'interval')
     await setSelect('refresh-interval', '300')
     await page.waitFor(`window.sessionManager.getSettings().then((s) => s.refreshIntervalSec === 300)`, 'the interval to be saved').catch(() => {})
     check('settings: the interval is chosen in the app\'s own dropdown and saved', (await settings()).refreshIntervalSec === 300)
-    // In the smallest window the field is low on a page that scrolls: the list must open whole, and go when the page moves it.
+    // In the smallest window, on a page that scrolls (Advanced is open): the list must open whole, and go when the page moves it.
     await setSize(allSizes[0])
     await page.evaluate(`document.querySelector('.page').scrollTop = 0; document.querySelector('.page').parentElement.scrollTop = 0`)
     await settle()
@@ -1407,19 +1432,19 @@ async function runVariant(channel) {
     await settle()
     const low = await page.evaluate(`(() => { const m = document.querySelector('.select-menu'); const r = m?.getBoundingClientRect(); return r ? { side: m.dataset.side, inside: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth } : null })()`)
     check('settings: in the smallest window the interval list opens whole, even after scrolling to it', !!low?.inside, JSON.stringify(low))
-    await page.evaluate(`(() => { let box = ${selectEl('refresh-interval')}.parentElement; while (box && !(box.scrollHeight > box.clientHeight && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement; box.scrollTop -= 40 })()`)
+    await page.evaluate(`(() => { let box = ${selectEl('refresh-interval')}.parentElement; while (box && !(box.scrollHeight > box.clientHeight && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement; box.scrollTop = box.scrollTop >= 40 ? box.scrollTop - 40 : box.scrollTop + 40 })()`)
     await settle()
     check('settings: scrolling the page closes the list', !(await has('.select-menu')))
     await setSize(allSizes[2])
-    await clickEl(`document.querySelectorAll('.radio-list input')[0]`, 'the manual option')
+    await clickEl(refreshOption(1), 'the manual option')
     await settle()
     check('settings: the manual option hides the field', !(await has('.inline-field .select')))
     await closeToasts()
-    await clickEl(`[...document.querySelectorAll('.setting-control .btn')][0]`, 'Clear cache')
+    await clickEl(`document.querySelector('[data-action="clear-cache"]')`, 'Clear cache')
     await page.waitFor(`document.querySelector('.toast')`, 'the cache confirmation')
     check('settings: clearing the cache confirms it', true)
     await closeToasts()
-    await clickEl(`[...document.querySelectorAll('.row-actions .btn')].at(-1)`, 'Show logs')
+    await clickEl(`document.querySelector('[data-action="show-logs"]')`, 'Show logs')
     await page.waitFor(`document.querySelector('.code-block.log')`, 'the log')
     check('settings: the log can be shown', (await text('.code-block.log')).length > 0)
     await clickEl(`${switches}[${(await count('.switch input')) - 1}].closest('.switch')`, 'the debug switch')
@@ -1428,6 +1453,7 @@ async function runVariant(channel) {
     await selectRow(roles.longEn)
     check('settings: debug mode adds a section to the details panel', (await count('details.collapsible')) === 2)
     await goSettings()
+    await openAdvanced()
     await clickEl(`${switches}[${(await count('.switch input')) - 1}].closest('.switch')`, 'the debug switch')
     await settle()
     check(isStore ? 'Store edition: the Deletion safety section is there' : 'no Deletion safety section without Safe Mode', (await has('.settings-section.safety')) === isStore)

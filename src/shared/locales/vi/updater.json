@@ -1,9 +1,7 @@
 {
   "loading": "Đang đọc trạng thái cập nhật…",
   "version": "Phiên bản {{version}}",
-  "current": "Phiên bản hiện tại",
-  "latest": "Phiên bản mới nhất",
-  "lastChecked": "Kiểm tra lần cuối",
+  "checkedAt": "kiểm tra lúc {{time}}",
   "status": {
     "idle": "Chưa kiểm tra",
     "checking": "Đang kiểm tra cập nhật…",
@@ -31,8 +29,7 @@
     "openStore": "Mở Microsoft Store",
     "viewInStore": "Xem trên Microsoft Store"
   },
-  "storeNote": "Bản này được cài từ Microsoft Store. Store sẽ tự tải và cài phiên bản mới; ứng dụng không bao giờ chạy bộ cài từ GitHub.",
-  "portableNote": "Bản Portable không bao giờ được tự động thay thế. Hãy tải bản Setup (khuyên dùng) hoặc bản Portable mới từ GitHub Releases.",
+  "portableNote": "Bản Portable không tự cập nhật. Hãy tải bản mới từ GitHub Releases.",
   "confirm": {
     "title": "Cài đặt bản cập nhật?",
     "text": "{{appName}} sẽ đóng và khởi động lại để cài phiên bản {{version}}."

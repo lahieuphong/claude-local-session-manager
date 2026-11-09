@@ -135,6 +135,10 @@ function AccountDropdown({ accounts }: { accounts: ClaudeAccount[] }): ReactElem
 
 function AccountRow({ account: a, on, count, onPick }: { account: ClaudeAccount; on: boolean; count?: { all: number; open: number }; onPick: () => void }): ReactElement {
   const { t } = useTranslation()
+  // Codex keeps no list of open sessions: its count is of sessions Codex wrote to in the last minutes.
+  const context = useAppState(toolContext)
+  // A Codex folder signed in with an API key has no plan; it says so instead.
+  const plan = a.plan ?? (a.apiKey ? t('common:account.apiKey') : undefined)
   return (
     <button
       role="menuitemradio"
@@ -156,9 +160,9 @@ function AccountRow({ account: a, on, count, onPick }: { account: ClaudeAccount;
         </span>
         <span className="account-item-meta">
           {a.email && <span className="account-item-email">{a.email}</span>}
-          {a.plan && <span className="account-item-plan">{a.plan}</span>}
+          {plan && <span className="account-item-plan">{plan}</span>}
           <span className="account-item-count">{t('common:account.sessions', { count: count?.all ?? 0 })}</span>
-          {!!count?.open && <span className="account-item-open">{t('common:account.open', { count: count.open })}</span>}
+          {!!count?.open && <span className="account-item-open">{t('common:account.open', { count: count.open, context })}</span>}
         </span>
       </span>
       {on && <IconCheck size={16} className="account-item-check" />}

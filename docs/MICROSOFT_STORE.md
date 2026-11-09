@@ -107,9 +107,9 @@ tests: `tests/storeEdition.test.ts`):
 - Neither channel ever deletes or migrates `~\.claude`, Claude transcripts,
   Claude Desktop metadata or your source projects on install, update or
   uninstall.
-- Settings → About → Diagnostics shows the distribution, user home, Claude
-  transcript root, Claude metadata roots and the app data folder for
-  troubleshooting. These paths are only displayed locally.
+- Settings → Advanced shows every Claude folder the app found (transcripts,
+  Claude Desktop metadata), the app data folder, the cache and the log file
+  for troubleshooting. These paths are only displayed locally.
 
 ---
 
@@ -256,8 +256,8 @@ new Store package.
    # …test, then remove it:
    Get-AppxPackage *ClaudeLocalSessionManager* | Remove-AppxPackage
    ```
-   Then check: the window, sidebar and Settings → About say *LHP Local Session
-   Manager*; *Distribution: Microsoft Store*; the session list loads; the
+   Then check: the window, sidebar and the foot of Settings say *LHP Local
+   Session Manager*; Settings → Updates says *Microsoft Store*; the session list loads; the
    status strip shows SAFE MODE; a session with Claude Desktop metadata has no
    Archive button and a disabled Delete button with the Store-edition note. Do
    not test deletion on real sessions.
@@ -343,7 +343,7 @@ Remaining risks:
 | Upload error about package identity / publisher | The values must match Product identity character for character (including spaces in `CN=…`). |
 | Upload error about version | The version must be higher than the previous Store version and end with `.0`. Bump `package.json`. |
 | `Cannot create symbolic link … darwin … libcrypto.dylib` while building | Harmless: electron-builder's tool archive contains macOS links that Windows cannot create without Developer Mode; the Windows tools are extracted. |
-| The installed Store app offers a GitHub update | It should not. Check Settings → About → Distribution. If it says GitHub, the wrong package was installed. |
+| The installed Store app offers a GitHub update | It should not. Check Settings → Updates: it must say *Microsoft Store*. If it says Setup or Portable, the wrong package was installed. |
 | Archive / Restore / Delete are unavailable for a session in the Store app | Expected for sessions with Claude Desktop metadata (§1). |
 | Privacy policy URL returns 404 | GitHub Pages is not enabled or still building (§2.1). |
-| Need the app data folder | Settings → About → Diagnostics. |
+| Need the app data folder | Settings → Advanced. |

@@ -1,5 +1,7 @@
 export const CODEX_UUID_RE: RegExp
 export const CODEX_TEST_SECRET: string
+export const CODEX_TEST_EMAIL: string
+export function codexAuth(account?: { email?: string; plan?: string }): Record<string, unknown>
 export function codexUuid(n: number): string
 export interface CodexThreadSpec {
   id: string
@@ -19,7 +21,7 @@ export interface CodexThreadSpec {
   items?: Array<[string, string]>
   turnInProgressAt?: number
 }
-export function createCodexHome(dir: string, threads: CodexThreadSpec[]): string
+export function createCodexHome(dir: string, threads: CodexThreadSpec[], auth?: Record<string, unknown>): string
 export interface CodexRoles {
   named: string
   aiTitle: string

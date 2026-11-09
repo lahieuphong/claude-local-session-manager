@@ -1,6 +1,6 @@
 # Privacy policy — LHP Local Session Manager
 
-_Last updated: 8 November 2026_
+_Last updated: 9 November 2026_
 
 LHP Local Session Manager is an **unofficial, independent** desktop utility for
 Windows. It lets you browse, search, export and clean up the session history
@@ -39,15 +39,23 @@ behave differently, this page says so.
   its session files (`sessions` and `archived_sessions`) and `session_index.jsonl`.
   The app opens the databases read-only. They contain session titles, your
   prompts, Codex's replies, commands it ran, file paths, project names and git
-  details. The app never opens `auth.json`, the file with your Codex sign-in.
+  details.
 - **Running processes** named `claude`, `node`, `bun`, `codex` or `ChatGPT`
   (the Codex app): name, executable path, command line and start time. This is
   a local, read-only Windows query.
 - **The name and plan of each Claude sign-in**, if you have more than one on this
   PC: the email address, display name and plan name (such as "Max 20x") from each
   account's `.claude.json` file. The app reads that file, keeps only these three
-  values and uses them only to label the account switcher on your screen. It never
+  values and uses them only to tell the accounts apart on your screen. It never
   opens `.credentials.json`, the file with your sign-in tokens.
+- **The email and plan of each Codex sign-in**, if you have more than one Codex
+  folder on this PC: from each folder's `auth.json`, the file with your Codex
+  sign-in, the app reads the email address and the plan name (such as "Pro")
+  recorded in the sign-in's ID token, or only that the folder uses an API key.
+  It keeps nothing else from that file: your tokens and API key are never
+  stored, logged, shown or sent anywhere, and the file is never changed. These
+  values are only used to tell the accounts apart on your screen. With a single
+  Codex folder the file is not opened.
 - **The paths of your project folders**, as recorded in the session files. The
   app does not read the files inside your projects.
 

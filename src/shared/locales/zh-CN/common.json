@@ -1,7 +1,7 @@
 {
   "app": {
     "tagline": "非官方 · 仅限本地",
-    "disclaimer": "非官方本地工具 · 与 Anthropic 无关"
+    "disclaimer": "非官方本地工具 · 与 Anthropic 和 OpenAI 无关"
   },
   "nav": {
     "sidebar": "主导航",
@@ -18,6 +18,8 @@
     "current": "正在查看的账户：{{name}}",
     "sessions_other": "{{count}} 个会话",
     "open_other": "{{count}} 个已打开",
+    "open_codex_other": "{{count}} 个刚刚活动",
+    "apiKey": "API 密钥",
     "role": {
       "original": "原始",
       "shared": "共享"

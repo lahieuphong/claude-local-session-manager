@@ -54,7 +54,7 @@ The interface is available in **English**, **Tiếng Việt** and **简体中文
 - **Settings → General → Language** switches immediately, without a restart.
   The choice is saved in `%APPDATA%\Claude Local Session Manager\settings.json`
   and kept across restarts and updates. "Use system language" clears it.
-- **Settings → Appearance → Motion**: "Follow system" respects the Windows
+- **Settings → General → Motion**: "Follow system" respects the Windows
   animation setting (`prefers-reduced-motion`); "Reduce motion" turns
   transitions off in the app.
 - Never translated: file paths, session/plan IDs, model IDs, branch names,
@@ -94,8 +94,8 @@ with its own updates; they share one version number.
 | **GitHub Setup** — `…-Setup-X.Y.Z-x64.exe` | From GitHub Releases, inside the app (Settings → Updates) |
 | **Portable** (advanced) — `…-Portable-X.Y.Z-x64.exe` | Manual: download the new release |
 
-Settings → About shows which channel a copy came from (*Distribution: GitHub /
-Microsoft Store / Development*). The Store version never uses the GitHub
+Settings → Updates shows which kind of copy it is (*Setup / Portable /
+Microsoft Store / Development build*). The Store version never uses the GitHub
 updater. Store packaging and submission are described in
 [docs/MICROSOFT_STORE.md](docs/MICROSOFT_STORE.md). The Store product exists
 in Partner Center; the listing goes live only after Microsoft certifies a submission.
@@ -160,7 +160,7 @@ Older test builds were sometimes pinned straight from `dist\`, which breaks
 ## Updating
 
 - **Setup:** the app checks GitHub Releases in the background a few seconds
-  after start (never delaying startup), and on **Settings → About → Check for
+  after start (never delaying startup), and on **Settings → Updates → Check for
   updates**. States: *Checking for updates… · You're up to date · Update
   available: X.Y.Z · Downloading update… · Update ready to install · Update
   failed*. Downloading and installing only happen when you click
@@ -345,7 +345,9 @@ the top of the sidebar goes back to it.
 
 Codex keeps its sessions in its own folder, `%USERPROFILE%\.codex` (or `CODEX_HOME`).
 Each `%USERPROFILE%\.codex-<name>` folder that holds a Codex database is listed as
-another Codex account. In each folder the app reads:
+another Codex account. With two or more, the dropdown at the top right names each
+like a Claude account: its email, its ChatGPT plan ("Pro") or *API key*, its
+sessions and those Codex wrote to in the last two minutes. In each folder the app reads:
 
 | What | Where |
 |---|---|
@@ -358,7 +360,9 @@ another Codex account. In each folder the app reads:
 The databases are opened read-only, with every column looked up first (Codex's
 schema changes between versions). Only the sessions the user started are listed:
 sub-agents and Codex's automatic reviews are counted with the session that
-started them. `auth.json`, the Codex sign-in, is never opened.
+started them. `auth.json`, the Codex sign-in, is opened only with two or more
+Codex folders, and only the email and plan in its ID token are kept (or that it
+holds an API key); the tokens and the key never leave the function that reads it.
 
 **Changes are made by Codex itself.** Archive, Restore and Delete run the Codex
 CLI found on this PC (`npm i -g @openai/codex`, else the one the Codex extension
@@ -637,7 +641,7 @@ GitHub Pages is enabled for `main` / `docs`.
   again also brings back a window that was hidden.
 - **A session shows "In use"**: it is open in VS Code / a terminal running
   Claude Code. Close that session (or the IDE window) first.
-- Logs: `%APPDATA%\Claude Local Session Manager\logs\main.log` (Settings → Show log).
+- Logs: `%APPDATA%\Claude Local Session Manager\logs\main.log` (Settings → Advanced → Show log).
 
 ## Known limitations
 

@@ -224,8 +224,10 @@ export interface ClaudeAccount {
   label: string
   email?: string
   displayName?: string
-  /** The plan, named as Claude Code's own account picker names it ("Max 20x"). */
+  /** The plan, named as Claude Code's own account picker names it ("Max 20x"); for Codex, as ChatGPT names it ("Pro"). */
   plan?: string
+  /** Codex only: signed in with an OpenAI API key, so there is no account email or plan. */
+  apiKey?: true
   /** Set when accounts share one session store: `original` holds it, `shared` reaches it through a link. */
   storeRole?: 'original' | 'shared'
   /** The account's Claude config folder. */

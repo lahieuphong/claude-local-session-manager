@@ -2,42 +2,48 @@
   "title": "Cài đặt",
   "section": {
     "general": "Chung",
-    "appearance": "Giao diện",
-    "discovery": "Tìm phiên",
+    "data": "Dữ liệu Claude",
+    "data_codex": "Dữ liệu Codex",
     "deletionSafety": "An toàn khi xóa",
     "updates": "Cập nhật",
-    "about": "Giới thiệu"
+    "advanced": "Nâng cao"
   },
   "language": {
     "label": "Ngôn ngữ",
-    "hint": "Lần đầu mở sẽ theo ngôn ngữ Windows ({{language}}). Lựa chọn của bạn được lưu và áp dụng ngay.",
     "useSystem": "Dùng ngôn ngữ hệ thống"
   },
   "motion": {
     "label": "Chuyển động",
-    "hint": "“Giảm chuyển động” tắt hiệu ứng chuyển cảnh trong ứng dụng. “Theo hệ thống” tuân theo cài đặt hiệu ứng của Windows.",
     "system": "Theo hệ thống",
     "reduced": "Giảm chuyển động"
   },
   "rawPaths": {
     "label": "Hiện đường dẫn đầy đủ",
-    "hint": "Hiện đường dẫn tuyệt đối thay vì dạng rút gọn ~ và %LOCALAPPDATA%. Hộp thoại xóa luôn hiện đường dẫn đầy đủ."
+    "hint": "Hiện đường dẫn đầy đủ thay cho dạng rút gọn ~ và %LOCALAPPDATA%. Hộp thoại xóa luôn hiện đường dẫn đầy đủ."
   },
   "refresh": {
     "label": "Làm mới",
-    "manual": "Chỉ thủ công",
+    "manual": "Thủ công",
     "manualHint": "Quét khi mở ứng dụng và khi bạn bấm Làm mới (F5).",
     "watch": "Theo dõi tệp",
-    "watchHint": "Quét lại ngay sau khi Claude hoặc Codex ghi vào thư mục lưu (có giãn cách, ít bộ theo dõi).",
+    "watchHint": "Quét lại ngay khi Claude hoặc Codex ghi dữ liệu mới.",
     "interval": "Định kỳ",
     "intervalHint": "Quét lại theo chu kỳ cố định.",
     "seconds_other": "{{count}} giây",
-    "minutes_other": "{{count}} phút"
+    "minutes_other": "{{count}} phút",
+    "every": "Mỗi"
+  },
+  "data": {
+    "folder": "Thư mục",
+    "hint": "Tự dò mỗi lần quét. Ứng dụng chỉ thay đổi tệp của phiên bạn thao tác.",
+    "hint_codex": "Tự dò mỗi lần quét. Ứng dụng chỉ đọc; việc lưu trữ và xóa do Codex CLI làm.",
+    "cli": "Codex CLI",
+    "cliHint": "Dùng để lưu trữ, khôi phục và xóa.",
+    "cliReady": "Sẵn sàng"
   },
   "roots": {
     "accounts": "Tài khoản Claude",
-    "label": "Thư mục dữ liệu",
-    "hint": "Được dò từ USERPROFILE, APPDATA và LOCALAPPDATA mỗi lần quét và không chỉnh sửa được: ứng dụng chỉ thay đổi tệp bên trong các thư mục này, và chỉ những đường dẫn đã được gán cho một phiên.",
+    "label": "Tất cả thư mục",
     "claudeHome": "Thư mục Claude Code",
     "transcripts": "Thư mục bản ghi hội thoại",
     "fileHistory": "Lịch sử tệp",
@@ -59,36 +65,25 @@
   },
   "cache": {
     "label": "Bộ nhớ đệm quét",
-    "hint": "Giúp quét lại nhanh hơn. Xóa bộ nhớ đệm không bao giờ đụng tới tệp của Claude.",
+    "hint": "Giúp quét lại nhanh hơn. Xóa bộ nhớ đệm không bao giờ đụng tới dữ liệu của Claude hay Codex.",
     "clear": "Xóa bộ nhớ đệm quét"
   },
   "debug": {
-    "label": "Chế độ nhà phát triển / gỡ lỗi",
-    "hint": "Ghi nhật ký chi tiết, hiện JSON phiên đã chuẩn hóa trong khung chi tiết và DevTools (F12)."
+    "label": "Chế độ gỡ lỗi",
+    "hint": "Ghi nhật ký chi tiết, hiện JSON của phiên trong khung chi tiết và mở được DevTools (F12)."
   },
   "logs": {
-    "label": "Chẩn đoán",
+    "label": "Thư mục ứng dụng và nhật ký",
+    "hint": "Để xử lý sự cố. Chỉ hiện ở đây, không gửi đi đâu.",
+    "userData": "Dữ liệu ứng dụng (userData)",
     "cache": "Bộ nhớ đệm",
     "logFile": "Tệp nhật ký",
+    "runtime": "Môi trường chạy",
     "show": "Xem nhật ký",
-    "empty": "(trống)",
-    "hint": "Đường dẫn trên máy để xử lý sự cố. Chỉ hiển thị ở đây, không gửi đi đâu.",
-    "userHome": "Thư mục người dùng",
-    "transcriptRoot": "Thư mục bản ghi hội thoại Claude",
-    "metadataRoots": "Thư mục siêu dữ liệu Claude",
-    "userData": "Dữ liệu ứng dụng (userData)"
+    "empty": "(trống)"
   },
-  "distribution": {
-    "label": "Kênh phân phối",
-    "github": "GitHub",
-    "store": "Microsoft Store",
-    "development": "Bản phát triển"
-  },
-  "updatesSource": {
-    "label": "Cập nhật",
-    "github": "GitHub Releases",
-    "store": "Do Microsoft Store quản lý",
-    "development": "Tắt ở bản phát triển"
+  "advanced": {
+    "summary": "Đường dẫn, bộ nhớ đệm, gỡ lỗi và nhật ký"
   },
   "storeEdition": {
     "limits": "Bản Microsoft Store: các phiên có siêu dữ liệu Claude Desktop chỉ xem và xuất được. Không thể Lưu trữ, Khôi phục hay Xóa các phiên này vì cơ chế đóng gói của Windows Store cô lập một số thao tác ghi vào AppData. Phiên chỉ có bản ghi hội thoại vẫn ẩn hoặc xóa được như bình thường."

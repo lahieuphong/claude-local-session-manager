@@ -1,7 +1,7 @@
 {
   "app": {
     "tagline": "Không chính thức · chỉ cục bộ",
-    "disclaimer": "Tiện ích cục bộ không chính thức · Không liên kết với Anthropic"
+    "disclaimer": "Tiện ích cục bộ không chính thức · Không liên kết với Anthropic hay OpenAI"
   },
   "nav": {
     "sidebar": "Điều hướng chính",
@@ -18,6 +18,8 @@
     "current": "Tài khoản đang xem: {{name}}",
     "sessions_other": "{{count}} phiên",
     "open_other": "{{count}} đang mở",
+    "open_codex_other": "{{count}} vừa hoạt động",
+    "apiKey": "Khóa API",
     "role": {
       "original": "gốc",
       "shared": "dùng chung"

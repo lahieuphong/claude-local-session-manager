@@ -1,6 +1,6 @@
 import { useId, useState, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LOCALE_LABELS, SUPPORTED_LOCALES, resolveLocale } from '../../../shared/locale'
+import { LOCALE_LABELS, SUPPORTED_LOCALES } from '../../../shared/locale'
 import type { LogEntry, MotionPreference, RefreshMode, StorageRoots } from '../../../shared/types'
 import { IconCheck, IconChevron, IconX } from '../components/Icons'
 import { DeletionSafetySection } from '../components/SafetyMode'
@@ -8,6 +8,7 @@ import { Select } from '../components/Select'
 import { AboutSection, UpdatesSection } from '../components/Updates'
 import { useFmt } from '../i18n'
 import { clearCache, errText, hasSafeMode, setLanguage, setMotion, toast, toolContext, updateSettings, useAppState } from '../stores/appStore'
+import { displayPath } from '../utils/paths'
 
 const api = (): Window['sessionManager'] => window.sessionManager
 
@@ -15,30 +16,23 @@ const REFRESH_MODES: RefreshMode[] = ['manual', 'watch', 'interval']
 const INTERVALS = [15, 30, 60, 120, 300, 600]
 const MOTIONS: MotionPreference[] = ['system', 'reduced']
 
+/**
+ * Settings: what people change (language, motion, refresh), where the
+ * sessions come from, deletion safety and updates. Paths, cache, debug mode
+ * and logs are for troubleshooting and wait, closed, under "Advanced".
+ */
 export function SettingsPage(): ReactElement {
   const { t, i18n } = useTranslation()
-  const fmt = useFmt()
   const settings = useAppState((s) => s.settings)
-  const snapshot = useAppState((s) => s.snapshot)
-  const appInfo = useAppState((s) => s.appInfo)
-  const busy = useAppState((s) => s.busy)
+  const roots = useAppState((s) => s.snapshot?.roots)
   const safeMode = useAppState((s) => hasSafeMode(s.safety))
-  const [logs, setLogs] = useState<LogEntry[] | null>(null)
-  const roots = snapshot?.roots
-  const codex = useAppState((st) => st.provider) === 'codex'
+  const codex = useAppState((s) => s.provider) === 'codex'
   const context = useAppState(toolContext)
+  const storeEdition = useAppState((s) => s.appInfo?.desktopDataReadOnly ?? false)
   const langName = useId()
   const motionName = useId()
   const refreshName = useId()
-  const systemLocale = resolveLocale(null, appInfo?.systemLanguages ?? navigator.languages ?? [])
-
-  const loadLogs = async (): Promise<void> => {
-    try {
-      setLogs(await api().getLogs())
-    } catch (err) {
-      toast('error', { text: errText(err) })
-    }
-  }
+  const refreshMode = settings?.refreshMode ?? 'manual'
 
   return (
     <div className="page settings">
@@ -47,55 +41,38 @@ export function SettingsPage(): ReactElement {
       </header>
 
       <SettingsSection title={t('settings:section.general')}>
-        <SettingRow label={t('settings:language.label')} hint={t('settings:language.hint', { language: LOCALE_LABELS[systemLocale].native })} id={langName}>
-          <div className="segmented" role="radiogroup" aria-labelledby={langName}>
-            {SUPPORTED_LOCALES.map((l) => (
-              <label key={l} className={`segment ${i18n.language === l ? 'on' : ''}`} lang={l}>
-                <input type="radio" name={langName} checked={i18n.language === l} onChange={() => void setLanguage(l)} />
-                {LOCALE_LABELS[l].native}
-              </label>
-            ))}
-          </div>
+        <SettingRow label={t('settings:language.label')} id={langName}>
+          <Segmented
+            name={langName}
+            value={i18n.language}
+            options={SUPPORTED_LOCALES.map((l) => ({ value: l, label: LOCALE_LABELS[l].native, lang: l }))}
+            onChange={(l) => void setLanguage(l)}
+          />
           {settings?.language && (
             <button className="link-btn" onClick={() => void setLanguage(null)}>
               {t('settings:language.useSystem')}
             </button>
           )}
         </SettingRow>
-      </SettingsSection>
-
-      <SettingsSection title={t('settings:section.appearance')}>
-        <SettingRow label={t('settings:motion.label')} hint={t('settings:motion.hint')} id={motionName}>
-          <div className="segmented" role="radiogroup" aria-labelledby={motionName}>
-            {MOTIONS.map((m) => (
-              <label key={m} className={`segment ${(settings?.motion ?? 'system') === m ? 'on' : ''}`}>
-                <input type="radio" name={motionName} checked={(settings?.motion ?? 'system') === m} onChange={() => void setMotion(m)} />
-                {t(`settings:motion.${m}`)}
-              </label>
-            ))}
-          </div>
+        <SettingRow label={t('settings:motion.label')} id={motionName}>
+          <Segmented
+            name={motionName}
+            value={settings?.motion ?? 'system'}
+            options={MOTIONS.map((m) => ({ value: m, label: t(`settings:motion.${m}`) }))}
+            onChange={(m) => void setMotion(m)}
+          />
         </SettingRow>
-        <SettingRow label={t('settings:rawPaths.label')} hint={t('settings:rawPaths.hint')}>
-          <Switch checked={settings?.showRawPaths ?? false} onChange={(v) => void updateSettings({ showRawPaths: v })} label={t('settings:rawPaths.label')} />
-        </SettingRow>
-      </SettingsSection>
-
-      <SettingsSection title={t('settings:section.discovery')}>
-        <SettingRow label={t('settings:refresh.label')} id={refreshName} stacked>
-          <div className="radio-list" role="radiogroup" aria-labelledby={refreshName}>
-            {REFRESH_MODES.map((mode) => (
-              <label key={mode} className="radio">
-                <input type="radio" name={refreshName} checked={settings?.refreshMode === mode} onChange={() => void updateSettings({ refreshMode: mode })} />
-                <span>
-                  <span className="radio-title">{t(`settings:refresh.${mode}`)}</span>
-                  <span className="radio-hint">{t(`settings:refresh.${mode}Hint`)}</span>
-                </span>
-              </label>
-            ))}
-          </div>
+        <SettingRow label={t('settings:refresh.label')} hint={t(`settings:refresh.${refreshMode}Hint`)} id={refreshName}>
+          <Segmented
+            name={refreshName}
+            dataName="refresh"
+            value={refreshMode}
+            options={REFRESH_MODES.map((m) => ({ value: m, label: t(`settings:refresh.${m}`) }))}
+            onChange={(m) => void updateSettings({ refreshMode: m })}
+          />
           {settings?.refreshMode === 'interval' && (
             <div className="inline-field">
-              <span aria-hidden="true">{t('settings:refresh.interval')}</span>
+              <span aria-hidden="true">{t('settings:refresh.every')}</span>
               <Select
                 name="refresh-interval"
                 label={t('settings:refresh.interval')}
@@ -106,8 +83,83 @@ export function SettingsPage(): ReactElement {
             </div>
           )}
         </SettingRow>
+      </SettingsSection>
 
-        <SettingRow label={t('settings:roots.label')} hint={t('settings:roots.hint')} stacked>
+      <SettingsSection title={t('settings:section.data', { context })}>
+        <SettingRow label={t('settings:data.folder')} hint={t('settings:data.hint', { context })}>
+          <DataFolders roots={roots} codex={codex} raw={settings?.showRawPaths ?? false} />
+        </SettingRow>
+        {!codex && storeEdition && <p className="setting-note">{t('settings:storeEdition.limits')}</p>}
+        {codex && (
+          <SettingRow label={t('settings:data.cli')} hint={t('settings:data.cliHint')}>
+            {!roots ? null : roots.codexCli ? (
+              <span className="inline-status ok-text">
+                <IconCheck size={14} />
+                {t('settings:data.cliReady')}
+              </span>
+            ) : (
+              <span className="warn-text">{t('settings:roots.codexCliMissing')}</span>
+            )}
+          </SettingRow>
+        )}
+      </SettingsSection>
+
+      {safeMode && (
+        <SettingsSection title={t('settings:section.deletionSafety')} tone="safety">
+          <DeletionSafetySection />
+        </SettingsSection>
+      )}
+
+      <SettingsSection title={t('settings:section.updates')}>
+        <UpdatesSection />
+      </SettingsSection>
+
+      <AdvancedSection roots={roots} codex={codex} />
+
+      <AboutSection />
+    </div>
+  )
+}
+
+/** Paths, cache, debug mode and logs: closed until opened. */
+function AdvancedSection({ roots, codex }: { roots: StorageRoots | undefined; codex: boolean }): ReactElement {
+  const { t } = useTranslation()
+  const fmt = useFmt()
+  const settings = useAppState((s) => s.settings)
+  const appInfo = useAppState((s) => s.appInfo)
+  const busy = useAppState((s) => s.busy)
+  const context = useAppState(toolContext)
+  const [logs, setLogs] = useState<LogEntry[] | null>(null)
+
+  const loadLogs = async (): Promise<void> => {
+    try {
+      setLogs(await api().getLogs())
+    } catch (err) {
+      toast('error', { text: errText(err) })
+    }
+  }
+
+  return (
+    <details className="settings-advanced">
+      <summary>
+        <IconChevron size={12} className="chev" />
+        <span className="section-label">{t('settings:section.advanced')}</span>
+        <span className="advanced-sub">{t('settings:advanced.summary')}</span>
+      </summary>
+      <div className="settings-card">
+        <SettingRow label={t('settings:rawPaths.label')} hint={t('settings:rawPaths.hint')}>
+          <Switch checked={settings?.showRawPaths ?? false} onChange={(v) => void updateSettings({ showRawPaths: v })} label={t('settings:rawPaths.label')} />
+        </SettingRow>
+        <SettingRow label={t('settings:cache.label')} hint={t('settings:cache.hint')}>
+          <button className="btn" data-action="clear-cache" onClick={() => void clearCache()} disabled={busy}>
+            {t('settings:cache.clear')}
+          </button>
+        </SettingRow>
+        <SettingRow label={t('settings:debug.label')} hint={t('settings:debug.hint')}>
+          <Switch checked={settings?.debugMode ?? false} onChange={(v) => void updateSettings({ debugMode: v })} label={t('settings:debug.label')} />
+        </SettingRow>
+
+        <SettingRow label={t('settings:roots.label')} stacked>
           {roots ? (
             <dl className="kv roots">
               {roots.accounts.length > 1 && (
@@ -156,51 +208,9 @@ export function SettingsPage(): ReactElement {
           )}
         </SettingRow>
 
-        <SettingRow label={t('settings:cache.label')} hint={t('settings:cache.hint')}>
-          <button className="btn" onClick={() => void clearCache()} disabled={busy}>
-            {t('settings:cache.clear')}
-          </button>
-        </SettingRow>
-      </SettingsSection>
-
-      {safeMode && (
-        <SettingsSection title={t('settings:section.deletionSafety')} tone="safety">
-          <DeletionSafetySection />
-        </SettingsSection>
-      )}
-
-      <SettingsSection title={t('settings:section.updates')}>
-        <UpdatesSection />
-      </SettingsSection>
-
-      <SettingsSection title={t('settings:section.about')}>
-        <AboutSection />
-        <SettingRow label={t('settings:debug.label')} hint={t('settings:debug.hint')}>
-          <Switch checked={settings?.debugMode ?? false} onChange={(v) => void updateSettings({ debugMode: v })} label={t('settings:debug.label')} />
-        </SettingRow>
         <SettingRow label={t('settings:logs.label')} hint={t('settings:logs.hint')} stacked>
           {appInfo && (
             <dl className="kv compact">
-              <dt>{t('settings:distribution.label')}</dt>
-              <dd>{t(`settings:distribution.${appInfo.distribution}`)}</dd>
-              <dt>{t('settings:logs.userHome')}</dt>
-              <dd>
-                <code className="wrap">{appInfo.userHome}</code>
-              </dd>
-              <dt>{t('settings:logs.transcriptRoot')}</dt>
-              <dd>{roots?.projectsRoot ? <code className="wrap">{roots.projectsRoot}</code> : <span className="muted">{t('settings:roots.notFound')}</span>}</dd>
-              <dt>{t('settings:logs.metadataRoots')}</dt>
-              <dd>
-                {roots && roots.desktopRoots.length > 0 ? (
-                  roots.desktopRoots.map((d) => (
-                    <div key={d.path}>
-                      <code className="wrap">{d.path}</code>
-                    </div>
-                  ))
-                ) : (
-                  <span className="muted">{t('settings:roots.notFound')}</span>
-                )}
-              </dd>
               <dt>{t('settings:logs.userData')}</dt>
               <dd>
                 <code className="wrap">{appInfo.userDataPath}</code>
@@ -213,10 +223,16 @@ export function SettingsPage(): ReactElement {
               <dd>
                 <code className="wrap">{appInfo.logPath}</code>
               </dd>
+              <dt>{t('settings:logs.runtime')}</dt>
+              <dd>
+                <code>
+                  Electron {appInfo.electronVersion} · {appInfo.platform}
+                </code>
+              </dd>
             </dl>
           )}
           <div className="row-actions">
-            <button className="btn" onClick={() => void loadLogs()}>
+            <button className="btn" data-action="show-logs" onClick={() => void loadLogs()}>
               {t('settings:logs.show')}
             </button>
           </div>
@@ -229,8 +245,31 @@ export function SettingsPage(): ReactElement {
             </pre>
           )}
         </SettingRow>
-      </SettingsSection>
-    </div>
+      </div>
+    </details>
+  )
+}
+
+/** The folder each account keeps its sessions in, one line each. */
+function DataFolders({ roots, codex, raw }: { roots: StorageRoots | undefined; codex: boolean; raw: boolean }): ReactElement {
+  const { t } = useTranslation()
+  if (!roots) return <span className="muted">{t('settings:roots.pending')}</span>
+  const many = roots.accounts.length > 1
+  const folders = many ? roots.accounts : roots.claudeHome ? [{ id: 'main', path: roots.claudeHome, label: '', email: undefined }] : []
+  // Claude's folder may exist without a single conversation in it.
+  const found = folders.length > 0 && (codex || !!roots.projectsRoot)
+  return (
+    <ul className="data-folders">
+      {folders.map((a) => (
+        <li key={a.id}>
+          {many && <span className="data-folder-account muted">{a.email ?? a.label}</span>}
+          <code className="wrap" title={a.path}>
+            {displayPath(a.path, raw)}
+          </code>
+        </li>
+      ))}
+      {!found && <li className="warn-text">{t('settings:roots.notFound')}</li>}
+    </ul>
   )
 }
 
@@ -260,6 +299,32 @@ function SettingRow({ label, hint, id, stacked, children }: { label: string; hin
   )
 }
 
+/** A row of options, one chosen; `name` is also the ID of the label that names the group. */
+function Segmented<T extends string>({
+  name,
+  value,
+  options,
+  onChange,
+  dataName
+}: {
+  name: string
+  value: string
+  options: { value: T; label: string; lang?: string }[]
+  onChange(v: T): void
+  dataName?: string
+}): ReactElement {
+  return (
+    <div className="segmented" role="radiogroup" aria-labelledby={name} data-name={dataName}>
+      {options.map((o) => (
+        <label key={o.value} className={`segment ${value === o.value ? 'on' : ''}`} lang={o.lang}>
+          <input type="radio" name={name} checked={value === o.value} onChange={() => onChange(o.value)} />
+          {o.label}
+        </label>
+      ))}
+    </div>
+  )
+}
+
 function Switch({ checked, onChange, label }: { checked: boolean; onChange(v: boolean): void; label: string }): ReactElement {
   return (
     <label className="switch">
@@ -271,7 +336,7 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange(v: bo
   )
 }
 
-/** Where Claude keeps its sessions (the Codex view shows its own folders and CLI instead). */
+/** Where Claude keeps its sessions (the Codex view shows its own folder and CLI instead). */
 function ClaudeRoots({ roots }: { roots: StorageRoots }): ReactElement {
   const { t } = useTranslation()
   const fmt = useFmt()

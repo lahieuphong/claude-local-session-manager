@@ -27,15 +27,53 @@ export function UpdatesSection(): ReactElement {
   const detail =
     u.message && !['checking', 'up-to-date', 'available', 'downloading', 'downloaded', 'store-managed'].includes(u.status) ? fmt.msg(u.msg, u.message) : null
   const noRelease = u.status === 'up-to-date' && u.msg?.key === 'update.noRelease'
+  // One line under the status: this version, how it was installed, when it last looked.
+  const facts = [t('updater:version', { version: u.currentVersion }), t(`updater:mode.${u.mode}`)]
+  if (u.checkedAt) facts.push(t('updater:checkedAt', { time: fmt.dateTime(u.checkedAt) }))
 
   return (
     <div className={`update-panel status-${u.status}`}>
       <div className="update-head">
         <span className={`update-dot status-${u.status}`} aria-hidden="true" />
-        <span className="update-title" role="status">
-          {noRelease ? t('updater:status.noRelease') : t(statusKey(u), { version: u.latestVersion ?? '', percent: u.progressPercent ?? 0 })}
-        </span>
-        <span className="update-mode">{t(`updater:mode.${u.mode}`)}</span>
+        <div className="update-text">
+          <div className="update-title" role="status">
+            {noRelease ? t('updater:status.noRelease') : t(statusKey(u), { version: u.latestVersion ?? '', percent: u.progressPercent ?? 0 })}
+          </div>
+          <div className="update-facts">{facts.join(' · ')}</div>
+        </div>
+        <div className="row-actions">
+          {store ? (
+            <>
+              <button className="btn" onClick={() => void openMicrosoftStore('updates')}>
+                <IconExternal size={14} /> {t('updater:action.openStore')}
+              </button>
+              {appInfo?.storeListingAvailable && (
+                <button className="btn" onClick={() => void openMicrosoftStore('listing')}>
+                  <IconExternal size={14} /> {t('updater:action.viewInStore')}
+                </button>
+              )}
+            </>
+          ) : (
+            <button className="btn" disabled={!u.canCheck} onClick={() => void checkForUpdates()}>
+              <IconRefresh size={14} className={u.status === 'checking' ? 'spin' : ''} /> {t('updater:action.check')}
+            </button>
+          )}
+          {u.canDownload && (
+            <button className="btn primary" onClick={() => void downloadUpdate()}>
+              <IconDownload size={14} /> {t('updater:action.download')}
+            </button>
+          )}
+          {u.canInstall && (
+            <button className="btn primary" onClick={() => setConfirmOpen(true)}>
+              <IconRestore size={14} /> {t('updater:action.install')}
+            </button>
+          )}
+          {u.mode === 'portable' && u.status === 'available' && (
+            <button className="btn" onClick={() => void openReleasesPage()}>
+              <IconExternal size={14} /> {t('updater:action.openReleases')}
+            </button>
+          )}
+        </div>
       </div>
       {u.status === 'downloading' && (
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={u.progressPercent ?? 0}>
@@ -43,57 +81,7 @@ export function UpdatesSection(): ReactElement {
         </div>
       )}
       {detail && <div className="hint">{detail}</div>}
-      <dl className="kv compact">
-        <dt>{t('updater:current')}</dt>
-        <dd className="mono">{u.currentVersion}</dd>
-        {u.latestVersion && u.latestVersion !== u.currentVersion && (
-          <>
-            <dt>{t('updater:latest')}</dt>
-            <dd className="mono">{u.latestVersion}</dd>
-          </>
-        )}
-        {u.checkedAt && (
-          <>
-            <dt>{t('updater:lastChecked')}</dt>
-            <dd>{fmt.dateTime(u.checkedAt)}</dd>
-          </>
-        )}
-      </dl>
-      {store && <p className="hint">{t('updater:storeNote')}</p>}
-      <div className="row-actions">
-        {store ? (
-          <>
-            <button className="btn" onClick={() => void openMicrosoftStore('updates')}>
-              <IconExternal size={14} /> {t('updater:action.openStore')}
-            </button>
-            {appInfo?.storeListingAvailable && (
-              <button className="btn" onClick={() => void openMicrosoftStore('listing')}>
-                <IconExternal size={14} /> {t('updater:action.viewInStore')}
-              </button>
-            )}
-          </>
-        ) : (
-          <button className="btn" disabled={!u.canCheck} onClick={() => void checkForUpdates()}>
-            <IconRefresh size={14} className={u.status === 'checking' ? 'spin' : ''} /> {t('updater:action.check')}
-          </button>
-        )}
-        {u.canDownload && (
-          <button className="btn primary" onClick={() => void downloadUpdate()}>
-            <IconDownload size={14} /> {t('updater:action.download')}
-          </button>
-        )}
-        {u.canInstall && (
-          <button className="btn primary" onClick={() => setConfirmOpen(true)}>
-            <IconRestore size={14} /> {t('updater:action.install')}
-          </button>
-        )}
-        {u.mode === 'portable' && u.status === 'available' && (
-          <button className="btn" onClick={() => void openReleasesPage()}>
-            <IconExternal size={14} /> {t('updater:action.openReleases')}
-          </button>
-        )}
-      </div>
-      {u.mode === 'portable' && <p className="hint">{t('updater:portableNote')}</p>}
+      {u.mode === 'portable' && u.status === 'available' && <p className="hint">{t('updater:portableNote')}</p>}
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} labelledBy={titleId} size="narrow">
         <header className="modal-header">
@@ -122,31 +110,21 @@ export function UpdatesSection(): ReactElement {
   )
 }
 
-/** Settings → About. */
+/** Settings, at the bottom: the app's name, version and that it is unofficial. */
 export function AboutSection(): ReactElement {
   const { t } = useTranslation()
   const appInfo = useAppState((s) => s.appInfo)
   return (
-    <div className="about">
-      <AppMark size={40} />
+    <footer className="about">
+      <AppMark size={28} />
       <div className="about-body">
-        <div className="about-name">{appInfo?.name}</div>
-        <div className="about-version mono">{t('updater:version', { version: appInfo?.version ?? '…' })}</div>
-        <p className="hint">{t('common:app.disclaimer')}</p>
-        {appInfo && (
-          <dl className="kv compact about-meta">
-            <dt>{t('settings:distribution.label')}</dt>
-            <dd>{t(`settings:distribution.${appInfo.distribution}`)}</dd>
-            <dt>{t('settings:updatesSource.label')}</dt>
-            <dd>{t(`settings:updatesSource.${appInfo.distribution}`)}</dd>
-          </dl>
-        )}
-        {appInfo?.desktopDataReadOnly && <p className="hint">{t('settings:storeEdition.limits')}</p>}
-        <p className="hint mono">
-          Electron {appInfo?.electronVersion} · {appInfo?.platform}
-        </p>
+        <div className="about-line">
+          <span className="about-name">{appInfo?.name}</span>
+          <span className="about-version mono">{appInfo?.version ?? '…'}</span>
+        </div>
+        <div className="hint">{t('common:app.disclaimer')}</div>
       </div>
-    </div>
+    </footer>
   )
 }
 

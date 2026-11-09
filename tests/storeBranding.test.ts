@@ -59,7 +59,7 @@ describe('Store-facing product name', () => {
     const sidebar = read('src/renderer/src/components/Sidebar.tsx')
     expect(sidebar).toMatch(/const brand = appInfo \? appBrand\(appInfo\.distribution\) : null/)
     expect(sidebar).toMatch(/\{brand\?\.short\}/)
-    expect(read('src/renderer/src/components/Updates.tsx')).toMatch(/<div className="about-name">\{appInfo\?\.name\}<\/div>/)
+    expect(read('src/renderer/src/components/Updates.tsx')).toMatch(/<span className="about-name">\{appInfo\?\.name\}<\/span>/)
     // No translation carries a product name any more.
     for (const l of SUPPORTED_LOCALES) {
       expect(JSON.stringify(RESOURCES[l]), l).not.toMatch(/Claude Local|LHP Local/)

@@ -53,13 +53,38 @@ const item = (type, text, i) =>
       ? { type, id: `a${i}`, text, phase: 'final' }
       : { type, id: `t${i}`, command: text, cwd: 'C:\\', status: 'completed', exitCode: 0, durationMs: 12 }
 
+export const CODEX_TEST_SECRET = 'CODEX-UI-TEST-SECRET'
+export const CODEX_TEST_EMAIL = 'codex.user@example.com'
+
+const base64url = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
+/**
+ * A Codex sign-in file in Codex's layout. `{ email, plan }`: a ChatGPT sign-in whose ID token names
+ * the account; otherwise an API key. Every token, the key and the token's signature carry
+ * CODEX_TEST_SECRET, which must never show up anywhere in the app.
+ */
+export function codexAuth({ email, plan } = {}) {
+  if (!email) return { auth_mode: 'apikey', OPENAI_API_KEY: CODEX_TEST_SECRET, tokens: null, last_refresh: null }
+  const idToken = [
+    base64url({ alg: 'RS256', typ: 'JWT' }),
+    base64url({ email, email_verified: true, 'https://api.openai.com/auth': { chatgpt_plan_type: plan, chatgpt_account_id: CODEX_TEST_SECRET } }),
+    CODEX_TEST_SECRET
+  ].join('.')
+  return {
+    auth_mode: 'chatgpt',
+    OPENAI_API_KEY: null,
+    tokens: { id_token: idToken, access_token: `${CODEX_TEST_SECRET}-access`, refresh_token: `${CODEX_TEST_SECRET}-refresh`, account_id: CODEX_TEST_SECRET },
+    last_refresh: new Date(0).toISOString()
+  }
+}
+
 /**
  * One Codex folder. `threads`: { id, name?, title?, first?, cwd, model?, archived?, updatedAt, createdAt?,
  * source?, threadSource? ('user' by default), parent?, file? (write a session file), items?: [[type, text]],
  * turnInProgressAt? (a turn Codex still marks as running, started then) }. Items are written from createdAt on,
  * a second apart; a session file's time is the session's updatedAt, as if Codex last wrote it then.
+ * `auth`: the sign-in (see codexAuth), an API key by default.
  */
-export function createCodexHome(dir, threads) {
+export function createCodexHome(dir, threads, auth = codexAuth()) {
   mkdirSync(path.join(dir, 'sessions'), { recursive: true })
   mkdirSync(path.join(dir, 'archived_sessions'), { recursive: true })
   const state = new DatabaseSync(path.join(dir, 'state_5.sqlite'))
@@ -114,14 +139,12 @@ export function createCodexHome(dir, threads) {
   state.close()
   history.close()
   writeFileSync(path.join(dir, 'session_index.jsonl'), index.length ? index.join('\n') + '\n' : '')
-  // Codex keeps the sign-in here; the app must never open it.
-  writeFileSync(path.join(dir, 'auth.json'), JSON.stringify({ OPENAI_API_KEY: 'CODEX-UI-TEST-SECRET' }))
+  // Codex keeps the sign-in here; the app may take the email and plan from it, nothing else.
+  writeFileSync(path.join(dir, 'auth.json'), JSON.stringify(auth, null, 2))
   return dir
 }
 
-export const CODEX_TEST_SECRET = 'CODEX-UI-TEST-SECRET'
-
-/** The Codex data of the UI test profile: two Codex sign-ins. */
+/** The Codex data of the UI test profile: two Codex sign-ins, a ChatGPT account (Pro) and an API key. */
 export function writeCodexProfile(home, { now = Date.now(), cwds = ['C:\\UiTest\\185', 'C:\\UiTest\\OCR', 'C:\\UiTest\\CMS'] } = {}) {
   const H = 3_600_000
   const roles = {
@@ -154,7 +177,7 @@ export function writeCodexProfile(home, { now = Date.now(), cwds = ['C:\\UiTest\
     { id: roles.longVi, name: 'Tối ưu hóa toàn bộ quy trình dựng mô hình ba chiều cho nhà hát thành phố và kiểm tra lại hiệu năng', first: 'Tối ưu hóa toàn bộ quy trình', cwd: cwds[2], updatedAt: now - 30 * H, items: talk(1) },
     // Codex's own automatic review: not a session of the user's.
     { id: roles.guardian, title: 'guardian', cwd: cwds[0], updatedAt: now - 3 * H, source: '{"subagent":{"other":"guardian"}}', threadSource: 'guardian_review', file: false }
-  ])
+  ], codexAuth({ email: CODEX_TEST_EMAIL, plan: 'pro' }))
   const second = createCodexHome(path.join(home, '.codex-account-2'), [
     { id: roles.secondActive, name: 'Second account: release checklist', first: 'Prepare the release', cwd: cwds[0], updatedAt: now - 10 * H, items: talk(0) },
     { id: roles.secondArchived, name: 'Second account: archived plan', first: 'Plan', cwd: cwds[1], updatedAt: now - 90 * H, archived: true, items: talk(0) }

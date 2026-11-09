@@ -2,44 +2,50 @@
   "title": "Settings",
   "section": {
     "general": "General",
-    "appearance": "Appearance",
-    "discovery": "Session discovery",
+    "data": "Claude data",
+    "data_codex": "Codex data",
     "deletionSafety": "Deletion safety",
     "updates": "Updates",
-    "about": "About"
+    "advanced": "Advanced"
   },
   "language": {
     "label": "Language",
-    "hint": "First launch follows Windows ({{language}}). Your choice is saved and applies immediately.",
     "useSystem": "Use system language"
   },
   "motion": {
     "label": "Motion",
-    "hint": "“Reduce motion” turns off transitions in this app. “Follow system” respects the Windows animation setting.",
     "system": "Follow system",
     "reduced": "Reduce motion"
   },
   "rawPaths": {
     "label": "Show raw paths",
-    "hint": "Full absolute paths instead of ~ and %LOCALAPPDATA% shorthands. The delete dialog always shows full paths."
+    "hint": "Full paths instead of the ~ and %LOCALAPPDATA% shorthands. The delete dialog always shows full paths."
   },
   "refresh": {
     "label": "Refresh",
-    "manual": "Manual only",
-    "manualHint": "Scan on start and when you click Refresh (F5).",
+    "manual": "Manual",
+    "manualHint": "Scans when the app starts and when you press Refresh (F5).",
     "watch": "Watch files",
-    "watchHint": "Rescan shortly after Claude or Codex writes to its storage folders (debounced, few watchers).",
+    "watchHint": "Rescans as soon as Claude or Codex writes something new.",
     "interval": "Interval",
-    "intervalHint": "Rescan on a fixed timer.",
+    "intervalHint": "Rescans on a fixed timer.",
     "seconds_one": "{{count}} second",
     "seconds_other": "{{count}} seconds",
     "minutes_one": "{{count}} minute",
-    "minutes_other": "{{count}} minutes"
+    "minutes_other": "{{count}} minutes",
+    "every": "Every"
+  },
+  "data": {
+    "folder": "Folder",
+    "hint": "Found on every scan. The app only changes files of a session you act on.",
+    "hint_codex": "Found on every scan. The app only reads it; the Codex CLI archives and deletes.",
+    "cli": "Codex CLI",
+    "cliHint": "Used to archive, restore and delete.",
+    "cliReady": "Ready"
   },
   "roots": {
     "accounts": "Claude accounts",
-    "label": "Storage roots",
-    "hint": "Detected from USERPROFILE, APPDATA and LOCALAPPDATA on every scan. They cannot be edited: the app only modifies files inside these roots, and only paths the scanner attributed to a session.",
+    "label": "All folders",
     "claudeHome": "Claude Code home",
     "transcripts": "Transcript root",
     "fileHistory": "File history",
@@ -62,36 +68,25 @@
   },
   "cache": {
     "label": "Scan cache",
-    "hint": "Speeds up rescans. Clearing it never touches Claude files.",
+    "hint": "Makes rescans faster. Clearing it never touches Claude or Codex data.",
     "clear": "Clear scan cache"
   },
   "debug": {
-    "label": "Developer / debug mode",
-    "hint": "Verbose logging, the normalized session JSON in details, and DevTools (F12)."
+    "label": "Debug mode",
+    "hint": "Detailed log, the session JSON in the details panel, and DevTools (F12)."
   },
   "logs": {
-    "label": "Diagnostics",
+    "label": "App folders and log",
+    "hint": "For troubleshooting. Only shown here, never sent anywhere.",
+    "userData": "App data (userData)",
     "cache": "Cache",
     "logFile": "Log file",
+    "runtime": "Runtime",
     "show": "Show log",
-    "empty": "(empty)",
-    "hint": "Local paths for troubleshooting. They are only shown here and never sent anywhere.",
-    "userHome": "User home",
-    "transcriptRoot": "Claude transcript root",
-    "metadataRoots": "Claude metadata roots",
-    "userData": "App data (userData)"
+    "empty": "(empty)"
   },
-  "distribution": {
-    "label": "Distribution",
-    "github": "GitHub",
-    "store": "Microsoft Store",
-    "development": "Development"
-  },
-  "updatesSource": {
-    "label": "Updates",
-    "github": "GitHub Releases",
-    "store": "Managed by Microsoft Store",
-    "development": "Disabled in development builds"
+  "advanced": {
+    "summary": "Paths, scan cache, debug mode and logs"
   },
   "storeEdition": {
     "limits": "Microsoft Store edition: sessions that have Claude Desktop metadata are view- and export-only. Archive, Restore and Delete are unavailable for them because Windows Store packaging isolates certain AppData writes. Transcript-only sessions can be hidden or deleted as usual."

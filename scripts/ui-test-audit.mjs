@@ -215,7 +215,7 @@ export function auditPage() {
     const rects = [...range.getClientRects()]
     if (!rects.length) continue
 
-    const technical = !!el.closest('pre, code, .mono, kbd, .row-title, .inspector-title, .row-model, .row-project, .preview, .path-value, .account-trigger-name, .account-item-name, .account-item-email, .account-item-plan')
+    const technical = !!el.closest('pre, code, .mono, kbd, .row-title, .inspector-title, .row-model, .row-project, .preview, .path-value, .account-trigger-name, .account-item-name, .account-item-email, .account-item-plan, .data-folder-account')
     if (!technical) {
       if (new RegExp(`^(${NS}):`).test(text) || /^[a-z][A-Za-z]*(\.[A-Za-z0-9_-]+)+$/.test(text)) add('raw-text', el, `looks like an untranslated key: "${text}"`)
       if (/\{\{|\}\}|\bundefined\b|\bNaN\b|\[object Object\]|Invalid Date|\b(ENOENT|EACCES|EPERM|EBUSY)\b/.test(text)) add('raw-text', el, `"${text.slice(0, 60)}"`)
