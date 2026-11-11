@@ -29,6 +29,10 @@ describe('app icon and in-app mark stay in sync', () => {
     const css = fs.readFileSync(path.join(ROOT, 'src/renderer/src/styles/global.css'), 'utf8')
     const accent = /--accent:\s*(#[0-9a-f]{6})/i.exec(css)?.[1]?.toLowerCase()
     expect(appMark.shapes.map((s) => s.color.toLowerCase())).toContain(accent)
+    // While Codex is on screen the mark is drawn in its blue: the Codex accent.
+    const codexAccent = /:root\[data-provider='codex'\]\s*\{[^}]*--accent:\s*(#[0-9a-f]{6})/i.exec(css)?.[1]?.toLowerCase()
+    expect(appMark.shapes.map((s) => s.codex.toLowerCase())).toContain(codexAccent)
+    expect(markBody).toMatch(/fill=\{provider === 'codex' \? s\.codex : s\.color\}/)
     expect(fs.readFileSync(path.join(ROOT, 'electron-builder.yml'), 'utf8')).toMatch(/icon: build\/icon\.ico/)
   })
 })

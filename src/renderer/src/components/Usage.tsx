@@ -70,7 +70,11 @@ function AccountBlock({ account: a, usage, named, now }: { account: ClaudeAccoun
     <div className="usage-account">
       {(named || !!recordedAt) && (
         <div className="usage-head">
-          {named && <span className="usage-name">{a.email ?? a.label}</span>}
+          {named && (
+            <span className="usage-name" title={a.email ?? a.label}>
+              {a.email ?? a.label}
+            </span>
+          )}
           {named && a.plan && <span className="usage-plan">{a.plan}</span>}
           {!!recordedAt && (
             <span className="usage-recorded" title={fmt.dateTime(recordedAt)}>
@@ -115,7 +119,11 @@ function Meter({ limit: l, now }: { limit: UsageLimit; now: number }): ReactElem
         <span className={`usage-fill ${reset ? '' : l.severity}`} style={{ width: `${percent}%` }} />
       </span>
       <span className="usage-percent">{reset ? '—' : `${l.percent}%`}</span>
-      {resetText && <span className="usage-reset">{resetText}</span>}
+      {resetText && (
+        <span className="usage-reset" title={resetText}>
+          {resetText}
+        </span>
+      )}
     </div>
   )
 }

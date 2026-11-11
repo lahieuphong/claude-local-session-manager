@@ -4,7 +4,7 @@ import { useFmt } from '../i18n'
 import { leaveProvider, setView, toolContext, useAppState, visibleSessions, type SessionFilter } from '../stores/appStore'
 import { PROVIDER_NAMES, ProviderLogo } from './BrandLogos'
 import { UpdatePill } from './Updates'
-import { appBrand } from '../../../shared/appIdentity'
+import { appBrand, sidebarName } from '../../../shared/appIdentity'
 import { filterCounts, projectsOf } from '../../../shared/sessionQuery'
 import { TERMINAL_SHORTCUT, toggleTerminal, useTerminal } from '../stores/terminalStore'
 import {
@@ -67,9 +67,9 @@ export function Sidebar(): ReactElement {
   return (
     <aside className="sidebar" aria-label={t('common:nav.sidebar')}>
       <div className="identity">
-        <AppMark size={28} />
+        <AppMark size={28} provider={provider} />
         <div className="identity-text">
-          <div className="identity-name">{brand?.short}</div>
+          <div className="identity-name">{brand && sidebarName(brand, provider)}</div>
           <div className="identity-sub">{brand?.sub}</div>
         </div>
       </div>

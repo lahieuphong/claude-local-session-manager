@@ -2392,7 +2392,12 @@ code.phrase {
   margin-top: 4px;
 }
 
-/* Settings → Usage: a bar per limit, each account under its name. */
+/*
+ * Settings → Usage: a bar per limit, each account under its name. It is read
+ * again every few seconds, so no line may change its height as its text
+ * changes ("now" → "1 min ago"): that would move the page, and close a
+ * dropdown open further down. Long text ends in an ellipsis instead.
+ */
 .usage-account {
   display: flex;
   flex-direction: column;
@@ -2404,23 +2409,27 @@ code.phrase {
 }
 .usage-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 8px;
+  gap: 8px;
   font-size: 12.5px;
 }
 .usage-name {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 .usage-plan {
+  flex: none;
   color: var(--text-muted);
 }
 .usage-recorded {
+  flex: none;
   margin-left: auto;
   font-size: 12px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 /* The window, its bar and how much is used; under the bar, the day and time it resets. */
 .usage-meter {
@@ -2463,6 +2472,10 @@ code.phrase {
 }
 .usage-reset {
   grid-column: 2 / -1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
   color: var(--text-muted);
 }

@@ -1,5 +1,6 @@
 import type { ReactElement, SVGProps } from 'react'
 import appMark from '../../../shared/appMark.json'
+import type { Provider } from '../../../shared/types'
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number }
 
@@ -216,13 +217,14 @@ export const IconActivity = (p: IconProps): ReactElement => (
 
 /**
  * Neutral app mark (stacked session cards) — not a Claude/Anthropic logo.
- * Drawn from the same shapes as the window/installer icon (shared/appMark.json).
+ * Drawn from the same shapes as the window/installer icon (shared/appMark.json),
+ * in Codex's blue while Codex is the tool on screen (`provider`).
  */
-export function AppMark({ size = 28 }: { size?: number }): ReactElement {
+export function AppMark({ size = 28, provider }: { size?: number; provider?: Provider | null }): ReactElement {
   return (
     <svg width={size} height={size} viewBox={`0 0 ${appMark.size} ${appMark.size}`} aria-hidden="true">
       {appMark.shapes.map((s, i) => (
-        <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} rx={s.r} fill={s.color} opacity={'alpha' in s ? s.alpha : undefined} />
+        <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} rx={s.r} fill={provider === 'codex' ? s.codex : s.color} opacity={'alpha' in s ? s.alpha : undefined} />
       ))}
     </svg>
   )

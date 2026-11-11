@@ -1,4 +1,5 @@
 import type { DistributionChannel } from './distribution'
+import type { Provider } from './types'
 
 /**
  * Stable application identity. These values must never change between
@@ -38,4 +39,13 @@ const BRAND_SUB = 'Session Manager'
 export function appBrand(channel: DistributionChannel): AppBrand {
   const name = channel === 'store' ? STORE_APP_NAME : APP_NAME
   return { name, short: name.slice(0, -BRAND_SUB.length).trim(), sub: BRAND_SUB }
+}
+
+/**
+ * The name at the top of the sidebar for the tool on screen: "Codex Local"
+ * while Codex is. Only a name that says "Claude" changes (the Store
+ * edition's does not); the product's own name stays everywhere else.
+ */
+export function sidebarName(brand: AppBrand, provider: Provider): string {
+  return provider === 'codex' ? brand.short.replace(/^Claude(?= )/, 'Codex') : brand.short
 }

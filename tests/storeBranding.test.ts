@@ -3,7 +3,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PRIVACY_URL, SITE_URL, SUPPORT_URL, markdownToHtml, sitePages } from '../scripts/privacy-page.mjs'
 import { THIRD_PARTY_NAME_RE, storeAppName, validateStoreName, type StoreIdentity } from '../scripts/store-config.mjs'
-import { APP_NAME, STORE_APP_NAME, appBrand } from '../src/shared/appIdentity'
+import { APP_NAME, STORE_APP_NAME, appBrand, sidebarName } from '../src/shared/appIdentity'
 import { SUPPORTED_LOCALES } from '../src/shared/locale'
 import { RESOURCES } from '../src/shared/locales'
 import { formatPlanReport, formatResultReport } from '../src/main/services/deleteReport'
@@ -29,6 +29,13 @@ describe('Store-facing product name', () => {
     expect(appBrand('github')).toEqual({ name: APP_NAME, short: 'Claude Local', sub: 'Session Manager' })
     expect(appBrand('development').name).toBe(APP_NAME)
     expect(THIRD_PARTY_NAME_RE.test(STORE_APP_NAME)).toBe(false)
+  })
+
+  it('the sidebar names the tool on screen where the name says Claude: Codex Local while Codex is', () => {
+    expect(sidebarName(appBrand('github'), 'claude')).toBe('Claude Local')
+    expect(sidebarName(appBrand('github'), 'codex')).toBe('Codex Local')
+    // The Store edition's name has no third-party name to swap.
+    expect(sidebarName(appBrand('store'), 'codex')).toBe('LHP Local')
   })
 
   it('the package display name is the name the app shows; the immutable identity is unchanged', () => {
@@ -58,7 +65,7 @@ describe('Store-facing product name', () => {
     expect(read('src/renderer/index.html')).toMatch(/<title>Local Session Manager<\/title>/)
     const sidebar = read('src/renderer/src/components/Sidebar.tsx')
     expect(sidebar).toMatch(/const brand = appInfo \? appBrand\(appInfo\.distribution\) : null/)
-    expect(sidebar).toMatch(/\{brand\?\.short\}/)
+    expect(sidebar).toMatch(/\{brand && sidebarName\(brand, provider\)\}/)
     expect(read('src/renderer/src/components/Updates.tsx')).toMatch(/<span className="about-name">\{appInfo\?\.name\}<\/span>/)
     // No translation carries a product name any more.
     for (const l of SUPPORTED_LOCALES) {

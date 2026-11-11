@@ -849,7 +849,7 @@ async function runVariant(channel) {
     }
 
     // Text that is the same as English in another language was probably never translated.
-    const SAME_EVERYWHERE = /^(Claude( Desktop| Code| Local)?( Session Manager)?|Codex( CLI)?|Terminal|PowerShell 7|Windows PowerShell|Git Bash|Claude Desktop \(.*\)|Session Manager|LHP( Local)?( Session Manager)?|Local Session Manager|DELETE( \d+)?|ENABLE DELETE|JSON|JSONL|Markdown|PID|CLI|GitHub|Microsoft Store|APPDATA|Ctrl K|English|Tiếng Việt|简体中文|[\d\s.,:/%·—-]+)$/
+    const SAME_EVERYWHERE = /^(Claude( Desktop| Code| Local)?( Session Manager)?|Codex( CLI| Local)?|Terminal|PowerShell 7|Windows PowerShell|Git Bash|Claude Desktop \(.*\)|Session Manager|LHP( Local)?( Session Manager)?|Local Session Manager|DELETE( \d+)?|ENABLE DELETE|JSON|JSONL|Markdown|PID|CLI|GitHub|Microsoft Store|APPDATA|Ctrl K|English|Tiếng Việt|简体中文|[\d\s.,:/%·—-]+)$/
     for (const [state, perLocale] of strings) {
       const english = perLocale.get('en')
       if (!english) continue
@@ -1008,8 +1008,14 @@ async function runVariant(channel) {
     const codexMenuAccent = await accentOf('.select-menu [aria-selected="true"] .select-option-check')
     await press('Escape')
     check('accent: orange for Claude, blue for Codex, dropdowns included', claudeAccent === ORANGE && codexAccent === BLUE && codexMenuAccent === BLUE, `${claudeAccent} / ${codexAccent} / ${codexMenuAccent}`)
+    // The name and mark at the top of the sidebar follow the tool too (the Store edition's name has no "Claude" in it).
+    const identity = () => page.evaluate(`document.querySelector('.identity-name').textContent + ' ' + document.querySelectorAll('.identity svg rect')[4].getAttribute('fill')`)
+    const codexIdentity = await identity()
+    check('identity: Codex Local with a blue mark while Codex is on screen', codexIdentity === (isStore ? 'LHP Local #4c8dff' : 'Codex Local #4c8dff'), codexIdentity)
     await goTool('claude')
     check('accent: back to orange with Claude', (await accentOf('.nav > .nav-item.active svg')) === ORANGE)
+    const claudeIdentity = await identity()
+    check('identity: back to Claude Local and the orange mark', claudeIdentity === (isStore ? 'LHP Local #d97757' : 'Claude Local #d97757'), claudeIdentity)
     await goTool('codex')
     const cxDb = (file) => new DatabaseSync(path.join(codexProfile.main, file))
     const cxThread = (id) => {
